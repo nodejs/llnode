@@ -17,7 +17,7 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
   }
 
   // Load V8 constants from postmortem data
-  LLV8 llv8(target);
+  v8::LLV8 llv8(target);
 
   {
     SBStream desc;
@@ -41,10 +41,13 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
       continue;
     }
 
+    // V8 frame
+    v8::Error err;
+    v8::Value v8_frame(&llv8, static_cast<int64_t>(frame.GetFP()));
+    std::string res = llv8.GetJSFrameName(v8_frame, err);
+
     // Skip invalid frames
-    std::string res;
-    if (!llv8.GetJSFrameName(frame.GetFP(), res))
-      continue;
+    if (err.Fail()) continue;
 
     // V8 symbol
     result.Printf(
@@ -79,10 +82,12 @@ bool PrintCmd::DoExecute(SBDebugger d, char** cmd,
   }
 
   // Load V8 constants from postmortem data
-  LLV8 llv8(target);
+  v8::LLV8 llv8(target);
 
-  std::string res;
-  if (!llv8.ToString(static_cast<addr_t>(value.GetValueAsUnsigned()), res)) {
+  v8::Value v8_value(&llv8, value.GetValueAsSigned());
+  v8::Error err;
+  std::string res = v8_value.ToString(err);
+  if (err.Fail()) {
     result.SetError("Failed to evaluate expression");
     return false;
   }

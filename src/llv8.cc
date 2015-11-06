@@ -5,6 +5,7 @@
 #include "llv8-inl.h"
 
 namespace llnode {
+namespace v8 {
 
 using namespace lldb;
 
@@ -31,9 +32,13 @@ LLV8::LLV8(SBTarget target) : target_(target), process_(target_.GetProcess()) {
       LoadConstant("class_SharedFunctionInfo__inferred_name__String");
   shared_info_.kScriptOffset =
       LoadConstant("class_SharedFunctionInfo__script__Object");
+  shared_info_.kStartPositionOffset =
+      LoadConstant("class_SharedFunctionInfo__start_position_and_type__SMI");
+
+  // TODO(indutny): move it to post-mortem
+  shared_info_.kStartPositionShift = 2;
 
   script_.kNameOffset = LoadConstant("class_Script__name__Object");
-  script_.kLineOffset = LoadConstant("class_Script__line_offset__SMI");
 
   string_.kEncodingMask = LoadConstant("StringEncodingMask");
   string_.kRepresentationMask = LoadConstant("StringRepresentationMask");
@@ -81,142 +86,125 @@ int64_t LLV8::LoadConstant(const char* name) {
 }
 
 
-bool LLV8::LoadPtr(int64_t addr, int64_t* out) {
-  SBError err;
+int64_t LLV8::LoadPtr(int64_t addr, Error& err) {
+  SBError sberr;
   int64_t value = process_.ReadPointerFromMemory(static_cast<addr_t>(addr),
-      err);
-  if (err.Fail())
-    return false;
+      sberr);
+  if (sberr.Fail()) {
+    // TODO(indutny): add more information
+    err = Error::Failure("Failed to load V8 value");
+    return -1;
+  }
 
-  *out = value;
-  return true;
+  err = Error::Ok();
+  return value;
 }
 
 
-bool LLV8::LoadString(int64_t addr, int64_t length, std::string& out) {
+std::string LLV8::LoadString(int64_t addr, int64_t length, Error& err) {
   char* buf = new char[length + 1];
-  SBError err;
+  SBError sberr;
   process_.ReadMemory(static_cast<addr_t>(addr), buf,
-      static_cast<size_t>(length), err);
-  if (err.Fail())
-    return false;
+      static_cast<size_t>(length), sberr);
+  if (sberr.Fail()) {
+    // TODO(indutny): add more information
+    err = Error::Failure("Failed to load V8 one byte string");
+    return std::string();
+  }
 
   buf[length] = '\0';
 
-  out = buf;
+  std::string res = buf;
   delete[] buf;
-  return true;
+  err = Error::Ok();
+  return res;
 }
 
 
-bool LLV8::LoadTwoByteString(int64_t addr, int64_t length, std::string& out) {
+std::string LLV8::LoadTwoByteString(int64_t addr, int64_t length, Error& err) {
   char* buf = new char[length * 2 + 1];
-  SBError err;
+  SBError sberr;
   process_.ReadMemory(static_cast<addr_t>(addr), buf,
-      static_cast<size_t>(length * 2), err);
-  if (err.Fail())
-    return false;
+      static_cast<size_t>(length * 2), sberr);
+  if (sberr.Fail()) {
+    // TODO(indutny): add more information
+    err = Error::Failure("Failed to load V8 one byte string");
+    return std::string();
+  }
 
   for (int64_t i = 0; i < length; i++)
     buf[i] = buf[i * 2];
   buf[length] = '\0';
 
-  out = buf;
+  std::string res = buf;
   delete[] buf;
-  return true;
+  err = Error::Ok();
+  return res;
 }
 
 
-bool LLV8::GetType(int64_t addr, int64_t* out) {
-  if (!is_heap_obj(addr))
-    return false;
+std::string LLV8::GetJSFrameName(Value frame, Error& err) {
+  Value context = LoadValue<Value>(frame.raw() + frame_.kContextOffset, err);
+  if (err.Fail()) return std::string();
 
-  int64_t map;
-  if (!GetMap(addr, &map) || !is_heap_obj(map))
-    return false;
+  Smi smi_context = Smi(this, context.raw());
+  if (smi_context.Check() && smi_context.GetValue() == frame_.kAdaptorFrame)
+    return "<adaptor>";
 
-  if (!LoadHeapField(map, map_.kInstanceAttrsOffset, out))
-    return false;
+  Value marker = LoadValue<Value>(frame.raw() + frame_.kMarkerOffset, err);
+  if (err.Fail()) return std::string();
 
-  (*out) &= 0xff;
-  return true;
-}
-
-
-bool LLV8::GetJSFrameName(addr_t frame, std::string& res) {
-  int64_t context;
-  if (!LoadPtr(frame, frame_.kContextOffset, &context)) return false;
-
-  if (is_smi(context) && untag_smi(context) == frame_.kAdaptorFrame) {
-    res = "<adaptor>";
-    return true;
-  }
-
-  int64_t marker;
-  if (!LoadPtr(frame, frame_.kMarkerOffset, &marker)) return false;
-
-  if (is_smi(marker)) {
-    marker = untag_smi(marker);
-    if (marker == frame_.kEntryFrame) {
-      res = "<entry>";
-    } else if (marker == frame_.kEntryConstructFrame) {
-      res = "<entry_construct>";
-    } else if (marker == frame_.kExitFrame) {
-      res = "<exit>";
-    } else if (marker == frame_.kInternalFrame) {
-      res = "<internal>";
-    } else if (marker == frame_.kConstructFrame) {
-      res = "<constructor>";
-    } else if (marker != frame_.kJSFrame && marker != frame_.kOptimizedFrame) {
-      return false;
+  Smi smi_marker(marker);
+  if (smi_marker.Check()) {
+    int64_t value = smi_marker.GetValue();
+    if (value == frame_.kEntryFrame) {
+      return "<entry>";
+    } else if (value == frame_.kEntryConstructFrame) {
+      return "<entry_construct>";
+    } else if (value == frame_.kExitFrame) {
+      return "<exit>";
+    } else if (value == frame_.kInternalFrame) {
+      return "<internal>";
+    } else if (value == frame_.kConstructFrame) {
+      return "<constructor>";
+    } else if (value != frame_.kJSFrame && value != frame_.kOptimizedFrame) {
+      err = Error::Failure("Unknown frame marker");
+      return std::string();
     }
-
-    if (marker != frame_.kJSFrame && marker != frame_.kOptimizedFrame)
-      return true;
   }
 
   // We are dealing with function or internal code (probably stub)
-  int64_t fn;
-  int64_t args;
-  if (!LoadPtr(frame, frame_.kFunctionOffset, &fn) ||
-      !LoadPtr(frame, frame_.kArgsOffset, &args)) {
-    return false;
-  }
+  JSFunction fn =
+      LoadValue<JSFunction>(frame.raw() + frame_.kFunctionOffset, err);
+  if (err.Fail()) return std::string();
 
-  // Invalid fn or args
-  if (!is_heap_obj(fn) || !is_heap_obj(args)) return false;
+  LoadValue<HeapObject>(frame.raw() + frame_.kArgsOffset, err);
+  if (err.Fail()) return std::string();
 
-  int64_t fn_type;
-  if (!GetType(fn, &fn_type)) return false;
-  if (fn_type == types_.kCodeType) {
-    res = "<internal code>";
-    return true;
-  }
+  int64_t fn_type = fn.GetType(err);
+  if (err.Fail()) return std::string();
 
-  if (fn_type != types_.kJSFunctionType) {
-    res = "<non-function>";
-    return true;
-  }
+  if (fn_type == types_.kCodeType) return "<internal code>";
+  if (fn_type != types_.kJSFunctionType) return "<non-function>";
 
-  return GetJSFunctionName(static_cast<addr_t>(fn), res);
+  return fn.GetDebugLine(err);
 }
 
 
-bool LLV8::GetJSFunctionName(addr_t fn, std::string& res) {
-  int64_t shared_info;
-  int64_t name;
-  if (!LoadHeapField(static_cast<int64_t>(fn), js_function_.kSharedInfoOffset,
-                     &shared_info)) {
-    return false;
-  }
+std::string JSFunction::GetDebugLine(Error& err) {
+  SharedFunctionInfo info = Info(err);
+  if (err.Fail()) return std::string();
 
-  if (!LoadHeapField(shared_info, shared_info_.kNameOffset, &name))
-    return false;
+  String name = info.Name(err);
+  if (err.Fail()) return std::string();
 
-  if (!ToString(static_cast<addr_t>(name), res)) {
-    if (LoadHeapField(shared_info, shared_info_.kInferredNameOffset, &name))
-      return false;
-    if (!ToString(static_cast<addr_t>(name), res)) return false;
+  std::string res = name.ToString(err);
+  if (err.Fail()) {
+    name = info.InferredName(err);
+    if (err.Fail()) return std::string();
+
+    res = name.ToString(err);
+    if (err.Fail()) return std::string();
   }
 
   if (res.empty())
@@ -225,110 +213,107 @@ bool LLV8::GetJSFunctionName(addr_t fn, std::string& res) {
   res += " at ";
 
   std::string shared;
-  if (!GetSharedInfoPostfix(static_cast<int64_t>(shared_info), shared))
-    return false;
 
-  res += shared;
+  res += info.GetPostfix(err);
+  if (err.Fail()) return std::string();
 
-  return true;
+  return res;
 }
 
 
-bool LLV8::GetSharedInfoPostfix(lldb::addr_t addr, std::string& res) {
-  int64_t info = static_cast<int64_t>(addr);
+std::string SharedFunctionInfo::GetPostfix(Error& err) {
+  Script script = GetScript(err);
+  if (err.Fail()) return std::string();
 
-  int64_t script;
-  if (!LoadHeapField(info, shared_info_.kScriptOffset, &script)) return false;
-  if (!is_heap_obj(script)) return false;
+  String name = script.Name(err);
+  if (err.Fail()) return std::string();
 
-  int64_t name;
-  int64_t line;
-  if (!LoadHeapField(script, script_.kNameOffset, &name) ||
-      !LoadHeapField(script, script_.kLineOffset, &line)) {
-    return false;
-  }
+  int64_t start_pos = StartPosition(err);
+  if (err.Fail()) return std::string();
 
-  if (!is_heap_obj(name) || !is_smi(line)) return false;
-
-  if (!ToString(name, res)) return false;
-
+  std::string res = name.ToString(err);
   if (res.empty())
     res = "(no script)";
 
   char buf[1024];
-  snprintf(buf, sizeof(buf), ":%d", static_cast<int>(untag_smi(line)));
+  snprintf(buf, sizeof(buf), ":%d", static_cast<int>(start_pos));
   res += buf;
 
-  return true;
+  return res;
 }
 
 
-bool LLV8::ToString(addr_t value, std::string& res) {
-  int64_t obj = static_cast<int64_t>(value);
-  if (is_smi(obj)) {
-    char buf[128];
-    snprintf(buf, sizeof(buf), "%d", static_cast<int>(untag_smi(obj)));
-    res = buf;
-    return true;
+std::string Value::ToString(Error& err) {
+  Smi smi(this);
+  if (smi.Check())
+    return smi.ToString(err);
+
+  HeapObject obj(this);
+  if (!obj.Check()) {
+    err = Error::Failure("Not object and not smi");
+    return std::string();
   }
 
-  int64_t type;
-  if (!GetType(obj, &type)) return false;
+  int64_t type = obj.GetType(err);
+  if (err.Fail()) return std::string();
 
-  if (type == types_.kJSFunctionType) {
-    res = "<function: ";
-
-    std::string tmp;
-    if (!GetJSFunctionName(value, tmp)) return false;
-
-    res += tmp;
-    res += ">";
-    return true;
+  if (type == v8()->types_.kJSFunctionType) {
+    JSFunction fn(this);
+    return "<function: " + fn.GetDebugLine(err) + ">";
   }
 
-  if (type > types_.kFirstNonstringType) {
-    res = "<unknown non-string>";
-    return true;
-  }
+  if (type > v8()->types_.kFirstNonstringType) return "<unknown non-string>";
 
-  int64_t encoding = type & string_.kEncodingMask;
-  int64_t repr = type & string_.kRepresentationMask;
-
-  if (repr == string_.kSeqStringTag) {
-    int64_t len;
-    if (!LoadHeapField(obj, string_.kLengthOffset, &len)) return false;
-    if (!is_smi(len)) return false;
-
-    if (encoding == string_.kOneByteStringTag) {
-      int64_t chars = LeaHeapField(obj, one_byte_string_.kCharsOffset);
-      return LoadString(chars, untag_smi(len), res);
-    } else if (encoding == string_.kTwoByteStringTag) {
-      int64_t chars = LeaHeapField(obj, two_byte_string_.kCharsOffset);
-      return LoadTwoByteString(chars, untag_smi(len), res);
-    }
-
-    res = "<unsupported string>";
-    return true;
-  }
-
-  if (repr == string_.kConsStringTag) {
-    int64_t first;
-    int64_t second;
-    if (!LoadHeapField(obj, cons_string_.kFirstOffset, &first) ||
-        !LoadHeapField(obj, cons_string_.kSecondOffset, &second)) {
-      return false;
-    }
-
-    std::string tmp;
-    if (!ToString(first, res) || !ToString(second, tmp)) return false;
-
-    res += tmp;
-    return true;
-  }
-
-  res = "<unsupported string>";
-  return true;
+  String str(this);
+  return str.ToString(err);
 }
 
 
+std::string Smi::ToString(Error& err) {
+  char buf[128];
+  snprintf(buf, sizeof(buf), "%d", static_cast<int>(GetValue()));
+  err = Error::Ok();
+  return buf;
+}
+
+
+std::string String::ToString(Error& err) {
+  int64_t repr = Representation(err);
+  if (err.Fail()) return std::string();
+
+  int64_t encoding = Encoding(err);
+  if (err.Fail()) return std::string();
+
+  if (repr == v8()->string_.kSeqStringTag) {
+    if (encoding == v8()->string_.kOneByteStringTag) {
+      OneByteString one(this);
+      return one.GetValue(err);
+    } else if (encoding == v8()->string_.kTwoByteStringTag) {
+      TwoByteString two(this);
+      return two.GetValue(err);
+    }
+
+    return "<unsupported string>";
+  }
+
+  if (repr == v8()->string_.kConsStringTag) {
+    ConsString cons(this);
+    String first = cons.First(err);
+    if (err.Fail()) return std::string();
+
+    String second = cons.Second(err);
+    if (err.Fail()) return std::string();
+
+    std::string tmp = first.ToString(err);
+    if (err.Fail()) return std::string();
+    tmp += second.ToString(err);
+    if (err.Fail()) return std::string();
+
+    return tmp;
+  }
+
+  return "<unsupported string>";
+}
+
+}  // namespace v8
 }  // namespace llnode

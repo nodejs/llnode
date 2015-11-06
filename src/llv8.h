@@ -6,32 +6,160 @@
 #include <lldb/API/LLDB.h>
 
 namespace llnode {
+namespace v8 {
+
+class LLV8;
+
+class Error {
+ public:
+  Error() : failed_(false), msg_(nullptr) {}
+  Error(bool failed, const char* msg) : failed_(failed), msg_(msg) {}
+
+  static inline Error Ok() { return Error(false, "ok"); }
+  static inline Error Failure(const char* msg) { return Error(true, msg); }
+
+  inline bool Success() const { return !Fail(); }
+  inline bool Fail() const { return failed_; }
+
+ private:
+  bool failed_;
+  const char* msg_;
+};
+
+#define V8_VALUE_DEFAULT_METHODS(NAME, PARENT)                                \
+  NAME(const NAME& v) = default;                                              \
+  NAME() : PARENT() {}                                                        \
+  NAME(LLV8* v8, int64_t raw) : PARENT(v8, raw) {}                            \
+  NAME(Value& v) : PARENT(v) {}                                               \
+  NAME(Value* v) : PARENT(v->v8(), v->raw()) {}
+
+class Value {
+ public:
+  Value(const Value& v) = default;
+  Value(Value& v) = default;
+  Value() : v8_(nullptr), raw_(-1) {}
+  Value(LLV8* v8, int64_t raw) : v8_(v8), raw_(raw) {}
+
+  inline bool Check() const { return true; }
+
+  inline int64_t raw() const { return raw_; }
+  inline LLV8* v8() const { return v8_; }
+
+  std::string ToString(Error& err);
+
+ protected:
+  LLV8* v8_;
+  int64_t raw_;
+};
+
+class Smi : public Value {
+ public:
+  V8_VALUE_DEFAULT_METHODS(Smi, Value)
+
+  inline bool Check() const;
+  inline int64_t GetValue() const;
+
+  std::string ToString(Error& err);
+};
+
+class HeapObject : public Value {
+ public:
+  V8_VALUE_DEFAULT_METHODS(HeapObject, Value)
+
+  inline bool Check() const;
+  inline int64_t LeaField(int64_t off) const;
+  inline int64_t LoadField(int64_t off, Error& err);
+
+  template <class T>
+  inline T LoadFieldValue(int64_t off, Error& err);
+
+  inline HeapObject GetMap(Error& err);
+  inline int64_t GetType(Error& err);
+};
+
+class Map : public HeapObject {
+ public:
+  V8_VALUE_DEFAULT_METHODS(Map, HeapObject)
+
+  int64_t GetType(Error& err);
+};
+
+class String : public HeapObject {
+ public:
+  V8_VALUE_DEFAULT_METHODS(String, HeapObject)
+
+  inline int64_t Encoding(Error& err);
+  inline int64_t Representation(Error& err);
+  inline Smi Length(Error& err);
+
+  std::string ToString(Error& err);
+};
+
+class Script : public HeapObject {
+ public:
+  V8_VALUE_DEFAULT_METHODS(Script, HeapObject)
+
+  inline String Name(Error& err);
+};
+
+class SharedFunctionInfo : public HeapObject {
+ public:
+  V8_VALUE_DEFAULT_METHODS(SharedFunctionInfo, HeapObject)
+
+  inline String Name(Error& err);
+  inline String InferredName(Error& err);
+  inline Script GetScript(Error& err);
+  inline int64_t StartPosition(Error& err);
+
+  std::string GetPostfix(Error& err);
+};
+
+class JSFunction : public HeapObject {
+ public:
+  V8_VALUE_DEFAULT_METHODS(JSFunction, HeapObject)
+
+  inline SharedFunctionInfo Info(Error& err);
+
+  std::string GetDebugLine(Error& err);
+};
+
+class OneByteString : public String {
+ public:
+  V8_VALUE_DEFAULT_METHODS(OneByteString, String)
+
+  inline std::string GetValue(Error& err);
+};
+
+class TwoByteString : public String {
+ public:
+  V8_VALUE_DEFAULT_METHODS(TwoByteString, String)
+
+  inline std::string GetValue(Error& err);
+};
+
+class ConsString : public String {
+ public:
+  V8_VALUE_DEFAULT_METHODS(ConsString, String)
+
+  inline String First(Error& err);
+  inline String Second(Error& err);
+};
 
 class LLV8 {
  public:
   LLV8(lldb::SBTarget target);
 
-  bool GetJSFrameName(lldb::addr_t frame, std::string& out);
-  bool GetJSFunctionName(lldb::addr_t fn, std::string& out);
-  bool GetSharedInfoPostfix(lldb::addr_t addr, std::string& out);
-  bool ToString(lldb::addr_t value, std::string& out);
+  std::string GetJSFrameName(Value frame, Error& err);
+  std::string GetSharedInfoPostfix(SharedFunctionInfo info, Error& err);
 
  private:
-  bool is_smi(int64_t value) const;
-  int64_t untag_smi(int64_t value) const;
-  bool is_heap_obj(int64_t value) const;
-
-  inline bool LoadPtr(lldb::addr_t addr, int64_t off, int64_t* out);
-  inline int64_t LeaHeapField(int64_t addr, int64_t off);
-  inline bool LoadHeapField(int64_t addr, int64_t off, int64_t* out);
-  inline bool GetMap(int64_t addr, int64_t* map);
+  template <class T>
+  inline T LoadValue(int64_t addr, Error& err);
 
   int64_t LoadConstant(const char* name);
-  bool LoadPtr(int64_t addr, int64_t* out);
-  bool LoadString(int64_t addr, int64_t length, std::string& out);
-  bool LoadTwoByteString(int64_t addr, int64_t length, std::string& out);
-
-  bool GetType(int64_t addr, int64_t* out);
+  int64_t LoadPtr(int64_t addr, Error& err);
+  std::string LoadString(int64_t addr, int64_t length, Error& err);
+  std::string LoadTwoByteString(int64_t addr, int64_t length, Error& err);
 
   lldb::SBTarget target_;
   lldb::SBProcess process_;
@@ -61,11 +189,13 @@ class LLV8 {
     int64_t kNameOffset;
     int64_t kInferredNameOffset;
     int64_t kScriptOffset;
+    int64_t kStartPositionOffset;
+
+    int64_t kStartPositionShift;
   } shared_info_;
 
   struct {
     int64_t kNameOffset;
-    int64_t kLineOffset;
   } script_;
 
   struct {
@@ -118,8 +248,23 @@ class LLV8 {
     int64_t kCodeType;
     int64_t kJSFunctionType;
   } types_;
+
+  friend class Value;
+  friend class Smi;
+  friend class HeapObject;
+  friend class Map;
+  friend class String;
+  friend class Script;
+  friend class SharedFunctionInfo;
+  friend class JSFunction;
+  friend class OneByteString;
+  friend class TwoByteString;
+  friend class ConsString;
 };
 
+#undef V8_VALUE_DEFAULT_METHODS
+
+}  // namespace v8
 }  // namespace llnode
 
 #endif  // SRC_LLV8_H_
