@@ -236,7 +236,7 @@ std::string JSFunction::GetDebugLine(Error& err) {
   if (err.Fail()) return std::string();
 
   std::string res = name.GetValue(err);
-  if (err.Fail()) {
+  if (err.Fail() || res.empty()) {
     name = info.InferredName(err);
     if (err.Fail()) return std::string();
 
@@ -245,7 +245,7 @@ std::string JSFunction::GetDebugLine(Error& err) {
   }
 
   if (res.empty())
-    res = "(anonymous js function)";
+    res = "(anonymous)";
 
   res += " at ";
 
