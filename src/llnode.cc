@@ -58,10 +58,12 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
 
 namespace lldb {
 
-bool PluginInitialize(lldb::SBDebugger d) {
-  lldb::SBCommandInterpreter interpreter = d.GetCommandInterpreter();
+bool PluginInitialize(SBDebugger d) {
+  SBCommandInterpreter interpreter = d.GetCommandInterpreter();
 
-  interpreter.AddCommand("v8bt",
+  SBCommand v8 = interpreter.AddMultiwordCommand("v8", "Node.js helpers");
+
+  v8.AddCommand("bt",
       new llnode::BacktraceCmd(),
       "Print node.js backtrace");
 
