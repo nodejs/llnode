@@ -20,35 +20,35 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
   // Load V8 constants from postmortem data
   V8 v8(target);
 
-  result.Printf(" * thread #%u: tid 0x%04x\n", thread.GetIndexID(),
-      static_cast<unsigned int>(thread.GetThreadID()));
+  {
+    SBStream desc;
+    if (!thread.GetDescription(desc)) return false;
+    result.Printf(" * %s", desc.GetData());
+  }
 
   SBFrame selected_frame = thread.GetSelectedFrame();
 
   uint32_t num_frames = thread.GetNumFrames();
   for (uint32_t i = 0; i < num_frames; i++) {
     SBFrame frame = thread.GetFrameAtIndex(i);
+    SBSymbol symbol = frame.GetSymbol();
+
+    // C++ symbol
+    if (symbol.IsValid()) {
+      SBStream desc;
+      if (!frame.GetDescription(desc)) return false;
+      result.Printf(frame == selected_frame ? "  * %s" : "    %s",
+          desc.GetData());
+      continue;
+    }
+
+    // V8 symbol
     result.Printf(
         frame == selected_frame ? "  * frame #%u: 0x%016llx " :
             "    frame #%u: 0x%016llx ",
         i, static_cast<unsigned long long int>(frame.GetPC()));
 
-    SBSymbol symbol = frame.GetSymbol();
-    if (!symbol.IsValid()) {
-      result.Printf("%s\n", v8.GetJSFrameName(frame.GetFP()).c_str());
-      continue;
-    }
-
-    // C++ Symbol
-    SBLineEntry line_entry = frame.GetLineEntry();
-    SBFileSpec file_spec = line_entry.GetFileSpec();
-    if (!file_spec.IsValid()) {
-      result.Printf("%s\n", symbol.GetName());
-      continue;
-    }
-
-    result.Printf("%s at %s:%d\n", symbol.GetName(), file_spec.GetFilename(),
-        line_entry.GetLine());
+    result.Printf("%s\n", v8.GetJSFrameName(frame.GetFP()).c_str());
   }
 
   return true;
