@@ -1,5 +1,5 @@
 #include "src/llnode.h"
-#include "src/v8.h"
+#include "src/llv8.h"
 
 namespace llnode {
 
@@ -18,7 +18,7 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
   }
 
   // Load V8 constants from postmortem data
-  V8 v8(target);
+  LLV8 llv8(target);
 
   {
     SBStream desc;
@@ -48,7 +48,7 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
             "    frame #%u: 0x%016llx ",
         i, static_cast<unsigned long long int>(frame.GetPC()));
 
-    result.Printf("%s\n", v8.GetJSFrameName(frame.GetFP()).c_str());
+    result.Printf("%s\n", llv8.GetJSFrameName(frame.GetFP()).c_str());
   }
 
   return true;

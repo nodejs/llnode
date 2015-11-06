@@ -8,5 +8,11 @@ CXXFLAGS += -I. -I$(LLDB_FOLDER)/include
 
 LDFLAGS += -F$(LLDB_BUILD_DIR) -Wl,-rpath,"$(LLDB_BUILD_DIR)" -framework LLDB
 
-llnode.dylib: src/llnode.cc src/llnode.h src/v8.cc src/v8.h src/v8-inl.h
-	$(CXX) $(CXXFLAGS) -dynamiclib src/llnode.cc src/v8.cc -o $@ $(LDFLAGS)
+SRC += src/llnode.cc
+SRC += src/llv8.cc
+HEADERS += src/llnode.h
+HEADERS += src/llv8.h
+HEADERS += src/llv8-inl.h
+
+llnode.dylib: $(SRC) $(HEADERS)
+	$(CXX) $(CXXFLAGS) -dynamiclib $(SRC) -o $@ $(LDFLAGS)

@@ -1,8 +1,8 @@
 #include <assert.h>
 #include <string.h>
 
-#include "v8.h"
-#include "v8-inl.h"
+#include "llv8.h"
+#include "llv8-inl.h"
 
 namespace llnode {
 
@@ -10,7 +10,7 @@ using namespace lldb;
 
 static std::string kConstantPrefix = std::string("v8dbg_");
 
-V8::V8(SBTarget target) : target_(target), process_(target_.GetProcess()) {
+LLV8::LLV8(SBTarget target) : target_(target), process_(target_.GetProcess()) {
   smi_.kTag = LoadConstant("SmiTag");
   smi_.kTagMask = LoadConstant("SmiTagMask");
   smi_.kShiftSize = LoadConstant("SmiShiftSize");
@@ -75,13 +75,13 @@ V8::V8(SBTarget target) : target_(target), process_(target_.GetProcess()) {
 }
 
 
-int64_t V8::LoadConstant(const char* name) {
+int64_t LLV8::LoadConstant(const char* name) {
   return target_.FindFirstGlobalVariable((kConstantPrefix + name).c_str())
                 .GetValueAsSigned(-1);
 }
 
 
-int64_t V8::LoadPtr(int64_t addr) {
+int64_t LLV8::LoadPtr(int64_t addr) {
   SBError err;
   int64_t value = process_.ReadPointerFromMemory(static_cast<addr_t>(addr),
       err);
@@ -90,7 +90,7 @@ int64_t V8::LoadPtr(int64_t addr) {
 }
 
 
-std::string V8::LoadString(int64_t addr, int64_t length) {
+std::string LLV8::LoadString(int64_t addr, int64_t length) {
   char* buf = new char[length + 1];
   SBError err;
   process_.ReadMemory(static_cast<addr_t>(addr), buf,
@@ -104,7 +104,7 @@ std::string V8::LoadString(int64_t addr, int64_t length) {
 }
 
 
-std::string V8::LoadTwoByteString(int64_t addr, int64_t length) {
+std::string LLV8::LoadTwoByteString(int64_t addr, int64_t length) {
   char* buf = new char[length * 2 + 1];
   SBError err;
   process_.ReadMemory(static_cast<addr_t>(addr), buf,
@@ -121,7 +121,7 @@ std::string V8::LoadTwoByteString(int64_t addr, int64_t length) {
 }
 
 
-int64_t V8::GetType(int64_t addr) {
+int64_t LLV8::GetType(int64_t addr) {
   if (!is_heap_obj(addr))
     return -1;
 
@@ -133,7 +133,7 @@ int64_t V8::GetType(int64_t addr) {
 }
 
 
-std::string V8::GetJSFrameName(addr_t frame) {
+std::string LLV8::GetJSFrameName(addr_t frame) {
   int64_t context = LoadPtr(frame, frame_.kContextOffset);
   if (is_smi(context) && untag_smi(context) == frame_.kAdaptorFrame)
     return std::string("<adaptor>");
@@ -167,7 +167,7 @@ std::string V8::GetJSFrameName(addr_t frame) {
 }
 
 
-std::string V8::GetJSFunctionName(addr_t fn) {
+std::string LLV8::GetJSFunctionName(addr_t fn) {
   int64_t shared_info = LoadHeapField(static_cast<int64_t>(fn),
       js_function_.kSharedInfoOffset);
   int64_t name = LoadHeapField(shared_info, shared_info_.kNameOffset);
@@ -188,7 +188,7 @@ std::string V8::GetJSFunctionName(addr_t fn) {
 }
 
 
-std::string V8::GetSharedInfoPostfix(lldb::addr_t addr) {
+std::string LLV8::GetSharedInfoPostfix(lldb::addr_t addr) {
   int64_t info = static_cast<int64_t>(addr);
   int64_t script = LoadHeapField(info, shared_info_.kScriptOffset);
   if (!is_heap_obj(script)) return std::string();
@@ -210,7 +210,7 @@ std::string V8::GetSharedInfoPostfix(lldb::addr_t addr) {
 }
 
 
-std::string V8::ToString(addr_t value) {
+std::string LLV8::ToString(addr_t value) {
   int64_t obj = static_cast<int64_t>(value);
   int64_t type = GetType(obj);
 

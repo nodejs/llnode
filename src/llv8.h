@@ -1,5 +1,5 @@
-#ifndef SRC_V8_H_
-#define SRC_V8_H_
+#ifndef SRC_LLV8_H_
+#define SRC_LLV8_H_
 
 #include <string>
 
@@ -7,9 +7,9 @@
 
 namespace llnode {
 
-class V8 {
+class LLV8 {
  public:
-  V8(lldb::SBTarget target);
+  LLV8(lldb::SBTarget target);
 
   std::string GetJSFrameName(lldb::addr_t frame);
   std::string GetJSFunctionName(lldb::addr_t fn);
@@ -122,4 +122,4 @@ class V8 {
 
 }  // namespace llnode
 
-#endif  // SRC_V8_H_
+#endif  // SRC_LLV8_H_
