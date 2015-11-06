@@ -190,6 +190,15 @@ class FixedArray : public FixedArrayBase {
   std::string Inspect(Error& err);
 };
 
+class Oddball : public HeapObject {
+ public:
+  V8_VALUE_DEFAULT_METHODS(Oddball, HeapObject)
+
+  inline Smi Kind(Error& err);
+
+  std::string Inspect(Error& err);
+};
+
 class JSFrame : public Value {
  public:
   V8_VALUE_DEFAULT_METHODS(JSFrame, Value)
@@ -303,6 +312,17 @@ class LLV8 {
   } fixed_array_;
 
   struct {
+    int64_t kKindOffset;
+
+    int64_t kException;
+    int64_t kFalse;
+    int64_t kTrue;
+    int64_t kUndefined;
+    int64_t kTheHole;
+    int64_t kUninitialized;
+  } oddball_;
+
+  struct {
     int64_t kContextOffset;
     int64_t kFunctionOffset;
     int64_t kArgsOffset;
@@ -322,6 +342,7 @@ class LLV8 {
     int64_t kFirstNonstringType;
 
     int64_t kGlobalObjectType;
+    int64_t kOddballType;
     int64_t kJSObjectType;
     int64_t kCodeType;
     int64_t kJSFunctionType;
@@ -343,6 +364,7 @@ class LLV8 {
   friend class SlicedString;
   friend class FixedArrayBase;
   friend class FixedArray;
+  friend class Oddball;
 };
 
 #undef V8_VALUE_DEFAULT_METHODS

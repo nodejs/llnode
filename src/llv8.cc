@@ -78,6 +78,15 @@ LLV8::LLV8(SBTarget target) : target_(target), process_(target_.GetProcess()) {
 
   fixed_array_.kDataOffset = LoadConstant("class_FixedArray__data__uintptr_t");
 
+  oddball_.kKindOffset = LoadConstant("class_Oddball__kind_offset__int");
+
+  oddball_.kException = LoadConstant("OddballException");
+  oddball_.kFalse = LoadConstant("OddballFalse");
+  oddball_.kTrue = LoadConstant("OddballTrue");
+  oddball_.kUndefined = LoadConstant("OddballUndefined");
+  oddball_.kTheHole = LoadConstant("OddballTheHole");
+  oddball_.kUninitialized = LoadConstant("OddballUninitialized");
+
   frame_.kContextOffset = LoadConstant("off_fp_context");
   frame_.kFunctionOffset = LoadConstant("off_fp_function");
   frame_.kArgsOffset = LoadConstant("off_fp_args");
@@ -96,6 +105,8 @@ LLV8::LLV8(SBTarget target) : target_(target), process_(target_.GetProcess()) {
 
   types_.kGlobalObjectType =
       LoadConstant("type_JSGlobalObject__JS_GLOBAL_OBJECT_TYPE");
+  types_.kOddballType =
+      LoadConstant("type_Oddball__ODDBALL_TYPE");
   types_.kJSObjectType =
       LoadConstant("type_JSObject__JS_OBJECT_TYPE");
   types_.kCodeType = LoadConstant("type_Code__CODE_TYPE");
@@ -410,26 +421,36 @@ std::string Value::Inspect(Error& err) {
   int64_t type = obj.GetType(err);
   if (err.Fail()) return std::string();
 
-  if (type == v8()->types_.kGlobalObjectType) return "<global>";
-  if (type == v8()->types_.kJSObjectType) return "<obj>";
-  if (type == v8()->types_.kCodeType) return "<code>";
+  // TODO(indutny): make this configurable
+  char buf[32];
+  snprintf(buf, sizeof(buf), "0x%016llx:", obj.raw());
+  std::string pre = buf;
+
+  if (type == v8()->types_.kGlobalObjectType) return pre + "<global>";
+  if (type == v8()->types_.kJSObjectType) return pre + "<obj>";
+  if (type == v8()->types_.kCodeType) return pre + "<code>";
+
+  if (type == v8()->types_.kOddballType) {
+    Oddball o(this);
+    return pre + o.Inspect(err);
+  }
 
   if (type == v8()->types_.kJSFunctionType) {
     JSFunction fn(this);
-    return fn.Inspect(err);
+    return pre + fn.Inspect(err);
   }
 
   if (type < v8()->types_.kFirstNonstringType) {
     String str(this);
-    return str.Inspect(err);
+    return pre + str.Inspect(err);
   }
 
   if (type == v8()->types_.kFixedArrayType) {
     FixedArray arr(this);
-    return arr.Inspect(err);
+    return pre + arr.Inspect(err);
   }
 
-  return "<unknown value>";
+  return pre + "<unknown value>";
 }
 
 
@@ -482,7 +503,14 @@ std::string String::GetValue(Error& err) {
 
 
 std::string String::Inspect(Error& err) {
-  return "<string: \"" + GetValue(err).substr(0, kInspectSize) + "\">";
+  std::string val = GetValue(err);
+  if (err.Fail()) return std::string();
+
+  // TODO(indutny): add length
+  if (val.length() > kInspectSize)
+    val = val.substr(0, kInspectSize) + "...";
+
+  return "<string: \"" + val + "\">";
 }
 
 
@@ -490,6 +518,21 @@ std::string FixedArray::Inspect(Error& err) {
   Smi length = Length(err);
   if (err.Fail()) return std::string();
   return "<fixed array, len=" + length.ToString(err) + ">";
+}
+
+
+std::string Oddball::Inspect(Error& err) {
+  Smi kind = Kind(err);
+  if (err.Fail()) return std::string();
+
+  int64_t kind_val = kind.GetValue();
+  if (kind_val == v8()->oddball_.kException) return "<exception>";
+  if (kind_val == v8()->oddball_.kFalse) return "<false>";
+  if (kind_val == v8()->oddball_.kTrue) return "<true>";
+  if (kind_val == v8()->oddball_.kUndefined) return "<undefined>";
+  if (kind_val == v8()->oddball_.kTheHole) return "<hole>";
+  if (kind_val == v8()->oddball_.kUninitialized) return "<uninitialized>";
+  return "<oddball>";
 }
 
 }  // namespace v8

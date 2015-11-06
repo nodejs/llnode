@@ -126,6 +126,8 @@ ACCESSOR(SharedFunctionInfo, InferredName, shared_info_.kInferredNameOffset,
          String)
 ACCESSOR(SharedFunctionInfo, GetScript, shared_info_.kScriptOffset, Script)
 
+ACCESSOR(Oddball, Kind, oddball_.kKindOffset, Smi)
+
 // TODO(indutny): this field is a Smi on 32bit
 int64_t SharedFunctionInfo::ParameterCount(Error& err) {
   int64_t field = LoadField(v8()->shared_info_.kParameterCountOffset, err);
