@@ -60,6 +60,7 @@ class Smi : public Value {
   inline int64_t GetValue() const;
 
   std::string ToString(Error& err);
+  std::string Inspect(Error& err);
 };
 
 class HeapObject : public Value {
@@ -93,6 +94,11 @@ class String : public HeapObject {
   inline Smi Length(Error& err);
 
   std::string GetValue(Error& err);
+  std::string Inspect(Error& err);
+
+ private:
+  // TODO(indutny): should be overridable
+  static const int kInspectSize = 16;
 };
 
 class Script : public HeapObject {
@@ -115,6 +121,7 @@ class SharedFunctionInfo : public HeapObject {
   inline String Name(Error& err);
   inline String InferredName(Error& err);
   inline Script GetScript(Error& err);
+  inline int64_t ParameterCount(Error& err);
   inline int64_t StartPosition(Error& err);
 
   std::string GetPostfix(Error& err);
@@ -126,7 +133,8 @@ class JSFunction : public HeapObject {
 
   inline SharedFunctionInfo Info(Error& err);
 
-  std::string GetDebugLine(Error& err);
+  std::string GetDebugLine(std::string args, Error& err);
+  std::string Inspect(Error& err);
 };
 
 class OneByteString : public String {
@@ -178,14 +186,25 @@ class FixedArray : public FixedArrayBase {
   inline T Get(int index, Error& err);
 
   inline int64_t LeaData() const;
+
+  std::string Inspect(Error& err);
+};
+
+class JSFrame : public Value {
+ public:
+  V8_VALUE_DEFAULT_METHODS(JSFrame, Value)
+
+  inline int64_t LeaParamSlot(int slot, int count) const;
+  inline Value GetReceiver(int count, Error &err);
+  inline Value GetParam(int slot, int count, Error &err);
+
+  std::string Inspect(bool with_args, Error& err);
+  std::string InspectArgs(JSFunction fn, Error& err);
 };
 
 class LLV8 {
  public:
   LLV8(lldb::SBTarget target);
-
-  std::string GetJSFrameName(Value frame, Error& err);
-  std::string GetSharedInfoPostfix(SharedFunctionInfo info, Error& err);
 
  private:
   template <class T>
@@ -228,6 +247,7 @@ class LLV8 {
     int64_t kInferredNameOffset;
     int64_t kScriptOffset;
     int64_t kStartPositionOffset;
+    int64_t kParameterCountOffset;
 
     int64_t kStartPositionShift;
   } shared_info_;
@@ -301,12 +321,15 @@ class LLV8 {
   struct {
     int64_t kFirstNonstringType;
 
+    int64_t kGlobalObjectType;
+    int64_t kJSObjectType;
     int64_t kCodeType;
     int64_t kJSFunctionType;
     int64_t kFixedArrayType;
   } types_;
 
   friend class Value;
+  friend class JSFrame;
   friend class Smi;
   friend class HeapObject;
   friend class Map;

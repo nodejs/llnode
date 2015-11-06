@@ -76,6 +76,23 @@ int64_t Map::GetType(Error& err) {
 }
 
 
+int64_t JSFrame::LeaParamSlot(int slot, int count) const {
+  return raw() + v8()->frame_.kArgsOffset +
+      (count - slot - 1) * v8()->kPointerSize;
+}
+
+
+inline Value JSFrame::GetReceiver(int count, Error &err) {
+  return GetParam(-1, count, err);
+}
+
+
+Value JSFrame::GetParam(int slot, int count, Error& err) {
+  int64_t addr = LeaParamSlot(slot, count);
+  return v8()->LoadValue<Value>(addr, err);
+}
+
+
 #define ACCESSOR(CLASS, METHOD, OFF, TYPE)                                    \
     TYPE CLASS::METHOD(Error& err) {                                          \
       return LoadFieldValue<TYPE>(v8()->OFF, err);                            \
@@ -109,6 +126,16 @@ ACCESSOR(SharedFunctionInfo, InferredName, shared_info_.kInferredNameOffset,
          String)
 ACCESSOR(SharedFunctionInfo, GetScript, shared_info_.kScriptOffset, Script)
 
+// TODO(indutny): this field is a Smi on 32bit
+int64_t SharedFunctionInfo::ParameterCount(Error& err) {
+  int64_t field = LoadField(v8()->shared_info_.kParameterCountOffset, err);
+  if (err.Fail()) return -1;
+
+  field &= 0xffffffff;
+  return field;
+}
+
+// TODO(indutny): this field is a Smi on 32bit
 int64_t SharedFunctionInfo::StartPosition(Error& err) {
   int64_t field = LoadField(v8()->shared_info_.kStartPositionOffset, err);
   if (err.Fail()) return -1;
@@ -127,40 +154,6 @@ ACCESSOR(SlicedString, Parent, sliced_string_.kParentOffset, String);
 ACCESSOR(SlicedString, Offset, sliced_string_.kOffsetOffset, Smi);
 
 ACCESSOR(FixedArrayBase, Length, fixed_array_base_.kLengthOffset, Smi);
-
-std::string String::GetValue(Error& err) {
-  int64_t repr = Representation(err);
-  if (err.Fail()) return std::string();
-
-  int64_t encoding = Encoding(err);
-  if (err.Fail()) return std::string();
-
-  if (repr == v8()->string_.kSeqStringTag) {
-    if (encoding == v8()->string_.kOneByteStringTag) {
-      OneByteString one(this);
-      return one.GetValue(err);
-    } else if (encoding == v8()->string_.kTwoByteStringTag) {
-      TwoByteString two(this);
-      return two.GetValue(err);
-    }
-
-    err = Error::Failure("Unsupported seq string encoding");
-    return std::string();
-  }
-
-  if (repr == v8()->string_.kConsStringTag) {
-    ConsString cons(this);
-    return cons.GetValue(err);
-  }
-
-  if (repr == v8()->string_.kSlicedStringTag) {
-    SlicedString sliced(this);
-    return sliced.GetValue(err);
-  }
-
-  err = Error::Failure("Unsupported string representation");
-  return std::string();
-}
 
 std::string OneByteString::GetValue(Error& err) {
   int64_t chars = LeaField(v8()->one_byte_string_.kCharsOffset);

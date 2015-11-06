@@ -12,7 +12,7 @@ using namespace lldb;
 static std::string kConstantPrefix = "v8dbg_";
 
 LLV8::LLV8(SBTarget target) : target_(target), process_(target_.GetProcess()) {
-  kPointerSize = LoadConstant("PointerSizeLog2");
+  kPointerSize = 1 << LoadConstant("PointerSizeLog2");
 
   smi_.kTag = LoadConstant("SmiTag");
   smi_.kTagMask = LoadConstant("SmiTagMask");
@@ -36,6 +36,8 @@ LLV8::LLV8(SBTarget target) : target_(target), process_(target_.GetProcess()) {
       LoadConstant("class_SharedFunctionInfo__script__Object");
   shared_info_.kStartPositionOffset =
       LoadConstant("class_SharedFunctionInfo__start_position_and_type__SMI");
+  shared_info_.kParameterCountOffset = LoadConstant(
+      "class_SharedFunctionInfo__internal_formal_parameter_count__SMI");
 
   // TODO(indutny): move it to post-mortem
   shared_info_.kStartPositionShift = 2;
@@ -92,6 +94,10 @@ LLV8::LLV8(SBTarget target) : target_(target), process_(target_.GetProcess()) {
 
   types_.kFirstNonstringType = LoadConstant("FirstNonstringType");
 
+  types_.kGlobalObjectType =
+      LoadConstant("type_JSGlobalObject__JS_GLOBAL_OBJECT_TYPE");
+  types_.kJSObjectType =
+      LoadConstant("type_JSObject__JS_OBJECT_TYPE");
   types_.kCodeType = LoadConstant("type_Code__CODE_TYPE");
   types_.kJSFunctionType = LoadConstant("type_JSFunction__JS_FUNCTION_TYPE");
   types_.kFixedArrayType = LoadConstant("type_FixedArray__FIXED_ARRAY_TYPE");
@@ -100,7 +106,7 @@ LLV8::LLV8(SBTarget target) : target_(target), process_(target_.GetProcess()) {
 
 int64_t LLV8::LoadConstant(const char* name) {
   return target_.FindFirstGlobalVariable((kConstantPrefix + name).c_str())
-                .GetValueAsSigned(-1);
+                .GetValueAsSigned(0);
 }
 
 
@@ -180,31 +186,36 @@ uint8_t* LLV8::LoadChunk(int64_t addr, int64_t length, Error& err) {
 }
 
 
-std::string LLV8::GetJSFrameName(Value frame, Error& err) {
-  Value context = LoadValue<Value>(frame.raw() + frame_.kContextOffset, err);
+std::string JSFrame::Inspect(bool with_args, Error& err) {
+  Value context =
+      v8()->LoadValue<Value>(raw() + v8()->frame_.kContextOffset, err);
   if (err.Fail()) return std::string();
 
-  Smi smi_context = Smi(this, context.raw());
-  if (smi_context.Check() && smi_context.GetValue() == frame_.kAdaptorFrame)
+  Smi smi_context = Smi(context);
+  if (smi_context.Check() &&
+      smi_context.GetValue() == v8()->frame_.kAdaptorFrame) {
     return "<adaptor>";
+  }
 
-  Value marker = LoadValue<Value>(frame.raw() + frame_.kMarkerOffset, err);
+  Value marker =
+      v8()->LoadValue<Value>(raw() + v8()->frame_.kMarkerOffset, err);
   if (err.Fail()) return std::string();
 
   Smi smi_marker(marker);
   if (smi_marker.Check()) {
     int64_t value = smi_marker.GetValue();
-    if (value == frame_.kEntryFrame) {
+    if (value == v8()->frame_.kEntryFrame) {
       return "<entry>";
-    } else if (value == frame_.kEntryConstructFrame) {
+    } else if (value == v8()->frame_.kEntryConstructFrame) {
       return "<entry_construct>";
-    } else if (value == frame_.kExitFrame) {
+    } else if (value == v8()->frame_.kExitFrame) {
       return "<exit>";
-    } else if (value == frame_.kInternalFrame) {
+    } else if (value == v8()->frame_.kInternalFrame) {
       return "<internal>";
-    } else if (value == frame_.kConstructFrame) {
+    } else if (value == v8()->frame_.kConstructFrame) {
       return "<constructor>";
-    } else if (value != frame_.kJSFrame && value != frame_.kOptimizedFrame) {
+    } else if (value != v8()->frame_.kJSFrame &&
+               value != v8()->frame_.kOptimizedFrame) {
       err = Error::Failure("Unknown frame marker");
       return std::string();
     }
@@ -212,23 +223,51 @@ std::string LLV8::GetJSFrameName(Value frame, Error& err) {
 
   // We are dealing with function or internal code (probably stub)
   JSFunction fn =
-      LoadValue<JSFunction>(frame.raw() + frame_.kFunctionOffset, err);
-  if (err.Fail()) return std::string();
-
-  LoadValue<HeapObject>(frame.raw() + frame_.kArgsOffset, err);
+      v8()->LoadValue<JSFunction>(raw() + v8()->frame_.kFunctionOffset, err);
   if (err.Fail()) return std::string();
 
   int64_t fn_type = fn.GetType(err);
   if (err.Fail()) return std::string();
 
-  if (fn_type == types_.kCodeType) return "<internal code>";
-  if (fn_type != types_.kJSFunctionType) return "<non-function>";
+  if (fn_type == v8()->types_.kCodeType) return "<internal code>";
+  if (fn_type != v8()->types_.kJSFunctionType) return "<non-function>";
 
-  return fn.GetDebugLine(err);
+  std::string args;
+  if (with_args) {
+    args = InspectArgs(fn, err);
+    if (err.Fail()) return std::string();
+  }
+
+  return fn.GetDebugLine(args, err);
 }
 
 
-std::string JSFunction::GetDebugLine(Error& err) {
+std::string JSFrame::InspectArgs(JSFunction fn, Error& err) {
+  SharedFunctionInfo info = fn.Info(err);
+  if (err.Fail()) return std::string();
+
+  int64_t param_count = info.ParameterCount(err);
+  if (err.Fail()) return std::string();
+
+  Value receiver = GetReceiver(param_count, err);
+  if (err.Fail()) return std::string();
+
+  std::string res = "this=" + receiver.Inspect(err);
+  if (err.Fail()) return std::string();
+
+  for (int64_t i = 0; i < param_count; i++) {
+    Value param = GetParam(i, param_count, err);
+    if (err.Fail()) return std::string();
+
+    res += ", " + param.Inspect(err);
+    if (err.Fail()) return std::string();
+  }
+
+  return res;
+}
+
+
+std::string JSFunction::GetDebugLine(std::string args, Error& err) {
   SharedFunctionInfo info = Info(err);
   if (err.Fail()) return std::string();
 
@@ -246,6 +285,8 @@ std::string JSFunction::GetDebugLine(Error& err) {
 
   if (res.empty())
     res = "(anonymous)";
+  if (!args.empty())
+    res += "(" + args + ")";
 
   res += " at ";
 
@@ -255,6 +296,11 @@ std::string JSFunction::GetDebugLine(Error& err) {
   if (err.Fail()) return std::string();
 
   return res;
+}
+
+
+std::string JSFunction::Inspect(Error& err) {
+  return "<function: " + GetDebugLine(std::string(), err) + ">";
 }
 
 
@@ -353,7 +399,7 @@ int64_t Script::ComputeLineFromPos(int64_t pos, Error& err) {
 std::string Value::Inspect(Error& err) {
   Smi smi(this);
   if (smi.Check())
-    return "<smi: " + smi.ToString(err) + ">";
+    return smi.Inspect(err);
 
   HeapObject obj(this);
   if (!obj.Check()) {
@@ -364,15 +410,26 @@ std::string Value::Inspect(Error& err) {
   int64_t type = obj.GetType(err);
   if (err.Fail()) return std::string();
 
+  if (type == v8()->types_.kGlobalObjectType) return "<global>";
+  if (type == v8()->types_.kJSObjectType) return "<obj>";
+  if (type == v8()->types_.kCodeType) return "<code>";
+
   if (type == v8()->types_.kJSFunctionType) {
     JSFunction fn(this);
-    return "<function: " + fn.GetDebugLine(err) + ">";
+    return fn.Inspect(err);
   }
 
-  if (type > v8()->types_.kFirstNonstringType) return "<unknown non-string>";
+  if (type < v8()->types_.kFirstNonstringType) {
+    String str(this);
+    return str.Inspect(err);
+  }
 
-  String str(this);
-  return "<string: " + str.GetValue(err) + ">";
+  if (type == v8()->types_.kFixedArrayType) {
+    FixedArray arr(this);
+    return arr.Inspect(err);
+  }
+
+  return "<unknown value>";
 }
 
 
@@ -381,6 +438,58 @@ std::string Smi::ToString(Error& err) {
   snprintf(buf, sizeof(buf), "%d", static_cast<int>(GetValue()));
   err = Error::Ok();
   return buf;
+}
+
+
+std::string Smi::Inspect(Error& err) {
+  return "<smi: " + ToString(err) + ">";
+}
+
+
+std::string String::GetValue(Error& err) {
+  int64_t repr = Representation(err);
+  if (err.Fail()) return std::string();
+
+  int64_t encoding = Encoding(err);
+  if (err.Fail()) return std::string();
+
+  if (repr == v8()->string_.kSeqStringTag) {
+    if (encoding == v8()->string_.kOneByteStringTag) {
+      OneByteString one(this);
+      return one.GetValue(err);
+    } else if (encoding == v8()->string_.kTwoByteStringTag) {
+      TwoByteString two(this);
+      return two.GetValue(err);
+    }
+
+    err = Error::Failure("Unsupported seq string encoding");
+    return std::string();
+  }
+
+  if (repr == v8()->string_.kConsStringTag) {
+    ConsString cons(this);
+    return cons.GetValue(err);
+  }
+
+  if (repr == v8()->string_.kSlicedStringTag) {
+    SlicedString sliced(this);
+    return sliced.GetValue(err);
+  }
+
+  err = Error::Failure("Unsupported string representation");
+  return std::string();
+}
+
+
+std::string String::Inspect(Error& err) {
+  return "<string: \"" + GetValue(err).substr(0, kInspectSize) + "\">";
+}
+
+
+std::string FixedArray::Inspect(Error& err) {
+  Smi length = Length(err);
+  if (err.Fail()) return std::string();
+  return "<fixed array, len=" + length.ToString(err) + ">";
 }
 
 }  // namespace v8

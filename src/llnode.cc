@@ -43,8 +43,8 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
 
     // V8 frame
     v8::Error err;
-    v8::Value v8_frame(&llv8, static_cast<int64_t>(frame.GetFP()));
-    std::string res = llv8.GetJSFrameName(v8_frame, err);
+    v8::JSFrame v8_frame(&llv8, static_cast<int64_t>(frame.GetFP()));
+    std::string res = v8_frame.Inspect(true, err);
 
     // Skip invalid frames
     if (err.Fail()) continue;
