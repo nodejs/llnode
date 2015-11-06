@@ -65,10 +65,16 @@ bool PrintCmd::DoExecute(SBDebugger d, char** cmd,
     return false;
   }
 
+  std::string full_cmd;
+  for (char** start = cmd; *start != nullptr; start++)
+    full_cmd += *start;
+
   SBExpressionOptions options;
-  SBValue value = target.EvaluateExpression(cmd[0], options);
-  if (!value.IsValid()) {
-    result.SetError("Invalid expression");
+  SBValue value = target.EvaluateExpression(full_cmd.c_str(), options);
+  if (value.GetError().Fail()) {
+    SBStream desc;
+    if (!value.GetError().GetDescription(desc)) return false;
+    result.SetError(desc.GetData());
     return false;
   }
 
@@ -76,8 +82,10 @@ bool PrintCmd::DoExecute(SBDebugger d, char** cmd,
   LLV8 llv8(target);
 
   std::string res;
-  if (!llv8.ToString(static_cast<addr_t>(value.GetValueAsUnsigned()), res))
+  if (!llv8.ToString(static_cast<addr_t>(value.GetValueAsUnsigned()), res)) {
+    result.SetError("Failed to evaluate expression");
     return false;
+  }
 
   result.Printf("%s\n", res.c_str());
 
