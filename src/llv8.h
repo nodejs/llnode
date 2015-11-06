@@ -45,7 +45,7 @@ class Value {
   inline int64_t raw() const { return raw_; }
   inline LLV8* v8() const { return v8_; }
 
-  std::string ToString(Error& err);
+  std::string Inspect(Error& err);
 
  protected:
   LLV8* v8_;

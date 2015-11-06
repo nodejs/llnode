@@ -86,7 +86,7 @@ bool PrintCmd::DoExecute(SBDebugger d, char** cmd,
 
   v8::Value v8_value(&llv8, value.GetValueAsSigned());
   v8::Error err;
-  std::string res = v8_value.ToString(err);
+  std::string res = v8_value.Inspect(err);
   if (err.Fail()) {
     result.SetError("Failed to evaluate expression");
     return false;

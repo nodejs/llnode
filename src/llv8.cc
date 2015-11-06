@@ -350,7 +350,7 @@ int64_t Script::ComputeLineFromPos(int64_t pos, Error& err) {
 }
 
 
-std::string Value::ToString(Error& err) {
+std::string Value::Inspect(Error& err) {
   Smi smi(this);
   if (smi.Check())
     return "<smi: " + smi.ToString(err) + ">";
