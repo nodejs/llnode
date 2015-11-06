@@ -9,7 +9,17 @@ namespace llnode {
 
 class BacktraceCmd : public lldb::SBCommandPluginInterface {
  public:
-  ~BacktraceCmd() override;
+  ~BacktraceCmd() override {
+  }
+
+  bool DoExecute(lldb::SBDebugger d, char** cmd,
+                 lldb::SBCommandReturnObject& result) override;
+};
+
+class PrintCmd : public lldb::SBCommandPluginInterface {
+ public:
+  ~PrintCmd() override {
+  }
 
   bool DoExecute(lldb::SBDebugger d, char** cmd,
                  lldb::SBCommandReturnObject& result) override;

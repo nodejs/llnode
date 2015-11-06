@@ -1,12 +1,11 @@
+#include <lldb/API/SBExpressionOptions.h>
+
 #include "src/llnode.h"
 #include "src/llv8.h"
 
 namespace llnode {
 
 using namespace lldb;
-
-BacktraceCmd::~BacktraceCmd() {
-}
 
 bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
                              SBCommandReturnObject& result) {
@@ -36,20 +35,51 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
     // C++ symbol
     if (symbol.IsValid()) {
       SBStream desc;
-      if (!frame.GetDescription(desc)) return false;
+      if (!frame.GetDescription(desc)) continue;
       result.Printf(frame == selected_frame ? "  * %s" : "    %s",
           desc.GetData());
       continue;
     }
 
+    // Skip invalid frames
+    std::string res;
+    if (!llv8.GetJSFrameName(frame.GetFP(), res))
+      continue;
+
     // V8 symbol
     result.Printf(
-        frame == selected_frame ? "  * frame #%u: 0x%016llx " :
-            "    frame #%u: 0x%016llx ",
-        i, static_cast<unsigned long long int>(frame.GetPC()));
-
-    result.Printf("%s\n", llv8.GetJSFrameName(frame.GetFP()).c_str());
+        frame == selected_frame ? "  * frame #%u: 0x%016llx %s\n" :
+            "    frame #%u: 0x%016llx %s\n",
+        i, static_cast<unsigned long long int>(frame.GetPC()), res.c_str());
   }
+
+  return true;
+}
+
+
+bool PrintCmd::DoExecute(SBDebugger d, char** cmd,
+                         SBCommandReturnObject& result) {
+  SBTarget target = d.GetSelectedTarget();
+  if (!target.IsValid()) {
+    result.SetError("No valid process, please start something\n");
+    return false;
+  }
+
+  SBExpressionOptions options;
+  SBValue value = target.EvaluateExpression(cmd[0], options);
+  if (!value.IsValid()) {
+    result.SetError("Invalid expression");
+    return false;
+  }
+
+  // Load V8 constants from postmortem data
+  LLV8 llv8(target);
+
+  std::string res;
+  if (!llv8.ToString(static_cast<addr_t>(value.GetValueAsUnsigned()), res))
+    return false;
+
+  result.Printf("%s\n", res.c_str());
 
   return true;
 }
@@ -63,9 +93,8 @@ bool PluginInitialize(SBDebugger d) {
 
   SBCommand v8 = interpreter.AddMultiwordCommand("v8", "Node.js helpers");
 
-  v8.AddCommand("bt",
-      new llnode::BacktraceCmd(),
-      "Print node.js backtrace");
+  v8.AddCommand("bt", new llnode::BacktraceCmd(), "Print node.js backtrace");
+  v8.AddCommand("print", new llnode::PrintCmd(), "Print JavaScript value");
 
   return true;
 }

@@ -11,27 +11,27 @@ class LLV8 {
  public:
   LLV8(lldb::SBTarget target);
 
-  std::string GetJSFrameName(lldb::addr_t frame);
-  std::string GetJSFunctionName(lldb::addr_t fn);
-  std::string GetSharedInfoPostfix(lldb::addr_t addr);
-  std::string ToString(lldb::addr_t value);
+  bool GetJSFrameName(lldb::addr_t frame, std::string& out);
+  bool GetJSFunctionName(lldb::addr_t fn, std::string& out);
+  bool GetSharedInfoPostfix(lldb::addr_t addr, std::string& out);
+  bool ToString(lldb::addr_t value, std::string& out);
 
  private:
   bool is_smi(int64_t value) const;
   int64_t untag_smi(int64_t value) const;
   bool is_heap_obj(int64_t value) const;
 
-  inline int64_t LoadPtr(lldb::addr_t addr, int64_t off = 0);
+  inline bool LoadPtr(lldb::addr_t addr, int64_t off, int64_t* out);
   inline int64_t LeaHeapField(int64_t addr, int64_t off);
-  inline int64_t LoadHeapField(int64_t addr, int64_t off);
-  inline int64_t GetMap(int64_t addr);
+  inline bool LoadHeapField(int64_t addr, int64_t off, int64_t* out);
+  inline bool GetMap(int64_t addr, int64_t* map);
 
   int64_t LoadConstant(const char* name);
-  int64_t LoadPtr(int64_t addr);
-  std::string LoadString(int64_t addr, int64_t length);
-  std::string LoadTwoByteString(int64_t addr, int64_t length);
+  bool LoadPtr(int64_t addr, int64_t* out);
+  bool LoadString(int64_t addr, int64_t length, std::string& out);
+  bool LoadTwoByteString(int64_t addr, int64_t length, std::string& out);
 
-  int64_t GetType(int64_t addr);
+  bool GetType(int64_t addr, int64_t* out);
 
   lldb::SBTarget target_;
   lldb::SBProcess process_;

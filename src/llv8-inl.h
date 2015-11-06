@@ -20,8 +20,8 @@ bool LLV8::is_heap_obj(int64_t value) const {
 }
 
 
-inline int64_t LLV8::LoadPtr(lldb::addr_t addr, int64_t off) {
-  return LoadPtr(static_cast<int64_t>(addr) + off);
+inline bool LLV8::LoadPtr(lldb::addr_t addr, int64_t off, int64_t* out) {
+  return LoadPtr(static_cast<int64_t>(addr) + off, out);
 }
 
 
@@ -30,13 +30,13 @@ inline int64_t LLV8::LeaHeapField(int64_t addr, int64_t off) {
 }
 
 
-inline int64_t LLV8::LoadHeapField(int64_t addr, int64_t off) {
-  return LoadPtr(LeaHeapField(addr, off));
+inline bool LLV8::LoadHeapField(int64_t addr, int64_t off, int64_t* out) {
+  return LoadPtr(LeaHeapField(addr, off), out);
 }
 
 
-inline int64_t LLV8::GetMap(int64_t addr) {
-  return LoadHeapField(addr, heap_obj_.kMapOffset);
+inline bool LLV8::GetMap(int64_t addr, int64_t* out) {
+  return LoadHeapField(addr, heap_obj_.kMapOffset, out);
 }
 
 }  // namespace llnode
