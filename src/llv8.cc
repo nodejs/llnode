@@ -12,6 +12,8 @@ using namespace lldb;
 static std::string kConstantPrefix = "v8dbg_";
 
 LLV8::LLV8(SBTarget target) : target_(target), process_(target_.GetProcess()) {
+  kPointerSize = LoadConstant("PointerSizeLog2");
+
   smi_.kTag = LoadConstant("SmiTag");
   smi_.kTagMask = LoadConstant("SmiTagMask");
   smi_.kShiftSize = LoadConstant("SmiShiftSize");
@@ -39,6 +41,9 @@ LLV8::LLV8(SBTarget target) : target_(target), process_(target_.GetProcess()) {
   shared_info_.kStartPositionShift = 2;
 
   script_.kNameOffset = LoadConstant("class_Script__name__Object");
+  script_.kLineOffsetOffset = LoadConstant("class_Script__line_offset__SMI");
+  script_.kSourceOffset = LoadConstant("class_Script__source__Object");
+  script_.kLineEndsOffset = LoadConstant("class_Script__line_ends__Object");
 
   string_.kEncodingMask = LoadConstant("StringEncodingMask");
   string_.kRepresentationMask = LoadConstant("StringRepresentationMask");
@@ -47,6 +52,8 @@ LLV8::LLV8(SBTarget target) : target_(target), process_(target_.GetProcess()) {
   string_.kTwoByteStringTag = LoadConstant("TwoByteStringTag");
   string_.kSeqStringTag = LoadConstant("SeqStringTag");
   string_.kConsStringTag = LoadConstant("ConsStringTag");
+  string_.kSlicedStringTag = LoadConstant("SlicedStringTag");
+  string_.kExternalStringTag = LoadConstant("ExternalStringTag");
 
   string_.kLengthOffset = LoadConstant("class_String__length__SMI");
 
@@ -58,6 +65,16 @@ LLV8::LLV8(SBTarget target) : target_(target), process_(target_.GetProcess()) {
 
   cons_string_.kFirstOffset = LoadConstant("class_ConsString__first__String");
   cons_string_.kSecondOffset = LoadConstant("class_ConsString__second__String");
+
+  sliced_string_.kParentOffset =
+      LoadConstant("class_SlicedString__parent__String");
+  sliced_string_.kOffsetOffset =
+      LoadConstant("class_SlicedString__offset__SMI");
+
+  fixed_array_base_.kLengthOffset =
+      LoadConstant("class_FixedArrayBase__length__SMI");
+
+  fixed_array_.kDataOffset = LoadConstant("class_FixedArray__data__uintptr_t");
 
   frame_.kContextOffset = LoadConstant("off_fp_context");
   frame_.kFunctionOffset = LoadConstant("off_fp_function");
@@ -77,6 +94,7 @@ LLV8::LLV8(SBTarget target) : target_(target), process_(target_.GetProcess()) {
 
   types_.kCodeType = LoadConstant("type_Code__CODE_TYPE");
   types_.kJSFunctionType = LoadConstant("type_JSFunction__JS_FUNCTION_TYPE");
+  types_.kFixedArrayType = LoadConstant("type_FixedArray__FIXED_ARRAY_TYPE");
 }
 
 
@@ -109,6 +127,7 @@ std::string LLV8::LoadString(int64_t addr, int64_t length, Error& err) {
   if (sberr.Fail()) {
     // TODO(indutny): add more information
     err = Error::Failure("Failed to load V8 one byte string");
+    delete[] buf;
     return std::string();
   }
 
@@ -129,6 +148,7 @@ std::string LLV8::LoadTwoByteString(int64_t addr, int64_t length, Error& err) {
   if (sberr.Fail()) {
     // TODO(indutny): add more information
     err = Error::Failure("Failed to load V8 one byte string");
+    delete[] buf;
     return std::string();
   }
 
@@ -140,6 +160,23 @@ std::string LLV8::LoadTwoByteString(int64_t addr, int64_t length, Error& err) {
   delete[] buf;
   err = Error::Ok();
   return res;
+}
+
+
+uint8_t* LLV8::LoadChunk(int64_t addr, int64_t length, Error& err) {
+  uint8_t* buf = new uint8_t[length];
+  SBError sberr;
+  process_.ReadMemory(static_cast<addr_t>(addr), buf,
+      static_cast<size_t>(length), sberr);
+  if (sberr.Fail()) {
+    // TODO(indutny): add more information
+    err = Error::Failure("Failed to load V8 memory chunk");
+    delete[] buf;
+    return nullptr;
+  }
+
+  err = Error::Ok();
+  return buf;
 }
 
 
@@ -198,12 +235,12 @@ std::string JSFunction::GetDebugLine(Error& err) {
   String name = info.Name(err);
   if (err.Fail()) return std::string();
 
-  std::string res = name.ToString(err);
+  std::string res = name.GetValue(err);
   if (err.Fail()) {
     name = info.InferredName(err);
     if (err.Fail()) return std::string();
 
-    res = name.ToString(err);
+    res = name.GetValue(err);
     if (err.Fail()) return std::string();
   }
 
@@ -231,22 +268,92 @@ std::string SharedFunctionInfo::GetPostfix(Error& err) {
   int64_t start_pos = StartPosition(err);
   if (err.Fail()) return std::string();
 
-  std::string res = name.ToString(err);
+  std::string res = name.GetValue(err);
   if (res.empty())
     res = "(no script)";
 
+  int64_t line = script.GetLineFromPos(start_pos, err);
+  if (err.Fail()) return std::string();
+
   char buf[1024];
-  snprintf(buf, sizeof(buf), ":%d", static_cast<int>(start_pos));
+  snprintf(buf, sizeof(buf), ":%d", static_cast<int>(line));
   res += buf;
 
   return res;
 }
 
 
+int64_t Script::GetLineFromPos(int64_t pos, Error& err) {
+  HeapObject obj = LineEnds(err);
+  if (err.Fail()) return -1;
+
+  int64_t type = obj.GetType(err);
+  if (err.Fail()) return -1;
+
+  // Possibly `undefined`, calculate line pos
+  if (type != v8()->types_.kFixedArrayType) return ComputeLineFromPos(pos, err);
+
+  FixedArray arr(obj);
+  Smi smi_len = arr.Length(err);
+  if (err.Fail()) return -1;
+
+  int64_t length = smi_len.GetValue();
+
+  if (length == 0) return -1;
+
+  Smi first = arr.Get<Smi>(0, err);
+  if (err.Fail()) return -1;
+
+  Smi line_offset = LineOffset(err);
+  if (err.Fail()) return -1;
+
+  if (first.GetValue() >= pos) return line_offset.GetValue();
+
+  int left = 0;
+  int right = length;
+  while (int half = (right - left) / 2) {
+    Smi elem = arr.Get<Smi>(left + half, err);
+    if (err.Fail()) return -1;
+
+    if (elem.GetValue() > pos) {
+      right -= half;
+    } else {
+      left += half;
+    }
+  }
+
+  return right + line_offset.GetValue();
+}
+
+
+int64_t Script::ComputeLineFromPos(int64_t pos, Error& err) {
+  HeapObject source = Source(err);
+  if (err.Fail()) return -1;
+
+  int64_t type = source.GetType(err);
+  if (err.Fail()) return -1;
+
+  // No source
+  if (type > v8()->types_.kFirstNonstringType) return pos;
+
+  String str(source);
+  std::string source_str = str.GetValue(err);
+  int64_t limit = source_str.length();
+  if (limit > pos)
+    limit = pos;
+
+  int lines = 1;
+  for (int64_t i = 0; i < limit; i++)
+    if (source_str[i] == '\n' || source_str[i] == '\r') lines++;
+
+  return lines;
+}
+
+
 std::string Value::ToString(Error& err) {
   Smi smi(this);
   if (smi.Check())
-    return smi.ToString(err);
+    return "<smi: " + smi.ToString(err) + ">";
 
   HeapObject obj(this);
   if (!obj.Check()) {
@@ -265,7 +372,7 @@ std::string Value::ToString(Error& err) {
   if (type > v8()->types_.kFirstNonstringType) return "<unknown non-string>";
 
   String str(this);
-  return str.ToString(err);
+  return "<string: " + str.GetValue(err) + ">";
 }
 
 
@@ -274,45 +381,6 @@ std::string Smi::ToString(Error& err) {
   snprintf(buf, sizeof(buf), "%d", static_cast<int>(GetValue()));
   err = Error::Ok();
   return buf;
-}
-
-
-std::string String::ToString(Error& err) {
-  int64_t repr = Representation(err);
-  if (err.Fail()) return std::string();
-
-  int64_t encoding = Encoding(err);
-  if (err.Fail()) return std::string();
-
-  if (repr == v8()->string_.kSeqStringTag) {
-    if (encoding == v8()->string_.kOneByteStringTag) {
-      OneByteString one(this);
-      return one.GetValue(err);
-    } else if (encoding == v8()->string_.kTwoByteStringTag) {
-      TwoByteString two(this);
-      return two.GetValue(err);
-    }
-
-    return "<unsupported string>";
-  }
-
-  if (repr == v8()->string_.kConsStringTag) {
-    ConsString cons(this);
-    String first = cons.First(err);
-    if (err.Fail()) return std::string();
-
-    String second = cons.Second(err);
-    if (err.Fail()) return std::string();
-
-    std::string tmp = first.ToString(err);
-    if (err.Fail()) return std::string();
-    tmp += second.ToString(err);
-    if (err.Fail()) return std::string();
-
-    return tmp;
-  }
-
-  return "<unsupported string>";
 }
 
 }  // namespace v8

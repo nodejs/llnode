@@ -92,7 +92,7 @@ class String : public HeapObject {
   inline int64_t Representation(Error& err);
   inline Smi Length(Error& err);
 
-  std::string ToString(Error& err);
+  std::string GetValue(Error& err);
 };
 
 class Script : public HeapObject {
@@ -100,6 +100,12 @@ class Script : public HeapObject {
   V8_VALUE_DEFAULT_METHODS(Script, HeapObject)
 
   inline String Name(Error& err);
+  inline Smi LineOffset(Error& err);
+  inline HeapObject Source(Error& err);
+  inline HeapObject LineEnds(Error& err);
+
+  int64_t GetLineFromPos(int64_t pos, Error& err);
+  int64_t ComputeLineFromPos(int64_t pos, Error& err);
 };
 
 class SharedFunctionInfo : public HeapObject {
@@ -143,6 +149,35 @@ class ConsString : public String {
 
   inline String First(Error& err);
   inline String Second(Error& err);
+
+  inline std::string GetValue(Error& err);
+};
+
+class SlicedString : public String {
+ public:
+  V8_VALUE_DEFAULT_METHODS(SlicedString, String)
+
+  inline String Parent(Error& err);
+  inline Smi Offset(Error& err);
+
+  inline std::string GetValue(Error& err);
+};
+
+class FixedArrayBase : public HeapObject {
+ public:
+  V8_VALUE_DEFAULT_METHODS(FixedArrayBase, HeapObject);
+
+  inline Smi Length(Error& err);
+};
+
+class FixedArray : public FixedArrayBase {
+ public:
+  V8_VALUE_DEFAULT_METHODS(FixedArray, FixedArrayBase)
+
+  template <class T>
+  inline T Get(int index, Error& err);
+
+  inline int64_t LeaData() const;
 };
 
 class LLV8 {
@@ -160,9 +195,12 @@ class LLV8 {
   int64_t LoadPtr(int64_t addr, Error& err);
   std::string LoadString(int64_t addr, int64_t length, Error& err);
   std::string LoadTwoByteString(int64_t addr, int64_t length, Error& err);
+  uint8_t* LoadChunk(int64_t addr, int64_t length, Error& err);
 
   lldb::SBTarget target_;
   lldb::SBProcess process_;
+
+  int64_t kPointerSize;
 
   struct {
     int64_t kTag;
@@ -196,6 +234,9 @@ class LLV8 {
 
   struct {
     int64_t kNameOffset;
+    int64_t kLineOffsetOffset;
+    int64_t kSourceOffset;
+    int64_t kLineEndsOffset;
   } script_;
 
   struct {
@@ -209,6 +250,8 @@ class LLV8 {
     // Representation
     int64_t kSeqStringTag;
     int64_t kConsStringTag;
+    int64_t kSlicedStringTag;
+    int64_t kExternalStringTag;
 
     int64_t kLengthOffset;
   } string_;
@@ -225,6 +268,19 @@ class LLV8 {
     int64_t kFirstOffset;
     int64_t kSecondOffset;
   } cons_string_;
+
+  struct {
+    int64_t kParentOffset;
+    int64_t kOffsetOffset;
+  } sliced_string_;
+
+  struct {
+    int64_t kLengthOffset;
+  } fixed_array_base_;
+
+  struct {
+    int64_t kDataOffset;
+  } fixed_array_;
 
   struct {
     int64_t kContextOffset;
@@ -247,6 +303,7 @@ class LLV8 {
 
     int64_t kCodeType;
     int64_t kJSFunctionType;
+    int64_t kFixedArrayType;
   } types_;
 
   friend class Value;
@@ -260,6 +317,9 @@ class LLV8 {
   friend class OneByteString;
   friend class TwoByteString;
   friend class ConsString;
+  friend class SlicedString;
+  friend class FixedArrayBase;
+  friend class FixedArray;
 };
 
 #undef V8_VALUE_DEFAULT_METHODS

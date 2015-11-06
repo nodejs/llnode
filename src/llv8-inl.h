@@ -100,6 +100,9 @@ int64_t String::Encoding(Error& err) {
 ACCESSOR(String, Length, string_.kLengthOffset, Smi)
 
 ACCESSOR(Script, Name, script_.kNameOffset, String)
+ACCESSOR(Script, LineOffset, script_.kLineOffsetOffset, Smi)
+ACCESSOR(Script, Source, script_.kSourceOffset, HeapObject)
+ACCESSOR(Script, LineEnds, script_.kLineEndsOffset, HeapObject)
 
 ACCESSOR(SharedFunctionInfo, Name, shared_info_.kNameOffset, String)
 ACCESSOR(SharedFunctionInfo, InferredName, shared_info_.kInferredNameOffset,
@@ -107,13 +110,57 @@ ACCESSOR(SharedFunctionInfo, InferredName, shared_info_.kInferredNameOffset,
 ACCESSOR(SharedFunctionInfo, GetScript, shared_info_.kScriptOffset, Script)
 
 int64_t SharedFunctionInfo::StartPosition(Error& err) {
-  Smi field = LoadFieldValue<Smi>(v8()->shared_info_.kStartPositionOffset, err);
+  int64_t field = LoadField(v8()->shared_info_.kStartPositionOffset, err);
   if (err.Fail()) return -1;
 
-  return field.GetValue() >> v8()->shared_info_.kStartPositionShift;
+  field &= 0xffffffff;
+  field >>= v8()->shared_info_.kStartPositionShift;
+  return field;
 }
 
 ACCESSOR(JSFunction, Info, js_function_.kSharedInfoOffset, SharedFunctionInfo);
+
+ACCESSOR(ConsString, First, cons_string_.kFirstOffset, String);
+ACCESSOR(ConsString, Second, cons_string_.kSecondOffset, String);
+
+ACCESSOR(SlicedString, Parent, sliced_string_.kParentOffset, String);
+ACCESSOR(SlicedString, Offset, sliced_string_.kOffsetOffset, Smi);
+
+ACCESSOR(FixedArrayBase, Length, fixed_array_base_.kLengthOffset, Smi);
+
+std::string String::GetValue(Error& err) {
+  int64_t repr = Representation(err);
+  if (err.Fail()) return std::string();
+
+  int64_t encoding = Encoding(err);
+  if (err.Fail()) return std::string();
+
+  if (repr == v8()->string_.kSeqStringTag) {
+    if (encoding == v8()->string_.kOneByteStringTag) {
+      OneByteString one(this);
+      return one.GetValue(err);
+    } else if (encoding == v8()->string_.kTwoByteStringTag) {
+      TwoByteString two(this);
+      return two.GetValue(err);
+    }
+
+    err = Error::Failure("Unsupported seq string encoding");
+    return std::string();
+  }
+
+  if (repr == v8()->string_.kConsStringTag) {
+    ConsString cons(this);
+    return cons.GetValue(err);
+  }
+
+  if (repr == v8()->string_.kSlicedStringTag) {
+    SlicedString sliced(this);
+    return sliced.GetValue(err);
+  }
+
+  err = Error::Failure("Unsupported string representation");
+  return std::string();
+}
 
 std::string OneByteString::GetValue(Error& err) {
   int64_t chars = LeaField(v8()->one_byte_string_.kCharsOffset);
@@ -129,8 +176,46 @@ std::string TwoByteString::GetValue(Error& err) {
   return v8()->LoadTwoByteString(chars, len.GetValue(), err);
 }
 
-ACCESSOR(ConsString, First, cons_string_.kFirstOffset, String);
-ACCESSOR(ConsString, Second, cons_string_.kSecondOffset, String);
+std::string ConsString::GetValue(Error& err) {
+  String first = First(err);
+  if (err.Fail()) return std::string();
+
+  String second = Second(err);
+  if (err.Fail()) return std::string();
+
+  std::string tmp = first.GetValue(err);
+  if (err.Fail()) return std::string();
+  tmp += second.GetValue(err);
+  if (err.Fail()) return std::string();
+
+  return tmp;
+}
+
+std::string SlicedString::GetValue(Error& err) {
+  String parent = Parent(err);
+  if (err.Fail()) return std::string();
+
+  Smi offset = Offset(err);
+  if (err.Fail()) return std::string();
+
+  Smi length = Length(err);
+  if (err.Fail()) return std::string();
+
+  std::string tmp = parent.GetValue(err);
+  if (err.Fail()) return std::string();
+
+  return tmp.substr(offset.GetValue(), length.GetValue());
+}
+
+int64_t FixedArray::LeaData() const {
+  return LeaField(v8()->fixed_array_.kDataOffset);
+}
+
+template <class T>
+T FixedArray::Get(int index, Error& err) {
+  int64_t off = v8()->fixed_array_.kDataOffset + index * v8()->kPointerSize;
+  return LoadFieldValue<T>(off, err);
+}
 
 #undef ACCESSOR
 
