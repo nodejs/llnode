@@ -346,6 +346,8 @@ class LLV8 {
   constants::JSArray js_array;
   constants::JSFunction js_function;
   constants::SharedInfo shared_info;
+  constants::ScopeInfo scope_info;
+  constants::Context context;
   constants::Script script;
   constants::String string;
   constants::OneByteString one_byte_string;

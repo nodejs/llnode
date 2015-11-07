@@ -131,6 +131,7 @@ class JSFunction : public Module {
   MODULE_DEFAULT_METHODS(JSFunction);
 
   int64_t kSharedInfoOffset;
+  int64_t kContextOffset;
 
  protected:
   void Load();
@@ -145,8 +146,36 @@ class SharedInfo : public Module {
   int64_t kScriptOffset;
   int64_t kStartPositionOffset;
   int64_t kParameterCountOffset;
+  int64_t kScopeInfoOffset;
 
+  int64_t kStartPositionMask;
   int64_t kStartPositionShift;
+
+ protected:
+  void Load();
+};
+
+class ScopeInfo : public Module {
+ public:
+  MODULE_DEFAULT_METHODS(ScopeInfo);
+
+  int64_t kParameterCountOffset;
+  int64_t kStackLocalCountOffset;
+  int64_t kContextLocalCountOffset;
+  int64_t kVariablePartIndex;
+
+ protected:
+  void Load();
+};
+
+class Context : public Module {
+ public:
+  MODULE_DEFAULT_METHODS(Context);
+
+  int64_t kClosureIndex;
+  int64_t kGlobalObjectIndex;
+  int64_t kPreviousIndex;
+  int64_t kMinContextSlots;
 
  protected:
   void Load();
@@ -279,6 +308,7 @@ class JSArrayBuffer : public Module {
   int64_t kBitFieldOffset;
 
   int64_t kWasNeuteredMask;
+  int64_t kWasNeuteredShift;
 
  protected:
   void Load();
@@ -328,6 +358,7 @@ class NameDictionary : public Module {
   int64_t kValueOffset;
 
   int64_t kEntrySize;
+  int64_t kPrefixStartIndex;
   int64_t kPrefixSize;
 
  protected:

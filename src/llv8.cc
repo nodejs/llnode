@@ -28,6 +28,8 @@ void LLV8::Load(SBTarget target) {
   js_array.Assign(target, &common);
   js_function.Assign(target, &common);
   shared_info.Assign(target, &common);
+  scope_info.Assign(target, &common);
+  context.Assign(target, &common);
   script.Assign(target, &common);
   string.Assign(target, &common);
   one_byte_string.Assign(target, &common);

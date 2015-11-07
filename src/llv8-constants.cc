@@ -89,11 +89,21 @@ void Map::Load() {
 
   kDictionaryMapShift = LoadConstant("bit_field3_dictionary_map_shift");
 
-  // TODO(indutny): PR for more postmortem data
-  static const int64_t kDescriptorIndexBitCount = 10;
-  kNumberOfOwnDescriptorsShift = kDictionaryMapShift - kDescriptorIndexBitCount;
-  kNumberOfOwnDescriptorsMask = (1 << kDescriptorIndexBitCount) - 1;
-  kNumberOfOwnDescriptorsMask <<= kNumberOfOwnDescriptorsShift;
+  kNumberOfOwnDescriptorsShift =
+      LoadConstant("bit_field3_number_of_own_descriptors_shift");
+  kNumberOfOwnDescriptorsMask =
+      LoadConstant("bit_field3_number_of_own_descriptors_mask");
+
+  if (kNumberOfOwnDescriptorsShift == -1) {
+    // TODO(indutny): check v8 version?
+    static const int64_t kDescriptorIndexBitCount = 10;
+
+    kNumberOfOwnDescriptorsShift = kDictionaryMapShift;
+    kNumberOfOwnDescriptorsShift -= kDescriptorIndexBitCount;
+
+    kNumberOfOwnDescriptorsMask = (1 << kDescriptorIndexBitCount) - 1;
+    kNumberOfOwnDescriptorsMask <<= kNumberOfOwnDescriptorsShift;
+  }
 }
 
 
@@ -116,6 +126,15 @@ void JSArray::Load() {
 void JSFunction::Load() {
   kSharedInfoOffset =
       LoadConstant("class_JSFunction__shared__SharedFunctionInfo");
+  kContextOffset =
+      LoadConstant("class_JSFunction__context__Context");
+
+  if (kContextOffset == -1) {
+    common_->Load();
+
+    // TODO(indutny): check V8 version?
+    kContextOffset = kSharedInfoOffset + common_->kPointerSize;
+  }
 }
 
 
@@ -130,8 +149,38 @@ void SharedInfo::Load() {
       "class_SharedFunctionInfo__internal_formal_parameter_count__SMI",
       "class_SharedFunctionInfo__formal_parameter_count__SMI");
 
-  // TODO(indutny): move it to post-mortem
-  kStartPositionShift = 2;
+  // NOTE: Could potentially be -1 on v4 and v5 node, should check in llv8
+  kScopeInfoOffset =
+      LoadConstant("class_SharedFunctionInfo__scope_info__ScopeInfo");
+
+  kStartPositionMask = LoadConstant("sharedfunctioninfo_start_position_mask");
+  kStartPositionShift = LoadConstant("sharedfunctioninfo_start_position_shift");
+
+  if (kStartPositionShift == -1) {
+    // TODO(indutny): check version?
+    kStartPositionShift = 2;
+    kStartPositionMask = ~((1 << kStartPositionShift) - 1);
+  }
+}
+
+
+void ScopeInfo::Load() {
+  kParameterCountOffset =
+      LoadConstant("class_ScopeInfo__context_local_count__Smi");
+  kStackLocalCountOffset =
+      LoadConstant("class_ScopeInfo__parameter_count__Smi");
+  kContextLocalCountOffset =
+      LoadConstant("class_ScopeInfo__stack_local_count__Smi");
+  kVariablePartIndex =
+      LoadConstant("class_ScopeInfo__variable_part_index__int");
+}
+
+
+void Context::Load() {
+  kClosureIndex = LoadConstant("class_Context__closure_index__int");
+  kGlobalObjectIndex = LoadConstant("class_Context__global_object_index__int");
+  kPreviousIndex = LoadConstant("class_Context__previous_index__int");
+  kMinContextSlots = LoadConstant("class_Context__min_context_slots__int");
 }
 
 
@@ -211,7 +260,7 @@ void JSArrayBuffer::Load() {
   kByteLengthOffset = LoadConstant("class_JSArrayBuffer__byte_length__Object");
 
   // v4 compatibility fix
-  if (kBackingStoreOffset == 0) {
+  if (kBackingStoreOffset == -1) {
     common_->Load();
 
     kBackingStoreOffset = kByteLengthOffset + common_->kPointerSize;
@@ -220,8 +269,14 @@ void JSArrayBuffer::Load() {
       kBitFieldOffset += 4;
   }
 
-  // TODO(indutny): move to postmortem info
-  kWasNeuteredMask = 1 << 3;
+  kWasNeuteredMask = LoadConstant("jsarray_buffer_was_neutered_mask");
+  kWasNeuteredShift = LoadConstant("jsarray_buffer_was_neutered_shift");
+
+  if (kWasNeuteredMask == -1) {
+    // TODO(indutny): check V8 version?
+    kWasNeuteredMask = 1 << 3;
+    kWasNeuteredShift = 3;
+  }
 }
 
 
@@ -243,13 +298,22 @@ void DescriptorArray::Load() {
   kPropertyIndexShift = LoadConstant("prop_index_shift");
   kPropertyTypeMask = LoadConstant("prop_type_mask");
 
-  // TODO(indutny): move to postmortem
-  kRepresentationShift = 5;
-  kRepresentationMask = ((1 << 4) - 1) << kRepresentationShift;
+  kRepresentationShift = LoadConstant("prop_representation_shift");
+  kRepresentationMask = LoadConstant("prop_representation_mask");
+
+  if (kRepresentationShift == -1) {
+    // TODO(indutny): check V8 version?
+    kRepresentationShift = 5;
+    kRepresentationMask = ((1 << 4) - 1) << kRepresentationShift;
+  }
 
   kFieldType = LoadConstant("prop_type_field");
-  // TODO(indutny): move to postmortem
-  kRepresentationDouble = 7;
+
+  kRepresentationDouble = LoadConstant("prop_representation_double");
+  if (kRepresentationDouble == -1) {
+    // TODO(indutny): check V8 version?
+    kRepresentationDouble = 7;
+  }
 
   kFirstIndex = LoadConstant("prop_idx_first");
   kSize = LoadConstant("prop_desc_size");
@@ -263,9 +327,15 @@ void NameDictionary::Load() {
 
   kEntrySize = LoadConstant("class_NameDictionaryShape__entry_size__int");
 
-  // TODO(indutny): move extra entry size bytes to postmortem
+  kPrefixStartIndex =
+      LoadConstant("class_NameDictionary__prefix_start_index__int");
+  if (kPrefixStartIndex == -1) {
+    // TODO(indutny): check V8 version?
+    kPrefixStartIndex = kEntrySize;
+  }
+
   kPrefixSize = LoadConstant("class_NameDictionaryShape__prefix_size__int") +
-      kEntrySize;
+      kPrefixStartIndex;
 }
 
 

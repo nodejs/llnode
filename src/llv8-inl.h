@@ -220,7 +220,7 @@ int64_t SharedFunctionInfo::StartPosition(Error& err) {
   int64_t field = LoadField(v8()->shared_info()->kStartPositionOffset, err);
   if (err.Fail()) return -1;
 
-  field &= 0xffffffff;
+  field &= v8()->shared_info()->kStartPositionMask;
   field >>= v8()->shared_info()->kStartPositionShift;
   return field;
 }
@@ -365,7 +365,9 @@ bool JSArrayBuffer::WasNeutered(Error& err) {
   int64_t field = BitField(err);
   if (err.Fail()) return false;
 
-  return (field & v8()->js_array_buffer()->kWasNeuteredMask) != 0;
+  field &= v8()->js_array_buffer()->kWasNeuteredMask;
+  field >>= v8()->js_array_buffer()->kWasNeuteredShift;
+  return field != 0;
 }
 
 #undef ACCESSOR
