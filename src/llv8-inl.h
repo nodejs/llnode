@@ -93,6 +93,14 @@ Value JSFrame::GetParam(int slot, int count, Error& err) {
 }
 
 
+std::string JSFunction::Name(Error& err) {
+  SharedFunctionInfo info = Info(err);
+  if (err.Fail()) return std::string();
+
+  return Name(info, err);
+}
+
+
 #define ACCESSOR(CLASS, METHOD, OFF, TYPE)                                    \
     TYPE CLASS::METHOD(Error& err) {                                          \
       return LoadFieldValue<TYPE>(v8()->OFF, err);                            \
@@ -100,6 +108,8 @@ Value JSFrame::GetParam(int slot, int count, Error& err) {
 
 
 ACCESSOR(HeapObject, GetMap, heap_obj_.kMapOffset, HeapObject)
+
+ACCESSOR(Map, MaybeConstructor, map_.kMaybeConstructorOffset, HeapObject)
 
 int64_t String::Representation(Error& err) {
   int64_t type = GetType(err);

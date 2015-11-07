@@ -24,6 +24,8 @@ LLV8::LLV8(SBTarget target) : target_(target), process_(target_.GetProcess()) {
 
   map_.kInstanceAttrsOffset =
       LoadConstant("class_Map__instance_attributes__int");
+  map_.kMaybeConstructorOffset =
+      LoadConstant("class_Map__constructor_or_backpointer__Object");
 
   js_function_.kSharedInfoOffset =
       LoadConstant("class_JSFunction__shared__SharedFunctionInfo");
@@ -115,6 +117,7 @@ LLV8::LLV8(SBTarget target) : target_(target), process_(target_.GetProcess()) {
 
   types_.kFirstNonstringType = LoadConstant("FirstNonstringType");
 
+  types_.kMapType = LoadConstant("type_Map__MAP_TYPE");
   types_.kGlobalObjectType =
       LoadConstant("type_JSGlobalObject__JS_GLOBAL_OBJECT_TYPE");
   types_.kOddballType = LoadConstant("type_Oddball__ODDBALL_TYPE");
@@ -293,10 +296,7 @@ std::string JSFrame::InspectArgs(JSFunction fn, Error& err) {
 }
 
 
-std::string JSFunction::GetDebugLine(std::string args, Error& err) {
-  SharedFunctionInfo info = Info(err);
-  if (err.Fail()) return std::string();
-
+std::string JSFunction::Name(SharedFunctionInfo info, Error& err) {
   String name = info.Name(err);
   if (err.Fail()) return std::string();
 
@@ -308,6 +308,17 @@ std::string JSFunction::GetDebugLine(std::string args, Error& err) {
     res = name.GetValue(err);
     if (err.Fail()) return std::string();
   }
+
+  return res;
+}
+
+
+std::string JSFunction::GetDebugLine(std::string args, Error& err) {
+  SharedFunctionInfo info = Info(err);
+  if (err.Fail()) return std::string();
+
+  std::string res = Name(info, err);
+  if (err.Fail()) return std::string();
 
   if (res.empty())
     res = "(anonymous)";
@@ -441,10 +452,14 @@ std::string Value::Inspect(Error& err) {
   snprintf(buf, sizeof(buf), "0x%016llx:", obj.raw());
   std::string pre = buf;
 
-  if (type == v8()->types_.kGlobalObjectType) return pre + "<global>";
-  if (type == v8()->types_.kJSObjectType) return pre + "<obj>";
-  if (type == v8()->types_.kJSArrayType) return pre + "<array>";
-  if (type == v8()->types_.kCodeType) return pre + "<code>";
+  if (type == v8()->types_.kGlobalObjectType) return pre + "<Global>";
+  if (type == v8()->types_.kJSArrayType) return pre + "<Array>";
+  if (type == v8()->types_.kCodeType) return pre + "<Code>";
+
+  if (type == v8()->types_.kJSObjectType) {
+    JSObject o(this);
+    return pre + o.Inspect(err);
+  }
 
   if (type == v8()->types_.kOddballType) {
     Oddball o(this);
@@ -476,7 +491,7 @@ std::string Value::Inspect(Error& err) {
     return pre + view.Inspect(err);
   }
 
-  return pre + "<unknown value>";
+  return pre + "<unknown>";
 }
 
 
@@ -489,7 +504,7 @@ std::string Smi::ToString(Error& err) {
 
 
 std::string Smi::Inspect(Error& err) {
-  return "<smi: " + ToString(err) + ">";
+  return "<Smi: " + ToString(err) + ">";
 }
 
 
@@ -536,14 +551,14 @@ std::string String::Inspect(Error& err) {
   if (val.length() > kInspectSize)
     val = val.substr(0, kInspectSize) + "...";
 
-  return "<string: \"" + val + "\">";
+  return "<String: \"" + val + "\">";
 }
 
 
 std::string FixedArray::Inspect(Error& err) {
   Smi length = Length(err);
   if (err.Fail()) return std::string();
-  return "<fixed array, len=" + length.ToString(err) + ">";
+  return "<FixedArray, len=" + length.ToString(err) + ">";
 }
 
 
@@ -558,7 +573,7 @@ std::string Oddball::Inspect(Error& err) {
   if (kind_val == v8()->oddball_.kUndefined) return "<undefined>";
   if (kind_val == v8()->oddball_.kTheHole) return "<hole>";
   if (kind_val == v8()->oddball_.kUninitialized) return "<uninitialized>";
-  return "<oddball>";
+  return "<Oddball>";
 }
 
 
@@ -593,6 +608,43 @@ std::string JSArrayBufferView::Inspect(Error& err) {
   snprintf(tmp, sizeof(tmp), "<ArrayBufferView 0x%016llx+%d:%d>", data,
       static_cast<int>(off.GetValue()), static_cast<int>(length.GetValue()));
   return tmp;
+}
+
+
+HeapObject Map::Constructor(Error& err) {
+  Map current = this;
+
+  do {
+    HeapObject obj = current.MaybeConstructor(err);
+    if (err.Fail()) return current;
+
+    int64_t type = obj.GetType(err);
+    if (err.Fail()) return current;
+
+    current = obj;
+    if (type != v8()->types_.kMapType) break;
+  } while (true);
+
+  return current;
+}
+
+
+std::string JSObject::Inspect(Error& err) {
+  HeapObject map_obj = GetMap(err);
+  if (err.Fail()) return std::string();
+
+  Map map(map_obj);
+  HeapObject constructor_obj = map.Constructor(err);
+  if (err.Fail()) return std::string();
+
+  int64_t constructor_type = constructor_obj.GetType(err);
+  if (err.Fail()) return std::string();
+
+  if (constructor_type != v8()->types_.kJSFunctionType)
+    return "<Object: no constructor>";
+
+  JSFunction constructor(constructor_obj);
+  return "<Object: " + constructor.Name(err) + ">";
 }
 
 }  // namespace v8

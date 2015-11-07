@@ -82,7 +82,10 @@ class Map : public HeapObject {
  public:
   V8_VALUE_DEFAULT_METHODS(Map, HeapObject)
 
-  int64_t GetType(Error& err);
+  inline int64_t GetType(Error& err);
+  inline HeapObject MaybeConstructor(Error& err);
+
+  HeapObject Constructor(Error& err);
 };
 
 class String : public HeapObject {
@@ -132,7 +135,9 @@ class JSFunction : public HeapObject {
   V8_VALUE_DEFAULT_METHODS(JSFunction, HeapObject)
 
   inline SharedFunctionInfo Info(Error& err);
+  inline std::string Name(Error& err);
 
+  std::string Name(SharedFunctionInfo info, Error& err);
   std::string GetDebugLine(std::string args, Error& err);
   std::string Inspect(Error& err);
 };
@@ -169,6 +174,13 @@ class SlicedString : public String {
   inline Smi Offset(Error& err);
 
   inline std::string GetValue(Error& err);
+};
+
+class JSObject : public HeapObject {
+ public:
+  V8_VALUE_DEFAULT_METHODS(JSObject, HeapObject);
+
+  std::string Inspect(Error& err);
 };
 
 class FixedArrayBase : public HeapObject {
@@ -266,6 +278,7 @@ class LLV8 {
 
   struct {
     int64_t kInstanceAttrsOffset;
+    int64_t kMaybeConstructorOffset;
   } map_;
 
   struct {
@@ -373,6 +386,7 @@ class LLV8 {
   struct {
     int64_t kFirstNonstringType;
 
+    int64_t kMapType;
     int64_t kGlobalObjectType;
     int64_t kOddballType;
     int64_t kJSObjectType;
@@ -397,6 +411,7 @@ class LLV8 {
   friend class TwoByteString;
   friend class ConsString;
   friend class SlicedString;
+  friend class JSObject;
   friend class FixedArrayBase;
   friend class FixedArray;
   friend class Oddball;
