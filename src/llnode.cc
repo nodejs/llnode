@@ -120,10 +120,18 @@ bool PluginInitialize(SBDebugger d) {
 
   SBCommand v8 = interpreter.AddMultiwordCommand("v8", "Node.js helpers");
 
-  v8.AddCommand("bt", new llnode::BacktraceCmd(), "Print node.js backtrace");
-  v8.AddCommand("print", new llnode::PrintCmd(false), "Print JavaScript value");
+  v8.AddCommand("bt", new llnode::BacktraceCmd(),
+      "Show a backtrace with node.js JavaScript functions and their args. "
+      "An optional argument is accepted; if that argument is a number, it "
+      "specifies the number of frames to display. Otherwise all frames will "
+      "be dumped.\n\n"
+      "Syntax: v8 bt [number]\n");
+  v8.AddCommand("print", new llnode::PrintCmd(false),
+      "Print short description of the JavaScript value.\n\n"
+      "Syntax: v8 print expr\n");
   v8.AddCommand("inspect", new llnode::PrintCmd(true),
-      "Detailed inspection of JavaScript value");
+      "Print detailed description and contents of the JavaScript value.\n\n"
+      "Syntax: v8 inspect expr\n");
 
   return true;
 }
