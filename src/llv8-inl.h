@@ -101,6 +101,26 @@ std::string JSFunction::Name(Error& err) {
 }
 
 
+bool Map::IsDictionary(Error& err) {
+  int64_t field = BitField3(err);
+  if (err.Fail()) return false;
+
+  return (field & (1 << v8()->map_.kDictionaryMapShift)) != 0;
+}
+
+
+int64_t Map::NumberOfOwnDescriptors(Error& err) {
+  int64_t field = BitField3(err);
+  if (err.Fail()) return false;
+
+  // TODO(indutny): this should really be controlled by postmortem data
+  // Skip EnumLength
+  field >>= (v8()->map_.kDictionaryMapShift - kDescriptorIndexBitCount);
+  field &= (1 << kDescriptorIndexBitCount) - 1;
+  return field;
+}
+
+
 #define ACCESSOR(CLASS, METHOD, OFF, TYPE)                                    \
     TYPE CLASS::METHOD(Error& err) {                                          \
       return LoadFieldValue<TYPE>(v8()->OFF, err);                            \
@@ -110,6 +130,23 @@ std::string JSFunction::Name(Error& err) {
 ACCESSOR(HeapObject, GetMap, heap_obj_.kMapOffset, HeapObject)
 
 ACCESSOR(Map, MaybeConstructor, map_.kMaybeConstructorOffset, HeapObject)
+ACCESSOR(Map, InstanceDescriptors, map_.kInstanceDescriptorsOffset, HeapObject)
+
+int64_t Map::BitField3(Error& err) {
+  return LoadField(v8()->map_.kBitField3Offset, err) & 0xffffffff;
+}
+
+int64_t Map::InObjectProperties(Error& err) {
+  return LoadField(v8()->map_.kInObjectPropertiesOffset, err) & 0xff;
+}
+
+int64_t Map::InstanceSize(Error& err) {
+  return (LoadField(v8()->map_.kInstanceSizeOffset, err) & 0xff) *
+      v8()->kPointerSize;
+}
+
+ACCESSOR(JSObject, Properties, js_object_.kPropertiesOffset, HeapObject)
+ACCESSOR(JSObject, Elements, js_object_.kElementsOffset, HeapObject)
 
 ACCESSOR(JSArray, Length, js_array_.kLengthOffset, Smi)
 
@@ -235,6 +272,30 @@ template <class T>
 T FixedArray::Get(int index, Error& err) {
   int64_t off = v8()->fixed_array_.kDataOffset + index * v8()->kPointerSize;
   return LoadFieldValue<T>(off, err);
+}
+
+inline Smi DescriptorArray::GetDetails(int index, Error& err) {
+  return Get<Smi>(v8()->descriptor_array_.kFirstIndex +
+                      index * v8()->descriptor_array_.kSize +
+                      v8()->descriptor_array_.kDetailsOffset,
+                  err);
+}
+
+inline String DescriptorArray::GetKey(int index, Error& err) {
+  return Get<String>(v8()->descriptor_array_.kFirstIndex +
+                         index * v8()->descriptor_array_.kSize +
+                         v8()->descriptor_array_.kKeyOffset,
+                     err);
+}
+
+inline bool DescriptorArray::IsFieldDetails(Smi details) {
+  return (details.GetValue() & v8()->descriptor_array_.kPropertyTypeMask) ==
+      v8()->descriptor_array_.kFieldType;
+}
+
+inline int64_t DescriptorArray::FieldIndex(Smi details) {
+  return (details.GetValue() & v8()->descriptor_array_.kPropertyIndexMask) >>
+      v8()->descriptor_array_.kPropertyIndexShift;
 }
 
 #undef ACCESSOR

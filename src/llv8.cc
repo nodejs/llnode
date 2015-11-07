@@ -33,6 +33,18 @@ void LLV8::Load(SBTarget target) {
       LoadConstant("class_Map__instance_attributes__int");
   map_.kMaybeConstructorOffset =
       LoadConstant("class_Map__constructor_or_backpointer__Object");
+  map_.kInstanceDescriptorsOffset =
+      LoadConstant("class_Map__instance_descriptors__DescriptorArray");
+  map_.kBitField3Offset = LoadConstant("class_Map__bit_field3__int");
+  map_.kInObjectPropertiesOffset = LoadConstant(
+      "class_Map__inobject_properties_or_constructor_function_index__int");
+  map_.kInstanceSizeOffset = LoadConstant("class_Map__instance_size__int");
+
+  map_.kDictionaryMapShift = LoadConstant("bit_field3_dictionary_map_shift");
+
+  js_object_.kPropertiesOffset =
+      LoadConstant("class_JSObject__properties__FixedArray");
+  js_object_.kElementsOffset = LoadConstant("class_JSObject__elements__Object");
 
   js_array_.kLengthOffset =
       LoadConstant("class_JSArray__length__Object");
@@ -110,6 +122,18 @@ void LLV8::Load(SBTarget target) {
     LoadConstant("class_JSArrayBufferView__byte_offset__Object");
   js_array_buffer_view_.kByteLengthOffset =
     LoadConstant("class_JSArrayBufferView__raw_byte_length__Object");
+
+  descriptor_array_.kDetailsOffset = LoadConstant("prop_desc_details");
+  descriptor_array_.kKeyOffset = LoadConstant("prop_desc_key");
+  descriptor_array_.kValueOffset = LoadConstant("prop_desc_value");
+
+  descriptor_array_.kPropertyIndexMask = LoadConstant("prop_index_mask");
+  descriptor_array_.kPropertyIndexShift = LoadConstant("prop_index_shift");
+  descriptor_array_.kPropertyTypeMask = LoadConstant("prop_type_mask");
+  descriptor_array_.kFieldType = LoadConstant("prop_type_field");
+
+  descriptor_array_.kFirstIndex = LoadConstant("prop_idx_first");
+  descriptor_array_.kSize = LoadConstant("prop_desc_size");
 
   frame_.kContextOffset = LoadConstant("off_fp_context");
   frame_.kFunctionOffset = LoadConstant("off_fp_function");
@@ -419,12 +443,17 @@ std::string Value::Inspect(bool detailed, Error& err) {
     return std::string();
   }
 
-  int64_t type = obj.GetType(err);
+  return obj.Inspect(detailed, err);
+}
+
+
+std::string HeapObject::Inspect(bool detailed, Error& err) {
+  int64_t type = GetType(err);
   if (err.Fail()) return std::string();
 
   // TODO(indutny): make this configurable
   char buf[32];
-  snprintf(buf, sizeof(buf), "0x%016llx:", obj.raw());
+  snprintf(buf, sizeof(buf), "0x%016llx:", raw());
   std::string pre = buf;
 
   if (type == v8()->types_.kGlobalObjectType) return pre + "<Global>";
@@ -623,7 +652,123 @@ std::string JSObject::Inspect(bool detailed, Error& err) {
     return "<Object: no constructor>";
 
   JSFunction constructor(constructor_obj);
-  return "<Object: " + constructor.Name(err) + ">";
+
+  std::string res = "<Object: " + constructor.Name(err);
+  if (err.Fail()) return std::string();
+
+  // Print properties in detailed mode
+  if (detailed) {
+    res += " " + InspectProperties(err);
+    if (err.Fail()) return std::string();
+  }
+
+  res += ">";
+  return res;
+}
+
+
+std::string JSObject::InspectProperties(Error& err) {
+  std::string res;
+
+  std::string elems = InspectElements(err);
+  if (err.Fail()) return std::string();
+
+  if (!elems.empty()) res = "elements {\n" + elems + "}";
+
+  HeapObject map_obj = GetMap(err);
+  if (err.Fail()) return std::string();
+
+  Map map(map_obj);
+
+  std::string props;
+  bool is_dict = map.IsDictionary(err);
+  if (err.Fail()) return std::string();
+
+  if (is_dict)
+    props = InspectDictionary(err);
+  else
+    props = InspectDescriptors(map, err);
+
+  if (err.Fail()) return std::string();
+
+  if (!props.empty()) {
+    if (!res.empty())
+      res += " ";
+    res += "properties {\n" + props + "}";
+  }
+
+  return res;
+}
+
+
+std::string JSObject::InspectElements(Error& err) {
+  // TODO(indutny): implement me
+  err = Error::Ok();
+  return std::string();
+}
+
+
+std::string JSObject::InspectDictionary(Error& err) {
+  // TODO(indutny): implement me
+  err = Error::Ok();
+  return std::string("dict");
+}
+
+
+std::string JSObject::InspectDescriptors(Map map, Error& err) {
+  HeapObject descriptors_obj = map.InstanceDescriptors(err);
+  if (err.Fail()) return std::string();
+
+  DescriptorArray descriptors(descriptors_obj);
+  int64_t own_descriptors_count = map.NumberOfOwnDescriptors(err);
+  if (err.Fail()) return std::string();
+
+  int64_t in_object_count = map.InObjectProperties(err);
+  if (err.Fail()) return std::string();
+
+  int64_t instance_size = map.InstanceSize(err);
+  if (err.Fail()) return std::string();
+
+  HeapObject extra_properties_obj = Properties(err);
+  if (err.Fail()) return std::string();
+
+  FixedArray extra_properties(extra_properties_obj);
+
+  std::string res;
+  for (int64_t i = 0; i < own_descriptors_count; i++) {
+    Smi details = descriptors.GetDetails(i, err);
+    if (err.Fail()) return std::string();
+
+    // Skip non-fields for now
+    if (!descriptors.IsFieldDetails(details)) continue;
+
+    String key = descriptors.GetKey(i, err);
+    if (err.Fail()) return std::string();
+
+    int64_t index = descriptors.FieldIndex(details);
+
+    Value value;
+    if (index < in_object_count)
+      value = GetInObjectValue(instance_size, index - in_object_count, err);
+    else
+      value = extra_properties.Get<Value>(index - in_object_count, err);
+    if (err.Fail()) return std::string();
+
+    if (!res.empty()) res += ",\n";
+
+    res += "    ." + key.GetValue(err) + "=";
+    if (err.Fail()) return std::string();
+
+    res += value.Inspect(false, err);
+    if (err.Fail()) return std::string();
+  }
+
+  return res;
+}
+
+
+Value JSObject::GetInObjectValue(int64_t size, int index, Error& err) {
+  return LoadFieldValue<Value>(size + index * v8()->kPointerSize, err);
 }
 
 

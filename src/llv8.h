@@ -76,6 +76,8 @@ class HeapObject : public Value {
 
   inline HeapObject GetMap(Error& err);
   inline int64_t GetType(Error& err);
+
+  std::string Inspect(bool detailed, Error& err);
 };
 
 class Map : public HeapObject {
@@ -84,8 +86,19 @@ class Map : public HeapObject {
 
   inline int64_t GetType(Error& err);
   inline HeapObject MaybeConstructor(Error& err);
+  inline HeapObject InstanceDescriptors(Error& err);
+  inline int64_t BitField3(Error& err);
+  inline int64_t InObjectProperties(Error& err);
+  inline int64_t InstanceSize(Error& err);
+
+  inline bool IsDictionary(Error& err);
+  inline int64_t NumberOfOwnDescriptors(Error& err);
 
   HeapObject Constructor(Error& err);
+
+ private:
+  // TODO(indutny): PR for more postmortem data
+  static const int64_t kDescriptorIndexBitCount = 10;
 };
 
 class String : public HeapObject {
@@ -167,7 +180,18 @@ class JSObject : public HeapObject {
  public:
   V8_VALUE_DEFAULT_METHODS(JSObject, HeapObject);
 
+  inline HeapObject Properties(Error& err);
+  inline HeapObject Elements(Error& err);
+
   std::string Inspect(bool detailed, Error& err);
+  std::string InspectProperties(Error& err);
+
+ private:
+  Value GetInObjectValue(int64_t size, int index, Error& err);
+
+  std::string InspectElements(Error& err);
+  std::string InspectDictionary(Error& err);
+  std::string InspectDescriptors(Map map, Error& err);
 };
 
 class JSArray : public JSObject {
@@ -209,6 +233,17 @@ class FixedArray : public FixedArrayBase {
   inline int64_t LeaData() const;
 
   std::string Inspect(Error& err);
+};
+
+class DescriptorArray : public FixedArray {
+ public:
+  V8_VALUE_DEFAULT_METHODS(DescriptorArray, FixedArray)
+
+  inline Smi GetDetails(int index, Error& err);
+  inline String GetKey(int index, Error& err);
+
+  inline bool IsFieldDetails(Smi details);
+  inline int64_t FieldIndex(Smi details);
 };
 
 class Oddball : public HeapObject {
@@ -290,7 +325,18 @@ class LLV8 {
   struct {
     int64_t kInstanceAttrsOffset;
     int64_t kMaybeConstructorOffset;
+    int64_t kInstanceDescriptorsOffset;
+    int64_t kBitField3Offset;
+    int64_t kInObjectPropertiesOffset;
+    int64_t kInstanceSizeOffset;
+
+    int64_t kDictionaryMapShift;
   } map_;
+
+  struct {
+    int64_t kPropertiesOffset;
+    int64_t kElementsOffset;
+  } js_object_;
 
   struct {
     int64_t kLengthOffset;
@@ -383,6 +429,20 @@ class LLV8 {
   } js_array_buffer_view_;
 
   struct {
+    int64_t kDetailsOffset;
+    int64_t kKeyOffset;
+    int64_t kValueOffset;
+
+    int64_t kPropertyIndexMask;
+    int64_t kPropertyIndexShift;
+    int64_t kPropertyTypeMask;
+    int64_t kFieldType;
+
+    int64_t kFirstIndex;
+    int64_t kSize;
+  } descriptor_array_;
+
+  struct {
     int64_t kContextOffset;
     int64_t kFunctionOffset;
     int64_t kArgsOffset;
@@ -430,6 +490,7 @@ class LLV8 {
   friend class JSArray;
   friend class FixedArrayBase;
   friend class FixedArray;
+  friend class DescriptorArray;
   friend class Oddball;
   friend class JSArrayBuffer;
   friend class JSArrayBufferView;
