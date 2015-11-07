@@ -189,7 +189,7 @@ class JSObject : public HeapObject {
   std::string Inspect(bool detailed, Error& err);
   std::string InspectProperties(Error& err);
 
- private:
+ protected:
   Value GetInObjectValue(int64_t size, int index, Error& err);
 
   std::string InspectElements(Error& err);
@@ -203,7 +203,7 @@ class JSArray : public JSObject {
 
   inline Smi Length(Error& err);
 
-  std::string Inspect(Error& err);
+  std::string Inspect(bool detailed, Error& err);
 };
 
 class JSFunction : public JSObject {

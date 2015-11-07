@@ -520,7 +520,7 @@ std::string HeapObject::Inspect(bool detailed, Error& err) {
 
   if (type == v8()->types_.kJSArrayType) {
     JSArray arr(this);
-    return pre + arr.Inspect(err);
+    return pre + arr.Inspect(detailed, err);
   }
 
   if (type == v8()->types_.kOddballType) {
@@ -756,9 +756,31 @@ std::string JSObject::InspectProperties(Error& err) {
 
 
 std::string JSObject::InspectElements(Error& err) {
-  // TODO(indutny): implement me
-  err = Error::Ok();
-  return std::string();
+  HeapObject elements_obj = Elements(err);
+  if (err.Fail()) return std::string();
+
+  FixedArray elements(elements_obj);
+
+  Smi length_smi = elements.Length(err);
+  if (err.Fail()) return std::string();
+
+  int64_t length = length_smi.GetValue();
+  std::string res;
+  for (int64_t i = 0; i < length; i++) {
+    Value value = elements.Get<Value>(i, err);
+    if (err.Fail()) return std::string();
+
+    if (!res.empty()) res += ",\n";
+
+    char tmp[64];
+    snprintf(tmp, sizeof(tmp), "    [%d]=", static_cast<int>(i));
+    res += tmp;
+
+    res += value.Inspect(false, err);
+    if (err.Fail()) return std::string();
+  }
+
+  return res;
 }
 
 
@@ -854,10 +876,19 @@ Value JSObject::GetInObjectValue(int64_t size, int index, Error& err) {
 }
 
 
-std::string JSArray::Inspect(Error& err) {
+std::string JSArray::Inspect(bool detailed, Error& err) {
   Smi length = Length(err);
   if (err.Fail()) return std::string();
-  return "<Array: length=" + length.ToString(err) + ">";
+
+  std::string res = "<Array: length=" + length.ToString(err);
+  if (detailed) {
+    std::string elems = InspectElements(err);
+    if (err.Fail()) return std::string();
+
+    if (!elems.empty()) res += " {\n" + elems + "}";
+  }
+
+  return res + ">";
 }
 
 }  // namespace v8
