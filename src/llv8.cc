@@ -284,14 +284,14 @@ std::string JSFrame::InspectArgs(JSFunction fn, Error& err) {
   Value receiver = GetReceiver(param_count, err);
   if (err.Fail()) return std::string();
 
-  std::string res = "this=" + receiver.Inspect(err);
+  std::string res = "this=" + receiver.Inspect(false, err);
   if (err.Fail()) return std::string();
 
   for (int64_t i = 0; i < param_count; i++) {
     Value param = GetParam(i, param_count, err);
     if (err.Fail()) return std::string();
 
-    res += ", " + param.Inspect(err);
+    res += ", " + param.Inspect(false, err);
     if (err.Fail()) return std::string();
   }
 
@@ -401,7 +401,7 @@ std::string Script::GetLineColumnFromPos(int64_t pos, Error& err) {
 }
 
 
-std::string Value::Inspect(Error& err) {
+std::string Value::Inspect(bool detailed, Error& err) {
   Smi smi(this);
   if (smi.Check())
     return smi.Inspect(err);
@@ -425,7 +425,7 @@ std::string Value::Inspect(Error& err) {
 
   if (type == v8()->types_.kJSObjectType) {
     JSObject o(this);
-    return pre + o.Inspect(err);
+    return pre + o.Inspect(detailed, err);
   }
 
   if (type == v8()->types_.kJSArrayType) {
@@ -601,7 +601,7 @@ HeapObject Map::Constructor(Error& err) {
 }
 
 
-std::string JSObject::Inspect(Error& err) {
+std::string JSObject::Inspect(bool detailed, Error& err) {
   HeapObject map_obj = GetMap(err);
   if (err.Fail()) return std::string();
 
