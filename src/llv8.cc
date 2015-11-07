@@ -109,6 +109,7 @@ void LLV8::Load(SBTarget target) {
   oddball_.kTrue = LoadConstant("OddballTrue");
   oddball_.kUndefined = LoadConstant("OddballUndefined");
   oddball_.kTheHole = LoadConstant("OddballTheHole");
+  oddball_.kNull = LoadConstant("OddballNull");
   oddball_.kUninitialized = LoadConstant("OddballUninitialized");
 
   js_array_buffer_.kBackingStoreOffset =
@@ -633,6 +634,7 @@ std::string Oddball::Inspect(Error& err) {
   if (kind_val == v8()->oddball_.kFalse) return "<false>";
   if (kind_val == v8()->oddball_.kTrue) return "<true>";
   if (kind_val == v8()->oddball_.kUndefined) return "<undefined>";
+  if (kind_val == v8()->oddball_.kNull) return "<null>";
   if (kind_val == v8()->oddball_.kTheHole) return "<hole>";
   if (kind_val == v8()->oddball_.kUninitialized) return "<uninitialized>";
   return "<Oddball>";

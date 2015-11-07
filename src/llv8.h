@@ -426,6 +426,7 @@ class LLV8 {
     int64_t kFalse;
     int64_t kTrue;
     int64_t kUndefined;
+    int64_t kNull;
     int64_t kTheHole;
     int64_t kUninitialized;
   } oddball_;
