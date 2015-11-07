@@ -23,22 +23,22 @@ T LLV8::LoadValue(int64_t addr, Error& err) {
 
 
 bool Smi::Check() const {
-  return (raw() & v8()->smi_.kTagMask) == v8()->smi_.kTag;
+  return (raw() & v8()->smi()->kTagMask) == v8()->smi()->kTag;
 }
 
 
 int64_t Smi::GetValue() const {
-  return raw() >> (v8()->smi_.kShiftSize + v8()->smi_.kTagMask);
+  return raw() >> (v8()->smi()->kShiftSize + v8()->smi()->kTagMask);
 }
 
 
 bool HeapObject::Check() const {
-  return (raw() & v8()->heap_obj_.kTagMask) == v8()->heap_obj_.kTag;
+  return (raw() & v8()->heap_obj()->kTagMask) == v8()->heap_obj()->kTag;
 }
 
 
 int64_t HeapObject::LeaField(int64_t off) const {
-  return raw() - v8()->heap_obj_.kTag + off;
+  return raw() - v8()->heap_obj()->kTag + off;
 }
 
 
@@ -70,15 +70,15 @@ int64_t HeapObject::GetType(Error& err) {
 
 
 int64_t Map::GetType(Error& err) {
-  int64_t type = LoadField(v8()->map_.kInstanceAttrsOffset, err);
+  int64_t type = LoadField(v8()->map()->kInstanceAttrsOffset, err);
   if (err.Fail()) return -1;
   return type & 0xff;
 }
 
 
 int64_t JSFrame::LeaParamSlot(int slot, int count) const {
-  return raw() + v8()->frame_.kArgsOffset +
-      (count - slot - 1) * v8()->kPointerSize;
+  return raw() + v8()->frame()->kArgsOffset +
+      (count - slot - 1) * v8()->common()->kPointerSize;
 }
 
 
@@ -105,7 +105,7 @@ bool Map::IsDictionary(Error& err) {
   int64_t field = BitField3(err);
   if (err.Fail()) return false;
 
-  return (field & (1 << v8()->map_.kDictionaryMapShift)) != 0;
+  return (field & (1 << v8()->map()->kDictionaryMapShift)) != 0;
 }
 
 
@@ -115,7 +115,7 @@ int64_t Map::NumberOfOwnDescriptors(Error& err) {
 
   // TODO(indutny): this should really be controlled by postmortem data
   // Skip EnumLength
-  field >>= (v8()->map_.kDictionaryMapShift - kDescriptorIndexBitCount);
+  field >>= (v8()->map()->kDictionaryMapShift - kDescriptorIndexBitCount);
   field &= (1 << kDescriptorIndexBitCount) - 1;
   return field;
 }
@@ -127,72 +127,76 @@ int64_t Map::NumberOfOwnDescriptors(Error& err) {
     }
 
 
-ACCESSOR(HeapObject, GetMap, heap_obj_.kMapOffset, HeapObject)
+ACCESSOR(HeapObject, GetMap, heap_obj()->kMapOffset, HeapObject)
 
-ACCESSOR(Map, MaybeConstructor, map_.kMaybeConstructorOffset, HeapObject)
-ACCESSOR(Map, InstanceDescriptors, map_.kInstanceDescriptorsOffset, HeapObject)
+ACCESSOR(Map, MaybeConstructor, map()->kMaybeConstructorOffset, HeapObject)
+ACCESSOR(Map, InstanceDescriptors, map()->kInstanceDescriptorsOffset, HeapObject)
 
 int64_t Map::BitField3(Error& err) {
-  return LoadField(v8()->map_.kBitField3Offset, err) & 0xffffffff;
+  return LoadField(v8()->map()->kBitField3Offset, err) & 0xffffffff;
 }
 
 int64_t Map::InObjectProperties(Error& err) {
-  return LoadField(v8()->map_.kInObjectPropertiesOffset, err) & 0xff;
+  return LoadField(v8()->map()->kInObjectPropertiesOffset, err) & 0xff;
 }
 
 int64_t Map::InstanceSize(Error& err) {
-  return (LoadField(v8()->map_.kInstanceSizeOffset, err) & 0xff) *
-      v8()->kPointerSize;
+  return (LoadField(v8()->map()->kInstanceSizeOffset, err) & 0xff) *
+      v8()->common()->kPointerSize;
 }
 
-ACCESSOR(JSObject, Properties, js_object_.kPropertiesOffset, HeapObject)
-ACCESSOR(JSObject, Elements, js_object_.kElementsOffset, HeapObject)
+ACCESSOR(JSObject, Properties, js_object()->kPropertiesOffset, HeapObject)
+ACCESSOR(JSObject, Elements, js_object()->kElementsOffset, HeapObject)
 
-ACCESSOR(JSArray, Length, js_array_.kLengthOffset, Smi)
+ACCESSOR(JSArray, Length, js_array()->kLengthOffset, Smi)
 
 int64_t String::Representation(Error& err) {
   int64_t type = GetType(err);
   if (err.Fail()) return -1;
-  return type & v8()->string_.kRepresentationMask;
+  return type & v8()->string()->kRepresentationMask;
 }
 
 
 int64_t String::Encoding(Error& err) {
   int64_t type = GetType(err);
   if (err.Fail()) return -1;
-  return type & v8()->string_.kEncodingMask;
+  return type & v8()->string()->kEncodingMask;
 }
 
-ACCESSOR(String, Length, string_.kLengthOffset, Smi)
+ACCESSOR(String, Length, string()->kLengthOffset, Smi)
 
-ACCESSOR(Script, Name, script_.kNameOffset, String)
-ACCESSOR(Script, LineOffset, script_.kLineOffsetOffset, Smi)
-ACCESSOR(Script, Source, script_.kSourceOffset, HeapObject)
-ACCESSOR(Script, LineEnds, script_.kLineEndsOffset, HeapObject)
+ACCESSOR(Script, Name, script()->kNameOffset, String)
+ACCESSOR(Script, LineOffset, script()->kLineOffsetOffset, Smi)
+ACCESSOR(Script, Source, script()->kSourceOffset, HeapObject)
+ACCESSOR(Script, LineEnds, script()->kLineEndsOffset, HeapObject)
 
-ACCESSOR(SharedFunctionInfo, Name, shared_info_.kNameOffset, String)
-ACCESSOR(SharedFunctionInfo, InferredName, shared_info_.kInferredNameOffset,
+ACCESSOR(SharedFunctionInfo, Name, shared_info()->kNameOffset, String)
+ACCESSOR(SharedFunctionInfo, InferredName, shared_info()->kInferredNameOffset,
          String)
-ACCESSOR(SharedFunctionInfo, GetScript, shared_info_.kScriptOffset, Script)
+ACCESSOR(SharedFunctionInfo, GetScript, shared_info()->kScriptOffset, Script)
 
-ACCESSOR(Oddball, Kind, oddball_.kKindOffset, Smi)
+ACCESSOR(Oddball, Kind, oddball()->kKindOffset, Smi)
 
 int64_t JSArrayBuffer::BackingStore(Error& err) {
-  return LoadField(v8()->js_array_buffer_.kBackingStoreOffset, err);
+  return LoadField(v8()->js_array_buffer()->kBackingStoreOffset, err);
 }
 
-ACCESSOR(JSArrayBuffer, ByteLength, js_array_buffer_.kByteLengthOffset, Smi)
+int64_t JSArrayBuffer::BitField(Error& err) {
+  return LoadField(v8()->js_array_buffer()->kBitFieldOffset, err) & 0xffffffff;
+}
 
-ACCESSOR(JSArrayBufferView, Buffer, js_array_buffer_view_.kBufferOffset,
+ACCESSOR(JSArrayBuffer, ByteLength, js_array_buffer()->kByteLengthOffset, Smi)
+
+ACCESSOR(JSArrayBufferView, Buffer, js_array_buffer_view()->kBufferOffset,
          JSArrayBuffer)
-ACCESSOR(JSArrayBufferView, ByteOffset, js_array_buffer_view_.kByteOffsetOffset,
+ACCESSOR(JSArrayBufferView, ByteOffset, js_array_buffer_view()->kByteOffsetOffset,
          Smi)
-ACCESSOR(JSArrayBufferView, ByteLength, js_array_buffer_view_.kByteLengthOffset,
+ACCESSOR(JSArrayBufferView, ByteLength, js_array_buffer_view()->kByteLengthOffset,
          Smi)
 
 // TODO(indutny): this field is a Smi on 32bit
 int64_t SharedFunctionInfo::ParameterCount(Error& err) {
-  int64_t field = LoadField(v8()->shared_info_.kParameterCountOffset, err);
+  int64_t field = LoadField(v8()->shared_info()->kParameterCountOffset, err);
   if (err.Fail()) return -1;
 
   field &= 0xffffffff;
@@ -201,33 +205,33 @@ int64_t SharedFunctionInfo::ParameterCount(Error& err) {
 
 // TODO(indutny): this field is a Smi on 32bit
 int64_t SharedFunctionInfo::StartPosition(Error& err) {
-  int64_t field = LoadField(v8()->shared_info_.kStartPositionOffset, err);
+  int64_t field = LoadField(v8()->shared_info()->kStartPositionOffset, err);
   if (err.Fail()) return -1;
 
   field &= 0xffffffff;
-  field >>= v8()->shared_info_.kStartPositionShift;
+  field >>= v8()->shared_info()->kStartPositionShift;
   return field;
 }
 
-ACCESSOR(JSFunction, Info, js_function_.kSharedInfoOffset, SharedFunctionInfo);
+ACCESSOR(JSFunction, Info, js_function()->kSharedInfoOffset, SharedFunctionInfo);
 
-ACCESSOR(ConsString, First, cons_string_.kFirstOffset, String);
-ACCESSOR(ConsString, Second, cons_string_.kSecondOffset, String);
+ACCESSOR(ConsString, First, cons_string()->kFirstOffset, String);
+ACCESSOR(ConsString, Second, cons_string()->kSecondOffset, String);
 
-ACCESSOR(SlicedString, Parent, sliced_string_.kParentOffset, String);
-ACCESSOR(SlicedString, Offset, sliced_string_.kOffsetOffset, Smi);
+ACCESSOR(SlicedString, Parent, sliced_string()->kParentOffset, String);
+ACCESSOR(SlicedString, Offset, sliced_string()->kOffsetOffset, Smi);
 
-ACCESSOR(FixedArrayBase, Length, fixed_array_base_.kLengthOffset, Smi);
+ACCESSOR(FixedArrayBase, Length, fixed_array_base()->kLengthOffset, Smi);
 
 std::string OneByteString::ToString(Error& err) {
-  int64_t chars = LeaField(v8()->one_byte_string_.kCharsOffset);
+  int64_t chars = LeaField(v8()->one_byte_string()->kCharsOffset);
   Smi len = Length(err);
   if (err.Fail()) return std::string();
   return v8()->LoadString(chars, len.GetValue(), err);
 }
 
 std::string TwoByteString::ToString(Error& err) {
-  int64_t chars = LeaField(v8()->two_byte_string_.kCharsOffset);
+  int64_t chars = LeaField(v8()->two_byte_string()->kCharsOffset);
   Smi len = Length(err);
   if (err.Fail()) return std::string();
   return v8()->LoadTwoByteString(chars, len.GetValue(), err);
@@ -265,50 +269,51 @@ std::string SlicedString::ToString(Error& err) {
 }
 
 int64_t FixedArray::LeaData() const {
-  return LeaField(v8()->fixed_array_.kDataOffset);
+  return LeaField(v8()->fixed_array()->kDataOffset);
 }
 
 template <class T>
 T FixedArray::Get(int index, Error& err) {
-  int64_t off = v8()->fixed_array_.kDataOffset + index * v8()->kPointerSize;
+  int64_t off = v8()->fixed_array()->kDataOffset +
+      index * v8()->common()->kPointerSize;
   return LoadFieldValue<T>(off, err);
 }
 
 Smi DescriptorArray::GetDetails(int index, Error& err) {
-  return Get<Smi>(v8()->descriptor_array_.kFirstIndex +
-                      index * v8()->descriptor_array_.kSize +
-                      v8()->descriptor_array_.kDetailsOffset,
+  return Get<Smi>(v8()->descriptor_array()->kFirstIndex +
+                      index * v8()->descriptor_array()->kSize +
+                      v8()->descriptor_array()->kDetailsOffset,
                   err);
 }
 
 Value DescriptorArray::GetKey(int index, Error& err) {
-  return Get<Value>(v8()->descriptor_array_.kFirstIndex +
-                        index * v8()->descriptor_array_.kSize +
-                        v8()->descriptor_array_.kKeyOffset,
+  return Get<Value>(v8()->descriptor_array()->kFirstIndex +
+                        index * v8()->descriptor_array()->kSize +
+                        v8()->descriptor_array()->kKeyOffset,
                     err);
 }
 
 bool DescriptorArray::IsFieldDetails(Smi details) {
-  return (details.GetValue() & v8()->descriptor_array_.kPropertyTypeMask) ==
-      v8()->descriptor_array_.kFieldType;
+  return (details.GetValue() & v8()->descriptor_array()->kPropertyTypeMask) ==
+      v8()->descriptor_array()->kFieldType;
 }
 
 int64_t DescriptorArray::FieldIndex(Smi details) {
-  return (details.GetValue() & v8()->descriptor_array_.kPropertyIndexMask) >>
-      v8()->descriptor_array_.kPropertyIndexShift;
+  return (details.GetValue() & v8()->descriptor_array()->kPropertyIndexMask) >>
+      v8()->descriptor_array()->kPropertyIndexShift;
 }
 
 Value NameDictionary::GetKey(int index, Error& err) {
-  int64_t off = v8()->name_dictionary_.kPrefixSize +
-      index * v8()->name_dictionary_.kEntrySize +
-      v8()->name_dictionary_.kKeyOffset;
+  int64_t off = v8()->name_dictionary()->kPrefixSize +
+      index * v8()->name_dictionary()->kEntrySize +
+      v8()->name_dictionary()->kKeyOffset;
   return FixedArray::Get<Value>(off, err);
 }
 
 Value NameDictionary::GetValue(int index, Error& err) {
-  int64_t off = v8()->name_dictionary_.kPrefixSize +
-      index * v8()->name_dictionary_.kEntrySize +
-      v8()->name_dictionary_.kValueOffset;
+  int64_t off = v8()->name_dictionary()->kPrefixSize +
+      index * v8()->name_dictionary()->kEntrySize +
+      v8()->name_dictionary()->kValueOffset;
   return FixedArray::Get<Value>(off, err);
 }
 
@@ -316,8 +321,8 @@ int64_t NameDictionary::Length(Error& err) {
   Smi length = FixedArray::Length(err);
   if (err.Fail()) return -1;
 
-  int64_t res = length.GetValue() - v8()->name_dictionary_.kPrefixSize;
-  res /= v8()->name_dictionary_.kEntrySize;
+  int64_t res = length.GetValue() - v8()->name_dictionary()->kPrefixSize;
+  res /= v8()->name_dictionary()->kEntrySize;
   return res;
 }
 
@@ -325,8 +330,15 @@ bool Oddball::IsHoleOrUndefined(Error& err) {
   Smi kind = Kind(err);
   if (err.Fail()) return false;
 
-  return kind.GetValue() == v8()->oddball_.kTheHole ||
-         kind.GetValue() == v8()->oddball_.kUndefined;
+  return kind.GetValue() == v8()->oddball()->kTheHole ||
+         kind.GetValue() == v8()->oddball()->kUndefined;
+}
+
+bool JSArrayBuffer::WasNeutered(Error& err) {
+  int64_t field = BitField(err);
+  if (err.Fail()) return false;
+
+  return (field & v8()->js_array_buffer()->kWasNeuteredMask) != 0;
 }
 
 #undef ACCESSOR

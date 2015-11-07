@@ -12,6 +12,7 @@
     "sources": [
       "src/llnode.cc",
       "src/llv8.cc",
+      "src/llv8-constants.cc",
     ],
 
     "conditions": [

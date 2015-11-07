@@ -19,167 +19,39 @@ void LLV8::Load(SBTarget target) {
   target_ = target;
   process_ = target_.GetProcess();
 
-  kPointerSize = 1 << LoadConstant("PointerSizeLog2");
-
-  smi_.kTag = LoadConstant("SmiTag");
-  smi_.kTagMask = LoadConstant("SmiTagMask");
-  smi_.kShiftSize = LoadConstant("SmiShiftSize");
-
-  heap_obj_.kTag = LoadConstant("HeapObjectTag");
-  heap_obj_.kTagMask = LoadConstant("HeapObjectTagMask");
-  heap_obj_.kMapOffset = LoadConstant("class_HeapObject__map__Map");
-
-  map_.kInstanceAttrsOffset =
-      LoadConstant("class_Map__instance_attributes__int");
-  map_.kMaybeConstructorOffset =
-      LoadConstant("class_Map__constructor_or_backpointer__Object");
-  map_.kInstanceDescriptorsOffset =
-      LoadConstant("class_Map__instance_descriptors__DescriptorArray");
-  map_.kBitField3Offset = LoadConstant("class_Map__bit_field3__int");
-  map_.kInObjectPropertiesOffset = LoadConstant(
-      "class_Map__inobject_properties_or_constructor_function_index__int");
-  map_.kInstanceSizeOffset = LoadConstant("class_Map__instance_size__int");
-
-  map_.kDictionaryMapShift = LoadConstant("bit_field3_dictionary_map_shift");
-
-  js_object_.kPropertiesOffset =
-      LoadConstant("class_JSObject__properties__FixedArray");
-  js_object_.kElementsOffset = LoadConstant("class_JSObject__elements__Object");
-
-  js_array_.kLengthOffset =
-      LoadConstant("class_JSArray__length__Object");
-
-  js_function_.kSharedInfoOffset =
-      LoadConstant("class_JSFunction__shared__SharedFunctionInfo");
-
-  shared_info_.kNameOffset =
-      LoadConstant("class_SharedFunctionInfo__name__Object");
-  shared_info_.kInferredNameOffset =
-      LoadConstant("class_SharedFunctionInfo__inferred_name__String");
-  shared_info_.kScriptOffset =
-      LoadConstant("class_SharedFunctionInfo__script__Object");
-  shared_info_.kStartPositionOffset =
-      LoadConstant("class_SharedFunctionInfo__start_position_and_type__SMI");
-  shared_info_.kParameterCountOffset = LoadConstant(
-      "class_SharedFunctionInfo__internal_formal_parameter_count__SMI");
-
-  // TODO(indutny): move it to post-mortem
-  shared_info_.kStartPositionShift = 2;
-
-  script_.kNameOffset = LoadConstant("class_Script__name__Object");
-  script_.kLineOffsetOffset = LoadConstant("class_Script__line_offset__SMI");
-  script_.kSourceOffset = LoadConstant("class_Script__source__Object");
-  script_.kLineEndsOffset = LoadConstant("class_Script__line_ends__Object");
-
-  string_.kEncodingMask = LoadConstant("StringEncodingMask");
-  string_.kRepresentationMask = LoadConstant("StringRepresentationMask");
-
-  string_.kOneByteStringTag = LoadConstant("OneByteStringTag");
-  string_.kTwoByteStringTag = LoadConstant("TwoByteStringTag");
-  string_.kSeqStringTag = LoadConstant("SeqStringTag");
-  string_.kConsStringTag = LoadConstant("ConsStringTag");
-  string_.kSlicedStringTag = LoadConstant("SlicedStringTag");
-  string_.kExternalStringTag = LoadConstant("ExternalStringTag");
-
-  string_.kLengthOffset = LoadConstant("class_String__length__SMI");
-
-  one_byte_string_.kCharsOffset =
-      LoadConstant("class_SeqOneByteString__chars__char");
-
-  two_byte_string_.kCharsOffset =
-      LoadConstant("class_SeqTwoByteString__chars__char");
-
-  cons_string_.kFirstOffset = LoadConstant("class_ConsString__first__String");
-  cons_string_.kSecondOffset = LoadConstant("class_ConsString__second__String");
-
-  sliced_string_.kParentOffset =
-      LoadConstant("class_SlicedString__parent__String");
-  sliced_string_.kOffsetOffset =
-      LoadConstant("class_SlicedString__offset__SMI");
-
-  fixed_array_base_.kLengthOffset =
-      LoadConstant("class_FixedArrayBase__length__SMI");
-
-  fixed_array_.kDataOffset = LoadConstant("class_FixedArray__data__uintptr_t");
-
-  oddball_.kKindOffset = LoadConstant("class_Oddball__kind_offset__int");
-
-  oddball_.kException = LoadConstant("OddballException");
-  oddball_.kFalse = LoadConstant("OddballFalse");
-  oddball_.kTrue = LoadConstant("OddballTrue");
-  oddball_.kUndefined = LoadConstant("OddballUndefined");
-  oddball_.kTheHole = LoadConstant("OddballTheHole");
-  oddball_.kNull = LoadConstant("OddballNull");
-  oddball_.kUninitialized = LoadConstant("OddballUninitialized");
-
-  js_array_buffer_.kBackingStoreOffset =
-    LoadConstant("class_JSArrayBuffer__backing_store__Object");
-  js_array_buffer_.kByteLengthOffset =
-    LoadConstant("class_JSArrayBuffer__byte_length__Object");
-
-  js_array_buffer_view_.kBufferOffset =
-    LoadConstant("class_JSArrayBufferView__buffer__Object");
-  js_array_buffer_view_.kByteOffsetOffset =
-    LoadConstant("class_JSArrayBufferView__byte_offset__Object");
-  js_array_buffer_view_.kByteLengthOffset =
-    LoadConstant("class_JSArrayBufferView__raw_byte_length__Object");
-
-  descriptor_array_.kDetailsOffset = LoadConstant("prop_desc_details");
-  descriptor_array_.kKeyOffset = LoadConstant("prop_desc_key");
-  descriptor_array_.kValueOffset = LoadConstant("prop_desc_value");
-
-  descriptor_array_.kPropertyIndexMask = LoadConstant("prop_index_mask");
-  descriptor_array_.kPropertyIndexShift = LoadConstant("prop_index_shift");
-  descriptor_array_.kPropertyTypeMask = LoadConstant("prop_type_mask");
-  descriptor_array_.kFieldType = LoadConstant("prop_type_field");
-
-  descriptor_array_.kFirstIndex = LoadConstant("prop_idx_first");
-  descriptor_array_.kSize = LoadConstant("prop_desc_size");
-
-  // TODO(indutny): move this to postmortem
-  name_dictionary_.kKeyOffset = 0;
-  name_dictionary_.kValueOffset = 1;
-
-  name_dictionary_.kEntrySize =
-      LoadConstant("class_NameDictionaryShape__entry_size__int");
-  name_dictionary_.kPrefixSize =
-      LoadConstant("class_NameDictionaryShape__prefix_size__int");
-
-  frame_.kContextOffset = LoadConstant("off_fp_context");
-  frame_.kFunctionOffset = LoadConstant("off_fp_function");
-  frame_.kArgsOffset = LoadConstant("off_fp_args");
-  frame_.kMarkerOffset = LoadConstant("off_fp_marker");
-
-  frame_.kAdaptorFrame = LoadConstant("frametype_ArgumentsAdaptorFrame");
-  frame_.kEntryFrame = LoadConstant("frametype_EntryFrame");
-  frame_.kEntryConstructFrame = LoadConstant("frametype_EntryConstructFrame");
-  frame_.kExitFrame = LoadConstant("frametype_ExitFrame");
-  frame_.kInternalFrame = LoadConstant("frametype_InternalFrame");
-  frame_.kConstructFrame = LoadConstant("frametype_ConstructFrame");
-  frame_.kJSFrame = LoadConstant("frametype_JavaScriptFrame");
-  frame_.kOptimizedFrame = LoadConstant("frametype_OptimizedFrame");
-
-  types_.kFirstNonstringType = LoadConstant("FirstNonstringType");
-
-  types_.kMapType = LoadConstant("type_Map__MAP_TYPE");
-  types_.kGlobalObjectType =
-      LoadConstant("type_JSGlobalObject__JS_GLOBAL_OBJECT_TYPE");
-  types_.kOddballType = LoadConstant("type_Oddball__ODDBALL_TYPE");
-  types_.kJSObjectType = LoadConstant("type_JSObject__JS_OBJECT_TYPE");
-  types_.kJSArrayType = LoadConstant("type_JSArray__JS_ARRAY_TYPE");
-  types_.kCodeType = LoadConstant("type_Code__CODE_TYPE");
-  types_.kJSFunctionType = LoadConstant("type_JSFunction__JS_FUNCTION_TYPE");
-  types_.kFixedArrayType = LoadConstant("type_FixedArray__FIXED_ARRAY_TYPE");
-  types_.kJSArrayBufferType =
-      LoadConstant("type_JSArrayBuffer__JS_ARRAY_BUFFER_TYPE");
-  types_.kJSTypedArrayType =
-      LoadConstant("type_JSTypedArray__JS_TYPED_ARRAY_TYPE");
+  common.SetTarget(target);
+  smi.SetTarget(target);
+  heap_obj.SetTarget(target);
+  map.SetTarget(target);
+  js_object.SetTarget(target);
+  js_array.SetTarget(target);
+  js_function.SetTarget(target);
+  shared_info.SetTarget(target);
+  script.SetTarget(target);
+  string.SetTarget(target);
+  one_byte_string.SetTarget(target);
+  two_byte_string.SetTarget(target);
+  cons_string.SetTarget(target);
+  sliced_string.SetTarget(target);
+  fixed_array_base.SetTarget(target);
+  fixed_array.SetTarget(target);
+  oddball.SetTarget(target);
+  js_array_buffer.SetTarget(target);
+  js_array_buffer_view.SetTarget(target);
+  descriptor_array.SetTarget(target);
+  name_dictionary.SetTarget(target);
+  frame.SetTarget(target);
+  types.SetTarget(target);
 }
 
 
 int64_t LLV8::LoadConstant(const char* name) {
-  return target_.FindFirstGlobalVariable((kConstantPrefix + name).c_str())
-                .GetValueAsSigned(0);
+  SBValue v = target_.FindFirstGlobalVariable((kConstantPrefix + name).c_str());
+
+  if (v.GetError().Fail())
+    fprintf(stderr, "Failed to load %s\n", name);
+
+  return v.GetValueAsSigned(0);
 }
 
 
@@ -261,34 +133,34 @@ uint8_t* LLV8::LoadChunk(int64_t addr, int64_t length, Error& err) {
 
 std::string JSFrame::Inspect(bool with_args, Error& err) {
   Value context =
-      v8()->LoadValue<Value>(raw() + v8()->frame_.kContextOffset, err);
+      v8()->LoadValue<Value>(raw() + v8()->frame()->kContextOffset, err);
   if (err.Fail()) return std::string();
 
   Smi smi_context = Smi(context);
   if (smi_context.Check() &&
-      smi_context.GetValue() == v8()->frame_.kAdaptorFrame) {
+      smi_context.GetValue() == v8()->frame()->kAdaptorFrame) {
     return "<adaptor>";
   }
 
   Value marker =
-      v8()->LoadValue<Value>(raw() + v8()->frame_.kMarkerOffset, err);
+      v8()->LoadValue<Value>(raw() + v8()->frame()->kMarkerOffset, err);
   if (err.Fail()) return std::string();
 
   Smi smi_marker(marker);
   if (smi_marker.Check()) {
     int64_t value = smi_marker.GetValue();
-    if (value == v8()->frame_.kEntryFrame) {
+    if (value == v8()->frame()->kEntryFrame) {
       return "<entry>";
-    } else if (value == v8()->frame_.kEntryConstructFrame) {
+    } else if (value == v8()->frame()->kEntryConstructFrame) {
       return "<entry_construct>";
-    } else if (value == v8()->frame_.kExitFrame) {
+    } else if (value == v8()->frame()->kExitFrame) {
       return "<exit>";
-    } else if (value == v8()->frame_.kInternalFrame) {
+    } else if (value == v8()->frame()->kInternalFrame) {
       return "<internal>";
-    } else if (value == v8()->frame_.kConstructFrame) {
+    } else if (value == v8()->frame()->kConstructFrame) {
       return "<constructor>";
-    } else if (value != v8()->frame_.kJSFrame &&
-               value != v8()->frame_.kOptimizedFrame) {
+    } else if (value != v8()->frame()->kJSFrame &&
+               value != v8()->frame()->kOptimizedFrame) {
       err = Error::Failure("Unknown frame marker");
       return std::string();
     }
@@ -296,14 +168,14 @@ std::string JSFrame::Inspect(bool with_args, Error& err) {
 
   // We are dealing with function or internal code (probably stub)
   JSFunction fn =
-      v8()->LoadValue<JSFunction>(raw() + v8()->frame_.kFunctionOffset, err);
+      v8()->LoadValue<JSFunction>(raw() + v8()->frame()->kFunctionOffset, err);
   if (err.Fail()) return std::string();
 
   int64_t fn_type = fn.GetType(err);
   if (err.Fail()) return std::string();
 
-  if (fn_type == v8()->types_.kCodeType) return "<internal code>";
-  if (fn_type != v8()->types_.kJSFunctionType) return "<non-function>";
+  if (fn_type == v8()->types()->kCodeType) return "<internal code>";
+  if (fn_type != v8()->types()->kJSFunctionType) return "<non-function>";
 
   std::string args;
   if (with_args) {
@@ -416,7 +288,7 @@ std::string Script::GetLineColumnFromPos(int64_t pos, Error& err) {
   if (err.Fail()) return std::string();
 
   // No source
-  if (type > v8()->types_.kFirstNonstringType) {
+  if (type > v8()->types()->kFirstNonstringType) {
     snprintf(tmp, sizeof(tmp), ":0:%d", static_cast<int>(pos));
     return tmp;
   }
@@ -452,7 +324,7 @@ bool Value::IsHoleOrUndefined(Error& err) {
   int64_t type = obj.GetType(err);
   if (err.Fail()) return false;
 
-  if (type != v8()->types_.kOddballType) return false;
+  if (type != v8()->types()->kOddballType) return false;
 
   Oddball odd(this);
   return odd.IsHoleOrUndefined(err);
@@ -493,7 +365,7 @@ std::string HeapObject::ToString(Error& err) {
   int64_t type = GetType(err);
   if (err.Fail()) return std::string();
 
-  if (type < v8()->types_.kFirstNonstringType) {
+  if (type < v8()->types()->kFirstNonstringType) {
     String str(this);
     return str.ToString(err);
   }
@@ -511,45 +383,45 @@ std::string HeapObject::Inspect(bool detailed, Error& err) {
   snprintf(buf, sizeof(buf), "0x%016llx:", raw());
   std::string pre = buf;
 
-  if (type == v8()->types_.kGlobalObjectType) return pre + "<Global>";
-  if (type == v8()->types_.kCodeType) return pre + "<Code>";
+  if (type == v8()->types()->kGlobalObjectType) return pre + "<Global>";
+  if (type == v8()->types()->kCodeType) return pre + "<Code>";
 
-  if (type == v8()->types_.kJSObjectType) {
+  if (type == v8()->types()->kJSObjectType) {
     JSObject o(this);
     return pre + o.Inspect(detailed, err);
   }
 
-  if (type == v8()->types_.kJSArrayType) {
+  if (type == v8()->types()->kJSArrayType) {
     JSArray arr(this);
     return pre + arr.Inspect(detailed, err);
   }
 
-  if (type == v8()->types_.kOddballType) {
+  if (type == v8()->types()->kOddballType) {
     Oddball o(this);
     return pre + o.Inspect(err);
   }
 
-  if (type == v8()->types_.kJSFunctionType) {
+  if (type == v8()->types()->kJSFunctionType) {
     JSFunction fn(this);
     return pre + fn.Inspect(err);
   }
 
-  if (type < v8()->types_.kFirstNonstringType) {
+  if (type < v8()->types()->kFirstNonstringType) {
     String str(this);
     return pre + str.Inspect(err);
   }
 
-  if (type == v8()->types_.kFixedArrayType) {
+  if (type == v8()->types()->kFixedArrayType) {
     FixedArray arr(this);
     return pre + arr.Inspect(err);
   }
 
-  if (type == v8()->types_.kJSArrayBufferType) {
+  if (type == v8()->types()->kJSArrayBufferType) {
     JSArrayBuffer buf(this);
     return pre + buf.Inspect(err);
   }
 
-  if (type == v8()->types_.kJSTypedArrayType) {
+  if (type == v8()->types()->kJSTypedArrayType) {
     JSArrayBufferView view(this);
     return pre + view.Inspect(err);
   }
@@ -578,11 +450,11 @@ std::string String::ToString(Error& err) {
   int64_t encoding = Encoding(err);
   if (err.Fail()) return std::string();
 
-  if (repr == v8()->string_.kSeqStringTag) {
-    if (encoding == v8()->string_.kOneByteStringTag) {
+  if (repr == v8()->string()->kSeqStringTag) {
+    if (encoding == v8()->string()->kOneByteStringTag) {
       OneByteString one(this);
       return one.ToString(err);
-    } else if (encoding == v8()->string_.kTwoByteStringTag) {
+    } else if (encoding == v8()->string()->kTwoByteStringTag) {
       TwoByteString two(this);
       return two.ToString(err);
     }
@@ -591,12 +463,12 @@ std::string String::ToString(Error& err) {
     return std::string();
   }
 
-  if (repr == v8()->string_.kConsStringTag) {
+  if (repr == v8()->string()->kConsStringTag) {
     ConsString cons(this);
     return cons.ToString(err);
   }
 
-  if (repr == v8()->string_.kSlicedStringTag) {
+  if (repr == v8()->string()->kSlicedStringTag) {
     SlicedString sliced(this);
     return sliced.ToString(err);
   }
@@ -630,18 +502,23 @@ std::string Oddball::Inspect(Error& err) {
   if (err.Fail()) return std::string();
 
   int64_t kind_val = kind.GetValue();
-  if (kind_val == v8()->oddball_.kException) return "<exception>";
-  if (kind_val == v8()->oddball_.kFalse) return "<false>";
-  if (kind_val == v8()->oddball_.kTrue) return "<true>";
-  if (kind_val == v8()->oddball_.kUndefined) return "<undefined>";
-  if (kind_val == v8()->oddball_.kNull) return "<null>";
-  if (kind_val == v8()->oddball_.kTheHole) return "<hole>";
-  if (kind_val == v8()->oddball_.kUninitialized) return "<uninitialized>";
+  if (kind_val == v8()->oddball()->kException) return "<exception>";
+  if (kind_val == v8()->oddball()->kFalse) return "<false>";
+  if (kind_val == v8()->oddball()->kTrue) return "<true>";
+  if (kind_val == v8()->oddball()->kUndefined) return "<undefined>";
+  if (kind_val == v8()->oddball()->kNull) return "<null>";
+  if (kind_val == v8()->oddball()->kTheHole) return "<hole>";
+  if (kind_val == v8()->oddball()->kUninitialized) return "<uninitialized>";
   return "<Oddball>";
 }
 
 
 std::string JSArrayBuffer::Inspect(Error& err) {
+  bool neutered = WasNeutered(err);
+  if (err.Fail()) return std::string();
+
+  if (neutered) return "<ArrayBuffer [neutered]>";
+
   int64_t data = BackingStore(err);
   if (err.Fail()) return std::string();
 
@@ -658,6 +535,11 @@ std::string JSArrayBuffer::Inspect(Error& err) {
 std::string JSArrayBufferView::Inspect(Error& err) {
   JSArrayBuffer buf = Buffer(err);
   if (err.Fail()) return std::string();
+
+  bool neutered = buf.WasNeutered(err);
+  if (err.Fail()) return std::string();
+
+  if (neutered) return "<ArrayBufferView [neutered]>";
 
   int64_t data = buf.BackingStore(err);
   if (err.Fail()) return std::string();
@@ -686,7 +568,7 @@ HeapObject Map::Constructor(Error& err) {
     if (err.Fail()) return current;
 
     current = obj;
-    if (type != v8()->types_.kMapType) break;
+    if (type != v8()->types()->kMapType) break;
   } while (true);
 
   return current;
@@ -704,7 +586,7 @@ std::string JSObject::Inspect(bool detailed, Error& err) {
   int64_t constructor_type = constructor_obj.GetType(err);
   if (err.Fail()) return std::string();
 
-  if (constructor_type != v8()->types_.kJSFunctionType)
+  if (constructor_type != v8()->types()->kJSFunctionType)
     return "<Object: no constructor>";
 
   JSFunction constructor(constructor_obj);
@@ -874,7 +756,8 @@ std::string JSObject::InspectDescriptors(Map map, Error& err) {
 
 
 Value JSObject::GetInObjectValue(int64_t size, int index, Error& err) {
-  return LoadFieldValue<Value>(size + index * v8()->kPointerSize, err);
+  return LoadFieldValue<Value>(size + index * v8()->common()->kPointerSize,
+      err);
 }
 
 

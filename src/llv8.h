@@ -5,6 +5,8 @@
 
 #include <lldb/API/LLDB.h>
 
+#include "src/llv8-constants.h"
+
 namespace llnode {
 namespace v8 {
 
@@ -273,7 +275,10 @@ class JSArrayBuffer : public HeapObject {
   V8_VALUE_DEFAULT_METHODS(JSArrayBuffer, HeapObject)
 
   inline int64_t BackingStore(Error& err);
+  inline int64_t BitField(Error& err);
   inline Smi ByteLength(Error& err);
+
+  inline bool WasNeutered(Error& err);
 
   std::string Inspect(Error& err);
 };
@@ -320,180 +325,29 @@ class LLV8 {
   lldb::SBTarget target_;
   lldb::SBProcess process_;
 
-  int64_t kPointerSize;
-
-  struct {
-    int64_t kTag;
-    int64_t kTagMask;
-    int64_t kShiftSize;
-  } smi_;
-
-  struct {
-    int64_t kTag;
-    int64_t kTagMask;
-
-    int64_t kMapOffset;
-  } heap_obj_;
-
-  struct {
-    int64_t kInstanceAttrsOffset;
-    int64_t kMaybeConstructorOffset;
-    int64_t kInstanceDescriptorsOffset;
-    int64_t kBitField3Offset;
-    int64_t kInObjectPropertiesOffset;
-    int64_t kInstanceSizeOffset;
-
-    int64_t kDictionaryMapShift;
-  } map_;
-
-  struct {
-    int64_t kPropertiesOffset;
-    int64_t kElementsOffset;
-  } js_object_;
-
-  struct {
-    int64_t kLengthOffset;
-  } js_array_;
-
-  struct {
-    int64_t kSharedInfoOffset;
-  } js_function_;
-
-  struct {
-    int64_t kNameOffset;
-    int64_t kInferredNameOffset;
-    int64_t kScriptOffset;
-    int64_t kStartPositionOffset;
-    int64_t kParameterCountOffset;
-
-    int64_t kStartPositionShift;
-  } shared_info_;
-
-  struct {
-    int64_t kNameOffset;
-    int64_t kLineOffsetOffset;
-    int64_t kSourceOffset;
-    int64_t kLineEndsOffset;
-  } script_;
-
-  struct {
-    int64_t kEncodingMask;
-    int64_t kRepresentationMask;
-
-    // Encoding
-    int64_t kOneByteStringTag;
-    int64_t kTwoByteStringTag;
-
-    // Representation
-    int64_t kSeqStringTag;
-    int64_t kConsStringTag;
-    int64_t kSlicedStringTag;
-    int64_t kExternalStringTag;
-
-    int64_t kLengthOffset;
-  } string_;
-
-  struct {
-    int64_t kCharsOffset;
-  } one_byte_string_;
-
-  struct {
-    int64_t kCharsOffset;
-  } two_byte_string_;
-
-  struct {
-    int64_t kFirstOffset;
-    int64_t kSecondOffset;
-  } cons_string_;
-
-  struct {
-    int64_t kParentOffset;
-    int64_t kOffsetOffset;
-  } sliced_string_;
-
-  struct {
-    int64_t kLengthOffset;
-  } fixed_array_base_;
-
-  struct {
-    int64_t kDataOffset;
-  } fixed_array_;
-
-  struct {
-    int64_t kKindOffset;
-
-    int64_t kException;
-    int64_t kFalse;
-    int64_t kTrue;
-    int64_t kUndefined;
-    int64_t kNull;
-    int64_t kTheHole;
-    int64_t kUninitialized;
-  } oddball_;
-
-  struct {
-    int64_t kBackingStoreOffset;
-    int64_t kByteLengthOffset;
-  } js_array_buffer_;
-
-  struct {
-    int64_t kBufferOffset;
-    int64_t kByteOffsetOffset;
-    int64_t kByteLengthOffset;
-  } js_array_buffer_view_;
-
-  struct {
-    int64_t kDetailsOffset;
-    int64_t kKeyOffset;
-    int64_t kValueOffset;
-
-    int64_t kPropertyIndexMask;
-    int64_t kPropertyIndexShift;
-    int64_t kPropertyTypeMask;
-    int64_t kFieldType;
-
-    int64_t kFirstIndex;
-    int64_t kSize;
-  } descriptor_array_;
-
-  struct {
-    int64_t kKeyOffset;
-    int64_t kValueOffset;
-
-    int64_t kEntrySize;
-    int64_t kPrefixSize;
-  } name_dictionary_;
-
-  struct {
-    int64_t kContextOffset;
-    int64_t kFunctionOffset;
-    int64_t kArgsOffset;
-    int64_t kMarkerOffset;
-
-    int64_t kAdaptorFrame;
-    int64_t kEntryFrame;
-    int64_t kEntryConstructFrame;
-    int64_t kExitFrame;
-    int64_t kInternalFrame;
-    int64_t kConstructFrame;
-    int64_t kJSFrame;
-    int64_t kOptimizedFrame;
-  } frame_;
-
-  struct {
-    int64_t kFirstNonstringType;
-
-    int64_t kMapType;
-    int64_t kGlobalObjectType;
-    int64_t kOddballType;
-    int64_t kJSObjectType;
-    int64_t kJSArrayType;
-    int64_t kCodeType;
-    int64_t kJSFunctionType;
-    int64_t kFixedArrayType;
-    int64_t kJSArrayBufferType;
-    int64_t kJSTypedArrayType;
-  } types_;
+  constants::Common common;
+  constants::Smi smi;
+  constants::HeapObject heap_obj;
+  constants::Map map;
+  constants::JSObject js_object;
+  constants::JSArray js_array;
+  constants::JSFunction js_function;
+  constants::SharedInfo shared_info;
+  constants::Script script;
+  constants::String string;
+  constants::OneByteString one_byte_string;
+  constants::TwoByteString two_byte_string;
+  constants::ConsString cons_string;
+  constants::SlicedString sliced_string;
+  constants::FixedArrayBase fixed_array_base;
+  constants::FixedArray fixed_array;
+  constants::Oddball oddball;
+  constants::JSArrayBuffer js_array_buffer;
+  constants::JSArrayBufferView js_array_buffer_view;
+  constants::DescriptorArray descriptor_array;
+  constants::NameDictionary name_dictionary;
+  constants::Frame frame;
+  constants::Types types;
 
   friend class Value;
   friend class JSFrame;
