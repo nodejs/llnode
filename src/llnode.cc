@@ -1,4 +1,6 @@
+#include <errno.h>
 #include <lldb/API/SBExpressionOptions.h>
+#include <stdlib.h>
 
 #include "src/llnode.h"
 #include "src/llv8.h"
@@ -18,6 +20,13 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
     return false;
   }
 
+  errno = 0;
+  int number = *cmd != nullptr ? strtol(*cmd, nullptr, 10) : -1;
+  if ((number == 0 && errno == EINVAL) || (number < 0 && number != -1)) {
+    result.SetError("Invalid number of frames");
+    return false;
+  }
+
   // Load V8 constants from postmortem data
   llv8.Load(target);
 
@@ -30,6 +39,8 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
   SBFrame selected_frame = thread.GetSelectedFrame();
 
   uint32_t num_frames = thread.GetNumFrames();
+  if (number != -1)
+    num_frames = number;
   for (uint32_t i = 0; i < num_frames; i++) {
     SBFrame frame = thread.GetFrameAtIndex(i);
     SBSymbol symbol = frame.GetSymbol();
