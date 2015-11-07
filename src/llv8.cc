@@ -135,6 +135,15 @@ void LLV8::Load(SBTarget target) {
   descriptor_array_.kFirstIndex = LoadConstant("prop_idx_first");
   descriptor_array_.kSize = LoadConstant("prop_desc_size");
 
+  // TODO(indutny): move this to postmortem
+  name_dictionary_.kKeyOffset = 0;
+  name_dictionary_.kValueOffset = 1;
+
+  name_dictionary_.kEntrySize =
+      LoadConstant("class_NameDictionaryShape__entry_size__int");
+  name_dictionary_.kPrefixSize =
+      LoadConstant("class_NameDictionaryShape__prefix_size__int");
+
   frame_.kContextOffset = LoadConstant("off_fp_context");
   frame_.kFunctionOffset = LoadConstant("off_fp_function");
   frame_.kArgsOffset = LoadConstant("off_fp_args");
@@ -334,12 +343,12 @@ std::string JSFunction::Name(SharedFunctionInfo info, Error& err) {
   String name = info.Name(err);
   if (err.Fail()) return std::string();
 
-  std::string res = name.GetValue(err);
+  std::string res = name.ToString(err);
   if (err.Fail() || res.empty()) {
     name = info.InferredName(err);
     if (err.Fail()) return std::string();
 
-    res = name.GetValue(err);
+    res = name.ToString(err);
     if (err.Fail()) return std::string();
   }
 
@@ -385,7 +394,7 @@ std::string SharedFunctionInfo::GetPostfix(Error& err) {
   int64_t start_pos = StartPosition(err);
   if (err.Fail()) return std::string();
 
-  std::string res = name.GetValue(err);
+  std::string res = name.ToString(err);
   if (res.empty())
     res = "(no script)";
 
@@ -412,7 +421,7 @@ std::string Script::GetLineColumnFromPos(int64_t pos, Error& err) {
   }
 
   String str(source);
-  std::string source_str = str.GetValue(err);
+  std::string source_str = str.ToString(err);
   int64_t limit = source_str.length();
   if (limit > pos)
     limit = pos;
@@ -432,6 +441,23 @@ std::string Script::GetLineColumnFromPos(int64_t pos, Error& err) {
 }
 
 
+bool Value::IsHoleOrUndefined(Error& err) {
+  Smi smi(this);
+  if (smi.Check()) return false;
+
+  HeapObject obj(this);
+  if (!obj.Check()) return false;
+
+  int64_t type = obj.GetType(err);
+  if (err.Fail()) return false;
+
+  if (type != v8()->types_.kOddballType) return false;
+
+  Oddball odd(this);
+  return odd.IsHoleOrUndefined(err);
+}
+
+
 std::string Value::Inspect(bool detailed, Error& err) {
   Smi smi(this);
   if (smi.Check())
@@ -444,6 +470,34 @@ std::string Value::Inspect(bool detailed, Error& err) {
   }
 
   return obj.Inspect(detailed, err);
+}
+
+
+std::string Value::ToString(Error& err) {
+  Smi smi(this);
+  if (smi.Check())
+    return smi.ToString(err);
+
+  HeapObject obj(this);
+  if (!obj.Check()) {
+    err = Error::Failure("Not object and not smi");
+    return std::string();
+  }
+
+  return obj.ToString(err);
+}
+
+
+std::string HeapObject::ToString(Error& err) {
+  int64_t type = GetType(err);
+  if (err.Fail()) return std::string();
+
+  if (type < v8()->types_.kFirstNonstringType) {
+    String str(this);
+    return str.ToString(err);
+  }
+
+  return "<non-string>";
 }
 
 
@@ -516,7 +570,7 @@ std::string Smi::Inspect(Error& err) {
 }
 
 
-std::string String::GetValue(Error& err) {
+std::string String::ToString(Error& err) {
   int64_t repr = Representation(err);
   if (err.Fail()) return std::string();
 
@@ -526,10 +580,10 @@ std::string String::GetValue(Error& err) {
   if (repr == v8()->string_.kSeqStringTag) {
     if (encoding == v8()->string_.kOneByteStringTag) {
       OneByteString one(this);
-      return one.GetValue(err);
+      return one.ToString(err);
     } else if (encoding == v8()->string_.kTwoByteStringTag) {
       TwoByteString two(this);
-      return two.GetValue(err);
+      return two.ToString(err);
     }
 
     err = Error::Failure("Unsupported seq string encoding");
@@ -538,12 +592,12 @@ std::string String::GetValue(Error& err) {
 
   if (repr == v8()->string_.kConsStringTag) {
     ConsString cons(this);
-    return cons.GetValue(err);
+    return cons.ToString(err);
   }
 
   if (repr == v8()->string_.kSlicedStringTag) {
     SlicedString sliced(this);
-    return sliced.GetValue(err);
+    return sliced.ToString(err);
   }
 
   err = Error::Failure("Unsupported string representation");
@@ -552,7 +606,7 @@ std::string String::GetValue(Error& err) {
 
 
 std::string String::Inspect(Error& err) {
-  std::string val = GetValue(err);
+  std::string val = ToString(err);
   if (err.Fail()) return std::string();
 
   // TODO(indutny): add length
@@ -709,9 +763,37 @@ std::string JSObject::InspectElements(Error& err) {
 
 
 std::string JSObject::InspectDictionary(Error& err) {
-  // TODO(indutny): implement me
-  err = Error::Ok();
-  return std::string("dict");
+  HeapObject dictionary_obj = Properties(err);
+  if (err.Fail()) return std::string();
+
+  NameDictionary dictionary(dictionary_obj);
+
+  int64_t length = dictionary.Length(err);
+  if (err.Fail()) return std::string();
+
+  std::string res;
+  for (int64_t i = 0; i < length; i++) {
+    Value key = dictionary.GetKey(i, err);
+    if (err.Fail()) return std::string();
+
+    // Skip holes
+    bool is_hole = key.IsHoleOrUndefined(err);
+    if (err.Fail()) return std::string();
+    if (is_hole) continue;
+
+    Value value = dictionary.GetValue(i, err);
+    if (err.Fail()) return std::string();
+
+    if (!res.empty()) res += ",\n";
+
+    res += "    ." + key.ToString(err) + "=";
+    if (err.Fail()) return std::string();
+
+    res += value.Inspect(false, err);
+    if (err.Fail()) return std::string();
+  }
+
+  return res;
 }
 
 
@@ -742,7 +824,7 @@ std::string JSObject::InspectDescriptors(Map map, Error& err) {
     // Skip non-fields for now
     if (!descriptors.IsFieldDetails(details)) continue;
 
-    String key = descriptors.GetKey(i, err);
+    Value key = descriptors.GetKey(i, err);
     if (err.Fail()) return std::string();
 
     int64_t index = descriptors.FieldIndex(details);
@@ -756,7 +838,7 @@ std::string JSObject::InspectDescriptors(Map map, Error& err) {
 
     if (!res.empty()) res += ",\n";
 
-    res += "    ." + key.GetValue(err) + "=";
+    res += "    ." + key.ToString(err) + "=";
     if (err.Fail()) return std::string();
 
     res += value.Inspect(false, err);

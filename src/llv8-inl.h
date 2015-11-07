@@ -7,7 +7,7 @@ namespace llnode {
 namespace v8 {
 
 template <class T>
-inline T LLV8::LoadValue(int64_t addr, Error& err) {
+T LLV8::LoadValue(int64_t addr, Error& err) {
   int64_t ptr;
   ptr = LoadPtr(addr, err);
   if (err.Fail()) return T();
@@ -82,7 +82,7 @@ int64_t JSFrame::LeaParamSlot(int slot, int count) const {
 }
 
 
-inline Value JSFrame::GetReceiver(int count, Error &err) {
+Value JSFrame::GetReceiver(int count, Error &err) {
   return GetParam(-1, count, err);
 }
 
@@ -219,36 +219,36 @@ ACCESSOR(SlicedString, Offset, sliced_string_.kOffsetOffset, Smi);
 
 ACCESSOR(FixedArrayBase, Length, fixed_array_base_.kLengthOffset, Smi);
 
-std::string OneByteString::GetValue(Error& err) {
+std::string OneByteString::ToString(Error& err) {
   int64_t chars = LeaField(v8()->one_byte_string_.kCharsOffset);
   Smi len = Length(err);
   if (err.Fail()) return std::string();
   return v8()->LoadString(chars, len.GetValue(), err);
 }
 
-std::string TwoByteString::GetValue(Error& err) {
+std::string TwoByteString::ToString(Error& err) {
   int64_t chars = LeaField(v8()->two_byte_string_.kCharsOffset);
   Smi len = Length(err);
   if (err.Fail()) return std::string();
   return v8()->LoadTwoByteString(chars, len.GetValue(), err);
 }
 
-std::string ConsString::GetValue(Error& err) {
+std::string ConsString::ToString(Error& err) {
   String first = First(err);
   if (err.Fail()) return std::string();
 
   String second = Second(err);
   if (err.Fail()) return std::string();
 
-  std::string tmp = first.GetValue(err);
+  std::string tmp = first.ToString(err);
   if (err.Fail()) return std::string();
-  tmp += second.GetValue(err);
+  tmp += second.ToString(err);
   if (err.Fail()) return std::string();
 
   return tmp;
 }
 
-std::string SlicedString::GetValue(Error& err) {
+std::string SlicedString::ToString(Error& err) {
   String parent = Parent(err);
   if (err.Fail()) return std::string();
 
@@ -258,7 +258,7 @@ std::string SlicedString::GetValue(Error& err) {
   Smi length = Length(err);
   if (err.Fail()) return std::string();
 
-  std::string tmp = parent.GetValue(err);
+  std::string tmp = parent.ToString(err);
   if (err.Fail()) return std::string();
 
   return tmp.substr(offset.GetValue(), length.GetValue());
@@ -274,28 +274,59 @@ T FixedArray::Get(int index, Error& err) {
   return LoadFieldValue<T>(off, err);
 }
 
-inline Smi DescriptorArray::GetDetails(int index, Error& err) {
+Smi DescriptorArray::GetDetails(int index, Error& err) {
   return Get<Smi>(v8()->descriptor_array_.kFirstIndex +
                       index * v8()->descriptor_array_.kSize +
                       v8()->descriptor_array_.kDetailsOffset,
                   err);
 }
 
-inline String DescriptorArray::GetKey(int index, Error& err) {
-  return Get<String>(v8()->descriptor_array_.kFirstIndex +
-                         index * v8()->descriptor_array_.kSize +
-                         v8()->descriptor_array_.kKeyOffset,
-                     err);
+Value DescriptorArray::GetKey(int index, Error& err) {
+  return Get<Value>(v8()->descriptor_array_.kFirstIndex +
+                        index * v8()->descriptor_array_.kSize +
+                        v8()->descriptor_array_.kKeyOffset,
+                    err);
 }
 
-inline bool DescriptorArray::IsFieldDetails(Smi details) {
+bool DescriptorArray::IsFieldDetails(Smi details) {
   return (details.GetValue() & v8()->descriptor_array_.kPropertyTypeMask) ==
       v8()->descriptor_array_.kFieldType;
 }
 
-inline int64_t DescriptorArray::FieldIndex(Smi details) {
+int64_t DescriptorArray::FieldIndex(Smi details) {
   return (details.GetValue() & v8()->descriptor_array_.kPropertyIndexMask) >>
       v8()->descriptor_array_.kPropertyIndexShift;
+}
+
+Value NameDictionary::GetKey(int index, Error& err) {
+  int64_t off = v8()->name_dictionary_.kPrefixSize +
+      index * v8()->name_dictionary_.kEntrySize +
+      v8()->name_dictionary_.kKeyOffset;
+  return FixedArray::Get<Value>(off, err);
+}
+
+Value NameDictionary::GetValue(int index, Error& err) {
+  int64_t off = v8()->name_dictionary_.kPrefixSize +
+      index * v8()->name_dictionary_.kEntrySize +
+      v8()->name_dictionary_.kValueOffset;
+  return FixedArray::Get<Value>(off, err);
+}
+
+int64_t NameDictionary::Length(Error& err) {
+  Smi length = FixedArray::Length(err);
+  if (err.Fail()) return -1;
+
+  int64_t res = length.GetValue() - v8()->name_dictionary_.kPrefixSize;
+  res /= v8()->name_dictionary_.kEntrySize;
+  return res;
+}
+
+bool Oddball::IsHoleOrUndefined(Error& err) {
+  Smi kind = Kind(err);
+  if (err.Fail()) return false;
+
+  return kind.GetValue() == v8()->oddball_.kTheHole ||
+         kind.GetValue() == v8()->oddball_.kUndefined;
 }
 
 #undef ACCESSOR

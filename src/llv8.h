@@ -45,7 +45,9 @@ class Value {
   inline int64_t raw() const { return raw_; }
   inline LLV8* v8() const { return v8_; }
 
+  bool IsHoleOrUndefined(Error& err);
   std::string Inspect(bool detailed, Error& err);
+  std::string ToString(Error& err);
 
  protected:
   LLV8* v8_;
@@ -77,6 +79,7 @@ class HeapObject : public Value {
   inline HeapObject GetMap(Error& err);
   inline int64_t GetType(Error& err);
 
+  std::string ToString(Error& err);
   std::string Inspect(bool detailed, Error& err);
 };
 
@@ -109,7 +112,7 @@ class String : public HeapObject {
   inline int64_t Representation(Error& err);
   inline Smi Length(Error& err);
 
-  std::string GetValue(Error& err);
+  std::string ToString(Error& err);
   std::string Inspect(Error& err);
 
  private:
@@ -146,14 +149,14 @@ class OneByteString : public String {
  public:
   V8_VALUE_DEFAULT_METHODS(OneByteString, String)
 
-  inline std::string GetValue(Error& err);
+  inline std::string ToString(Error& err);
 };
 
 class TwoByteString : public String {
  public:
   V8_VALUE_DEFAULT_METHODS(TwoByteString, String)
 
-  inline std::string GetValue(Error& err);
+  inline std::string ToString(Error& err);
 };
 
 class ConsString : public String {
@@ -163,7 +166,7 @@ class ConsString : public String {
   inline String First(Error& err);
   inline String Second(Error& err);
 
-  inline std::string GetValue(Error& err);
+  inline std::string ToString(Error& err);
 };
 
 class SlicedString : public String {
@@ -173,7 +176,7 @@ class SlicedString : public String {
   inline String Parent(Error& err);
   inline Smi Offset(Error& err);
 
-  inline std::string GetValue(Error& err);
+  inline std::string ToString(Error& err);
 };
 
 class JSObject : public HeapObject {
@@ -240,10 +243,19 @@ class DescriptorArray : public FixedArray {
   V8_VALUE_DEFAULT_METHODS(DescriptorArray, FixedArray)
 
   inline Smi GetDetails(int index, Error& err);
-  inline String GetKey(int index, Error& err);
+  inline Value GetKey(int index, Error& err);
 
   inline bool IsFieldDetails(Smi details);
   inline int64_t FieldIndex(Smi details);
+};
+
+class NameDictionary : public FixedArray {
+ public:
+  V8_VALUE_DEFAULT_METHODS(NameDictionary, FixedArray)
+
+  inline Value GetKey(int index, Error& err);
+  inline Value GetValue(int index, Error& err);
+  inline int64_t Length(Error& err);
 };
 
 class Oddball : public HeapObject {
@@ -251,6 +263,7 @@ class Oddball : public HeapObject {
   V8_VALUE_DEFAULT_METHODS(Oddball, HeapObject)
 
   inline Smi Kind(Error& err);
+  inline bool IsHoleOrUndefined(Error& err);
 
   std::string Inspect(Error& err);
 };
@@ -443,6 +456,14 @@ class LLV8 {
   } descriptor_array_;
 
   struct {
+    int64_t kKeyOffset;
+    int64_t kValueOffset;
+
+    int64_t kEntrySize;
+    int64_t kPrefixSize;
+  } name_dictionary_;
+
+  struct {
     int64_t kContextOffset;
     int64_t kFunctionOffset;
     int64_t kArgsOffset;
@@ -491,6 +512,7 @@ class LLV8 {
   friend class FixedArrayBase;
   friend class FixedArray;
   friend class DescriptorArray;
+  friend class NameDictionary;
   friend class Oddball;
   friend class JSArrayBuffer;
   friend class JSArrayBufferView;
