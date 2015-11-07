@@ -87,6 +87,18 @@ LLV8::LLV8(SBTarget target) : target_(target), process_(target_.GetProcess()) {
   oddball_.kTheHole = LoadConstant("OddballTheHole");
   oddball_.kUninitialized = LoadConstant("OddballUninitialized");
 
+  js_array_buffer_.kBackingStoreOffset =
+    LoadConstant("class_JSArrayBuffer__backing_store__Object");
+  js_array_buffer_.kByteLengthOffset =
+    LoadConstant("class_JSArrayBuffer__byte_length__Object");
+
+  js_array_buffer_view_.kBufferOffset =
+    LoadConstant("class_JSArrayBufferView__buffer__Object");
+  js_array_buffer_view_.kByteOffsetOffset =
+    LoadConstant("class_JSArrayBufferView__byte_offset__Object");
+  js_array_buffer_view_.kByteLengthOffset =
+    LoadConstant("class_JSArrayBufferView__raw_byte_length__Object");
+
   frame_.kContextOffset = LoadConstant("off_fp_context");
   frame_.kFunctionOffset = LoadConstant("off_fp_function");
   frame_.kArgsOffset = LoadConstant("off_fp_args");
@@ -105,13 +117,16 @@ LLV8::LLV8(SBTarget target) : target_(target), process_(target_.GetProcess()) {
 
   types_.kGlobalObjectType =
       LoadConstant("type_JSGlobalObject__JS_GLOBAL_OBJECT_TYPE");
-  types_.kOddballType =
-      LoadConstant("type_Oddball__ODDBALL_TYPE");
-  types_.kJSObjectType =
-      LoadConstant("type_JSObject__JS_OBJECT_TYPE");
+  types_.kOddballType = LoadConstant("type_Oddball__ODDBALL_TYPE");
+  types_.kJSObjectType = LoadConstant("type_JSObject__JS_OBJECT_TYPE");
+  types_.kJSArrayType = LoadConstant("type_JSArray__JS_ARRAY_TYPE");
   types_.kCodeType = LoadConstant("type_Code__CODE_TYPE");
   types_.kJSFunctionType = LoadConstant("type_JSFunction__JS_FUNCTION_TYPE");
   types_.kFixedArrayType = LoadConstant("type_FixedArray__FIXED_ARRAY_TYPE");
+  types_.kJSArrayBufferType =
+      LoadConstant("type_JSArrayBuffer__JS_ARRAY_BUFFER_TYPE");
+  types_.kJSTypedArrayType =
+      LoadConstant("type_JSTypedArray__JS_TYPED_ARRAY_TYPE");
 }
 
 
@@ -428,6 +443,7 @@ std::string Value::Inspect(Error& err) {
 
   if (type == v8()->types_.kGlobalObjectType) return pre + "<global>";
   if (type == v8()->types_.kJSObjectType) return pre + "<obj>";
+  if (type == v8()->types_.kJSArrayType) return pre + "<array>";
   if (type == v8()->types_.kCodeType) return pre + "<code>";
 
   if (type == v8()->types_.kOddballType) {
@@ -448,6 +464,16 @@ std::string Value::Inspect(Error& err) {
   if (type == v8()->types_.kFixedArrayType) {
     FixedArray arr(this);
     return pre + arr.Inspect(err);
+  }
+
+  if (type == v8()->types_.kJSArrayBufferType) {
+    JSArrayBuffer buf(this);
+    return pre + buf.Inspect(err);
+  }
+
+  if (type == v8()->types_.kJSTypedArrayType) {
+    JSArrayBufferView view(this);
+    return pre + view.Inspect(err);
   }
 
   return pre + "<unknown value>";
@@ -533,6 +559,40 @@ std::string Oddball::Inspect(Error& err) {
   if (kind_val == v8()->oddball_.kTheHole) return "<hole>";
   if (kind_val == v8()->oddball_.kUninitialized) return "<uninitialized>";
   return "<oddball>";
+}
+
+
+std::string JSArrayBuffer::Inspect(Error& err) {
+  int64_t data = BackingStore(err);
+  if (err.Fail()) return std::string();
+
+  Smi length = ByteLength(err);
+  if (err.Fail()) return std::string();
+
+  char tmp[128];
+  snprintf(tmp, sizeof(tmp), "<ArrayBuffer 0x%016llx:%d>", data,
+      static_cast<int>(length.GetValue()));
+  return tmp;
+}
+
+
+std::string JSArrayBufferView::Inspect(Error& err) {
+  JSArrayBuffer buf = Buffer(err);
+  if (err.Fail()) return std::string();
+
+  int64_t data = buf.BackingStore(err);
+  if (err.Fail()) return std::string();
+
+  Smi off = ByteOffset(err);
+  if (err.Fail()) return std::string();
+
+  Smi length = ByteLength(err);
+  if (err.Fail()) return std::string();
+
+  char tmp[128];
+  snprintf(tmp, sizeof(tmp), "<ArrayBufferView 0x%016llx+%d:%d>", data,
+      static_cast<int>(off.GetValue()), static_cast<int>(length.GetValue()));
+  return tmp;
 }
 
 }  // namespace v8

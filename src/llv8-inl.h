@@ -128,6 +128,19 @@ ACCESSOR(SharedFunctionInfo, GetScript, shared_info_.kScriptOffset, Script)
 
 ACCESSOR(Oddball, Kind, oddball_.kKindOffset, Smi)
 
+int64_t JSArrayBuffer::BackingStore(Error& err) {
+  return LoadField(v8()->js_array_buffer_.kBackingStoreOffset, err);
+}
+
+ACCESSOR(JSArrayBuffer, ByteLength, js_array_buffer_.kByteLengthOffset, Smi)
+
+ACCESSOR(JSArrayBufferView, Buffer, js_array_buffer_view_.kBufferOffset,
+         JSArrayBuffer)
+ACCESSOR(JSArrayBufferView, ByteOffset, js_array_buffer_view_.kByteOffsetOffset,
+         Smi)
+ACCESSOR(JSArrayBufferView, ByteLength, js_array_buffer_view_.kByteLengthOffset,
+         Smi)
+
 // TODO(indutny): this field is a Smi on 32bit
 int64_t SharedFunctionInfo::ParameterCount(Error& err) {
   int64_t field = LoadField(v8()->shared_info_.kParameterCountOffset, err);

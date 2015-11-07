@@ -199,6 +199,27 @@ class Oddball : public HeapObject {
   std::string Inspect(Error& err);
 };
 
+class JSArrayBuffer : public HeapObject {
+ public:
+  V8_VALUE_DEFAULT_METHODS(JSArrayBuffer, HeapObject)
+
+  inline int64_t BackingStore(Error& err);
+  inline Smi ByteLength(Error& err);
+
+  std::string Inspect(Error& err);
+};
+
+class JSArrayBufferView : public HeapObject {
+ public:
+  V8_VALUE_DEFAULT_METHODS(JSArrayBufferView, HeapObject)
+
+  inline JSArrayBuffer Buffer(Error& err);
+  inline Smi ByteOffset(Error& err);
+  inline Smi ByteLength(Error& err);
+
+  std::string Inspect(Error& err);
+};
+
 class JSFrame : public Value {
  public:
   V8_VALUE_DEFAULT_METHODS(JSFrame, Value)
@@ -323,6 +344,17 @@ class LLV8 {
   } oddball_;
 
   struct {
+    int64_t kBackingStoreOffset;
+    int64_t kByteLengthOffset;
+  } js_array_buffer_;
+
+  struct {
+    int64_t kBufferOffset;
+    int64_t kByteOffsetOffset;
+    int64_t kByteLengthOffset;
+  } js_array_buffer_view_;
+
+  struct {
     int64_t kContextOffset;
     int64_t kFunctionOffset;
     int64_t kArgsOffset;
@@ -344,9 +376,12 @@ class LLV8 {
     int64_t kGlobalObjectType;
     int64_t kOddballType;
     int64_t kJSObjectType;
+    int64_t kJSArrayType;
     int64_t kCodeType;
     int64_t kJSFunctionType;
     int64_t kFixedArrayType;
+    int64_t kJSArrayBufferType;
+    int64_t kJSTypedArrayType;
   } types_;
 
   friend class Value;
@@ -365,6 +400,8 @@ class LLV8 {
   friend class FixedArrayBase;
   friend class FixedArray;
   friend class Oddball;
+  friend class JSArrayBuffer;
+  friend class JSArrayBufferView;
 };
 
 #undef V8_VALUE_DEFAULT_METHODS
