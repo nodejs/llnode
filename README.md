@@ -1,6 +1,30 @@
 # llnode
 
-Node.js C++ plugin for LLDB (work in progress).
+Node.js v4.0.0-v5.0.0 C++ plugin for LLDB (work in progress).
+
+## Build instructions
+
+### OS X
+
+```bash
+# Check out source code of the LLDB that is compatible with OS X's default
+# lldb
+svn co http://llvm.org/svn/llvm-project/lldb/tags/RELEASE_34/final/ lldb
+
+# Initialize GYP
+git clone https://chromium.googlesource.com/external/gyp.git tools/gyp
+
+# Build
+./gyp_lldb
+make -C out/ -j9
+
+# Install
+make install-osx
+```
+
+### Linux
+
+Someone please check and contribute this section.
 
 ## LICENSE
 

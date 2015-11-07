@@ -1,18 +1,12 @@
-CXXFLAGS ?=
-LDFLAGS ?=
-LLDB_FOLDER ?=
-LLDB_BUILD_DIR ?= /Applications/Xcode.app/Contents/SharedFrameworks
+all:
+	@echo "Please take a look at README.md"
 
-CXXFLAGS += -g -O0 -Wall -Wextra -Wno-unused-parameter -std=c++11
-CXXFLAGS += -I. -I$(LLDB_FOLDER)/include
+install-osx:
+	mkdir -p ~/Library/Application\ Support/LLDB/PlugIns/
+	cp -rf ./out/Release/llnode.dylib \
+		~/Library/Application\ Support/LLDB/PlugIns/
 
-LDFLAGS += -F$(LLDB_BUILD_DIR) -Wl,-rpath,"$(LLDB_BUILD_DIR)" -framework LLDB
+uninstall-osx:
+	rm ~/Library/Application\ Support/LLDB/PlugIns/llnode.dylib
 
-SRC += src/llnode.cc
-SRC += src/llv8.cc
-HEADERS += src/llnode.h
-HEADERS += src/llv8.h
-HEADERS += src/llv8-inl.h
-
-llnode.dylib: $(SRC) $(HEADERS)
-	$(CXX) $(CXXFLAGS) -dynamiclib $(SRC) -o $@ $(LDFLAGS)
+.PHONY: all

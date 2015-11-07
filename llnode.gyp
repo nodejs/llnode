@@ -26,6 +26,10 @@
             "-framework LLDB",
           ],
         },
+      }, {
+        "ldflags": [
+          "-l<(lldb_lir)",
+        ],
       }],
     ],
   }]
