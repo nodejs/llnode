@@ -48,6 +48,8 @@ class Value {
   inline LLV8* v8() const { return v8_; }
 
   bool IsHoleOrUndefined(Error& err);
+  bool IsHole(Error& err);
+
   std::string Inspect(bool detailed, Error& err);
   std::string ToString(Error& err);
 
@@ -266,6 +268,7 @@ class Oddball : public HeapObject {
 
   inline Smi Kind(Error& err);
   inline bool IsHoleOrUndefined(Error& err);
+  inline bool IsHole(Error& err);
 
   std::string Inspect(Error& err);
 };

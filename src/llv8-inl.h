@@ -334,6 +334,13 @@ bool Oddball::IsHoleOrUndefined(Error& err) {
          kind.GetValue() == v8()->oddball()->kUndefined;
 }
 
+bool Oddball::IsHole(Error& err) {
+  Smi kind = Kind(err);
+  if (err.Fail()) return false;
+
+  return kind.GetValue() == v8()->oddball()->kTheHole;
+}
+
 bool JSArrayBuffer::WasNeutered(Error& err) {
   int64_t field = BitField(err);
   if (err.Fail()) return false;

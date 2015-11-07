@@ -315,9 +315,6 @@ std::string Script::GetLineColumnFromPos(int64_t pos, Error& err) {
 
 
 bool Value::IsHoleOrUndefined(Error& err) {
-  Smi smi(this);
-  if (smi.Check()) return false;
-
   HeapObject obj(this);
   if (!obj.Check()) return false;
 
@@ -328,6 +325,21 @@ bool Value::IsHoleOrUndefined(Error& err) {
 
   Oddball odd(this);
   return odd.IsHoleOrUndefined(err);
+}
+
+
+// TODO(indutny): deduplicate this?
+bool Value::IsHole(Error& err) {
+  HeapObject obj(this);
+  if (!obj.Check()) return false;
+
+  int64_t type = obj.GetType(err);
+  if (err.Fail()) return false;
+
+  if (type != v8()->types()->kOddballType) return false;
+
+  Oddball odd(this);
+  return odd.IsHole(err);
 }
 
 
@@ -631,7 +643,7 @@ std::string JSObject::InspectProperties(Error& err) {
 
   if (!props.empty()) {
     if (!res.empty())
-      res += " ";
+      res += "\n  ";
     res += "properties {\n" + props + "}";
   }
 
@@ -653,6 +665,12 @@ std::string JSObject::InspectElements(Error& err) {
   for (int64_t i = 0; i < length; i++) {
     Value value = elements.Get<Value>(i, err);
     if (err.Fail()) return std::string();
+
+    bool is_hole = value.IsHole(err);
+    if (err.Fail()) return std::string();
+
+    // Skip holes
+    if (is_hole) continue;
 
     if (!res.empty()) res += ",\n";
 
