@@ -17,8 +17,9 @@ class Module {
   void SetTarget(lldb::SBTarget);
 
  protected:
-  int64_t LoadConstant(const char* name, int64_t def = 0);
-  int64_t LoadConstant(const char* name, const char* fallback, int64_t def = 0);
+  int64_t LoadConstant(const char* name, int64_t def = -1);
+  int64_t LoadConstant(const char* name, const char* fallback,
+      int64_t def = -1);
 
   lldb::SBTarget target_;
   bool loaded_;

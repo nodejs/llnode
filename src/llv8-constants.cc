@@ -63,10 +63,12 @@ void Map::Load() {
   kInstanceAttrsOffset =
       LoadConstant("class_Map__instance_attributes__int");
   kMaybeConstructorOffset =
-      LoadConstant("class_Map__constructor_or_backpointer__Object");
+      LoadConstant("class_Map__constructor_or_backpointer__Object",
+                   "class_Map__constructor__Object");
   kInstanceDescriptorsOffset =
       LoadConstant("class_Map__instance_descriptors__DescriptorArray");
-  kBitField3Offset = LoadConstant("class_Map__bit_field3__int");
+  kBitField3Offset = LoadConstant("class_Map__bit_field3__int",
+                                  "class_Map__bit_field3__SMI");
   kInObjectPropertiesOffset = LoadConstant(
       "class_Map__inobject_properties_or_constructor_function_index__int",
       "class_Map__inobject_properties__int");
@@ -101,7 +103,8 @@ void SharedInfo::Load() {
   kStartPositionOffset =
       LoadConstant("class_SharedFunctionInfo__start_position_and_type__SMI");
   kParameterCountOffset = LoadConstant(
-      "class_SharedFunctionInfo__internal_formal_parameter_count__SMI");
+      "class_SharedFunctionInfo__internal_formal_parameter_count__SMI",
+      "class_SharedFunctionInfo__formal_parameter_count__SMI");
 
   // TODO(indutny): move it to post-mortem
   kStartPositionShift = 2;
@@ -120,7 +123,7 @@ void String::Load() {
   kEncodingMask = LoadConstant("StringEncodingMask");
   kRepresentationMask = LoadConstant("StringRepresentationMask");
 
-  kOneByteStringTag = LoadConstant("OneByteStringTag");
+  kOneByteStringTag = LoadConstant("OneByteStringTag", "AsciiStringTag");
   kTwoByteStringTag = LoadConstant("TwoByteStringTag");
   kSeqStringTag = LoadConstant("SeqStringTag");
   kConsStringTag = LoadConstant("ConsStringTag");
@@ -132,12 +135,14 @@ void String::Load() {
 
 
 void OneByteString::Load() {
-  kCharsOffset = LoadConstant("class_SeqOneByteString__chars__char");
+  kCharsOffset = LoadConstant("class_SeqOneByteString__chars__char",
+      "class_SeqAsciiString__chars__char");
 }
 
 
 void TwoByteString::Load() {
-  kCharsOffset = LoadConstant("class_SeqTwoByteString__chars__char");
+  kCharsOffset = LoadConstant("class_SeqTwoByteString__chars__char",
+      "class_SeqAsciiString__chars__char");
 }
 
 
