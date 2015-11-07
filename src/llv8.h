@@ -129,18 +129,6 @@ class SharedFunctionInfo : public HeapObject {
   std::string GetPostfix(Error& err);
 };
 
-class JSFunction : public HeapObject {
- public:
-  V8_VALUE_DEFAULT_METHODS(JSFunction, HeapObject)
-
-  inline SharedFunctionInfo Info(Error& err);
-  inline std::string Name(Error& err);
-
-  std::string Name(SharedFunctionInfo info, Error& err);
-  std::string GetDebugLine(std::string args, Error& err);
-  std::string Inspect(Error& err);
-};
-
 class OneByteString : public String {
  public:
   V8_VALUE_DEFAULT_METHODS(OneByteString, String)
@@ -190,6 +178,19 @@ class JSArray : public JSObject {
 
   std::string Inspect(Error& err);
 };
+
+class JSFunction : public JSObject {
+ public:
+  V8_VALUE_DEFAULT_METHODS(JSFunction, JSObject)
+
+  inline SharedFunctionInfo Info(Error& err);
+  inline std::string Name(Error& err);
+
+  std::string Name(SharedFunctionInfo info, Error& err);
+  std::string GetDebugLine(std::string args, Error& err);
+  std::string Inspect(Error& err);
+};
+
 
 class FixedArrayBase : public HeapObject {
  public:
