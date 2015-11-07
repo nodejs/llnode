@@ -26,6 +26,20 @@ int64_t Module::LoadConstant(const char* name, int64_t def) {
 }
 
 
+int64_t Module::LoadConstant(const char* name, const char* fallback,
+                             int64_t def) {
+  SBValue v = target_.FindFirstGlobalVariable((kConstantPrefix + name).c_str());
+
+  if (v.GetError().Fail())
+    v = target_.FindFirstGlobalVariable((kConstantPrefix + fallback).c_str());
+
+  if (v.GetError().Fail())
+    fprintf(stderr, "Failed to load both %s and %s\n", name, fallback);
+
+  return v.GetValueAsSigned(def);
+}
+
+
 void Common::Load() {
   kPointerSize = 1 << LoadConstant("PointerSizeLog2");
 }
@@ -54,7 +68,8 @@ void Map::Load() {
       LoadConstant("class_Map__instance_descriptors__DescriptorArray");
   kBitField3Offset = LoadConstant("class_Map__bit_field3__int");
   kInObjectPropertiesOffset = LoadConstant(
-      "class_Map__inobject_properties_or_constructor_function_index__int");
+      "class_Map__inobject_properties_or_constructor_function_index__int",
+      "class_Map__inobject_properties__int");
   kInstanceSizeOffset = LoadConstant("class_Map__instance_size__int");
 
   kDictionaryMapShift = LoadConstant("bit_field3_dictionary_map_shift");
