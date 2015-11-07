@@ -18,11 +18,17 @@ class BacktraceCmd : public lldb::SBCommandPluginInterface {
 
 class PrintCmd : public lldb::SBCommandPluginInterface {
  public:
+  PrintCmd(bool detailed) : detailed_(detailed) {
+  }
+
   ~PrintCmd() override {
   }
 
   bool DoExecute(lldb::SBDebugger d, char** cmd,
                  lldb::SBCommandReturnObject& result) override;
+
+ private:
+  bool detailed_;
 };
 
 }  // namespace llnode

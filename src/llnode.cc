@@ -7,6 +7,8 @@ namespace llnode {
 
 using namespace lldb;
 
+v8::LLV8 llv8;
+
 bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
                              SBCommandReturnObject& result) {
   SBTarget target = d.GetSelectedTarget();
@@ -17,7 +19,7 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
   }
 
   // Load V8 constants from postmortem data
-  v8::LLV8 llv8(target);
+  llv8.Load(target);
 
   {
     SBStream desc;
@@ -69,8 +71,9 @@ bool PrintCmd::DoExecute(SBDebugger d, char** cmd,
   }
 
   std::string full_cmd;
-  for (char** start = cmd; *start != nullptr; start++)
+  for (char** start = cmd; *start != nullptr; start++) {
     full_cmd += *start;
+  }
 
   SBExpressionOptions options;
   SBValue value = target.EvaluateExpression(full_cmd.c_str(), options);
@@ -82,11 +85,11 @@ bool PrintCmd::DoExecute(SBDebugger d, char** cmd,
   }
 
   // Load V8 constants from postmortem data
-  v8::LLV8 llv8(target);
+  llv8.Load(target);
 
   v8::Value v8_value(&llv8, value.GetValueAsSigned());
   v8::Error err;
-  std::string res = v8_value.Inspect(true, err);
+  std::string res = v8_value.Inspect(detailed_, err);
   if (err.Fail()) {
     result.SetError("Failed to evaluate expression");
     return false;
@@ -107,7 +110,9 @@ bool PluginInitialize(SBDebugger d) {
   SBCommand v8 = interpreter.AddMultiwordCommand("v8", "Node.js helpers");
 
   v8.AddCommand("bt", new llnode::BacktraceCmd(), "Print node.js backtrace");
-  v8.AddCommand("print", new llnode::PrintCmd(), "Print JavaScript value");
+  v8.AddCommand("print", new llnode::PrintCmd(false), "Print JavaScript value");
+  v8.AddCommand("inspect", new llnode::PrintCmd(true),
+      "Detailed inspection of JavaScript value");
 
   return true;
 }

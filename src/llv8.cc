@@ -11,7 +11,14 @@ using namespace lldb;
 
 static std::string kConstantPrefix = "v8dbg_";
 
-LLV8::LLV8(SBTarget target) : target_(target), process_(target_.GetProcess()) {
+void LLV8::Load(SBTarget target) {
+  // No need to reload
+  if (target_ == target)
+    return;
+
+  target_ = target;
+  process_ = target_.GetProcess();
+
   kPointerSize = 1 << LoadConstant("PointerSizeLog2");
 
   smi_.kTag = LoadConstant("SmiTag");

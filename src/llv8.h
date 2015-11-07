@@ -255,7 +255,9 @@ class JSFrame : public Value {
 
 class LLV8 {
  public:
-  LLV8(lldb::SBTarget target);
+  LLV8() : target_(lldb::SBTarget()) {}
+
+  void Load(lldb::SBTarget target);
 
  private:
   template <class T>
