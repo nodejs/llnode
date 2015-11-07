@@ -27,6 +27,9 @@ LLV8::LLV8(SBTarget target) : target_(target), process_(target_.GetProcess()) {
   map_.kMaybeConstructorOffset =
       LoadConstant("class_Map__constructor_or_backpointer__Object");
 
+  js_array_.kLengthOffset =
+      LoadConstant("class_JSArray__length__Object");
+
   js_function_.kSharedInfoOffset =
       LoadConstant("class_JSFunction__shared__SharedFunctionInfo");
 
@@ -418,12 +421,16 @@ std::string Value::Inspect(Error& err) {
   std::string pre = buf;
 
   if (type == v8()->types_.kGlobalObjectType) return pre + "<Global>";
-  if (type == v8()->types_.kJSArrayType) return pre + "<Array>";
   if (type == v8()->types_.kCodeType) return pre + "<Code>";
 
   if (type == v8()->types_.kJSObjectType) {
     JSObject o(this);
     return pre + o.Inspect(err);
+  }
+
+  if (type == v8()->types_.kJSArrayType) {
+    JSArray arr(this);
+    return pre + arr.Inspect(err);
   }
 
   if (type == v8()->types_.kOddballType) {
@@ -610,6 +617,13 @@ std::string JSObject::Inspect(Error& err) {
 
   JSFunction constructor(constructor_obj);
   return "<Object: " + constructor.Name(err) + ">";
+}
+
+
+std::string JSArray::Inspect(Error& err) {
+  Smi length = Length(err);
+  if (err.Fail()) return std::string();
+  return "<Array: length=" + length.ToString(err) + ">";
 }
 
 }  // namespace v8

@@ -182,6 +182,15 @@ class JSObject : public HeapObject {
   std::string Inspect(Error& err);
 };
 
+class JSArray : public JSObject {
+ public:
+  V8_VALUE_DEFAULT_METHODS(JSArray, JSObject);
+
+  inline Smi Length(Error& err);
+
+  std::string Inspect(Error& err);
+};
+
 class FixedArrayBase : public HeapObject {
  public:
   V8_VALUE_DEFAULT_METHODS(FixedArrayBase, HeapObject);
@@ -279,6 +288,10 @@ class LLV8 {
     int64_t kInstanceAttrsOffset;
     int64_t kMaybeConstructorOffset;
   } map_;
+
+  struct {
+    int64_t kLengthOffset;
+  } js_array_;
 
   struct {
     int64_t kSharedInfoOffset;
@@ -411,6 +424,7 @@ class LLV8 {
   friend class ConsString;
   friend class SlicedString;
   friend class JSObject;
+  friend class JSArray;
   friend class FixedArrayBase;
   friend class FixedArray;
   friend class Oddball;

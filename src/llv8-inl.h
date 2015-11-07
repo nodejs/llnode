@@ -111,6 +111,8 @@ ACCESSOR(HeapObject, GetMap, heap_obj_.kMapOffset, HeapObject)
 
 ACCESSOR(Map, MaybeConstructor, map_.kMaybeConstructorOffset, HeapObject)
 
+ACCESSOR(JSArray, Length, js_array_.kLengthOffset, Smi)
+
 int64_t String::Representation(Error& err) {
   int64_t type = GetType(err);
   if (err.Fail()) return -1;
