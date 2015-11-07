@@ -355,69 +355,27 @@ std::string SharedFunctionInfo::GetPostfix(Error& err) {
   if (res.empty())
     res = "(no script)";
 
-  int64_t line = script.GetLineFromPos(start_pos, err);
+  res += script.GetLineColumnFromPos(start_pos, err);
   if (err.Fail()) return std::string();
-
-  char buf[1024];
-  snprintf(buf, sizeof(buf), ":%d", static_cast<int>(line));
-  res += buf;
 
   return res;
 }
 
 
-int64_t Script::GetLineFromPos(int64_t pos, Error& err) {
-  HeapObject obj = LineEnds(err);
-  if (err.Fail()) return -1;
+std::string Script::GetLineColumnFromPos(int64_t pos, Error& err) {
+  char tmp[128];
 
-  int64_t type = obj.GetType(err);
-  if (err.Fail()) return -1;
-
-  // Possibly `undefined`, calculate line pos
-  if (type != v8()->types_.kFixedArrayType) return ComputeLineFromPos(pos, err);
-
-  FixedArray arr(obj);
-  Smi smi_len = arr.Length(err);
-  if (err.Fail()) return -1;
-
-  int64_t length = smi_len.GetValue();
-
-  if (length == 0) return -1;
-
-  Smi first = arr.Get<Smi>(0, err);
-  if (err.Fail()) return -1;
-
-  Smi line_offset = LineOffset(err);
-  if (err.Fail()) return -1;
-
-  if (first.GetValue() >= pos) return line_offset.GetValue();
-
-  int left = 0;
-  int right = length;
-  while (int half = (right - left) / 2) {
-    Smi elem = arr.Get<Smi>(left + half, err);
-    if (err.Fail()) return -1;
-
-    if (elem.GetValue() > pos) {
-      right -= half;
-    } else {
-      left += half;
-    }
-  }
-
-  return right + line_offset.GetValue();
-}
-
-
-int64_t Script::ComputeLineFromPos(int64_t pos, Error& err) {
   HeapObject source = Source(err);
-  if (err.Fail()) return -1;
+  if (err.Fail()) return std::string();
 
   int64_t type = source.GetType(err);
-  if (err.Fail()) return -1;
+  if (err.Fail()) return std::string();
 
   // No source
-  if (type > v8()->types_.kFirstNonstringType) return pos;
+  if (type > v8()->types_.kFirstNonstringType) {
+    snprintf(tmp, sizeof(tmp), ":0:%d", static_cast<int>(pos));
+    return tmp;
+  }
 
   String str(source);
   std::string source_str = str.GetValue(err);
@@ -425,11 +383,18 @@ int64_t Script::ComputeLineFromPos(int64_t pos, Error& err) {
   if (limit > pos)
     limit = pos;
 
-  int lines = 1;
-  for (int64_t i = 0; i < limit; i++)
-    if (source_str[i] == '\n' || source_str[i] == '\r') lines++;
+  int line = 1;
+  int column = 1;
+  for (int64_t i = 0; i < limit; i++, column++) {
+    if (source_str[i] == '\n' || source_str[i] == '\r') {
+      column = 0;
+      line++;
+    }
+  }
 
-  return lines;
+  snprintf(tmp, sizeof(tmp), ":%d:%d", static_cast<int>(line),
+      static_cast<int>(column));
+  return tmp;
 }
 
 

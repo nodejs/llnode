@@ -113,8 +113,7 @@ class Script : public HeapObject {
   inline HeapObject Source(Error& err);
   inline HeapObject LineEnds(Error& err);
 
-  int64_t GetLineFromPos(int64_t pos, Error& err);
-  int64_t ComputeLineFromPos(int64_t pos, Error& err);
+  std::string GetLineColumnFromPos(int64_t pos, Error& err);
 };
 
 class SharedFunctionInfo : public HeapObject {
