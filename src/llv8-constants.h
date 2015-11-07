@@ -7,6 +7,9 @@ namespace llnode {
 namespace v8 {
 namespace constants {
 
+// Forward declarations
+class Common;
+
 class Module {
  public:
   Module() : loaded_(false) {
@@ -14,14 +17,16 @@ class Module {
 
   inline bool is_loaded() const { return loaded_; }
 
-  void SetTarget(lldb::SBTarget);
+  void Assign(lldb::SBTarget target, Common* common = nullptr);
 
  protected:
+  int64_t LoadRawConstant(const char* name, int64_t def = -1);
   int64_t LoadConstant(const char* name, int64_t def = -1);
   int64_t LoadConstant(const char* name, const char* fallback,
       int64_t def = -1);
 
   lldb::SBTarget target_;
+  Common* common_;
   bool loaded_;
 };
 
@@ -39,8 +44,10 @@ class Common : public Module {
   MODULE_DEFAULT_METHODS(Common);
 
   int64_t kPointerSize;
+  int64_t kVersionMajor;
+  int64_t kVersionMinor;
 
- protected:
+  // Public, because other modules may use it
   void Load();
 };
 
@@ -80,6 +87,8 @@ class Map : public Module {
   int64_t kInObjectPropertiesOffset;
   int64_t kInstanceSizeOffset;
 
+  int64_t kNumberOfOwnDescriptorsMask;
+  int64_t kNumberOfOwnDescriptorsShift;
   int64_t kDictionaryMapShift;
 
  protected:
@@ -92,6 +101,16 @@ class JSObject : public Module {
 
   int64_t kPropertiesOffset;
   int64_t kElementsOffset;
+
+ protected:
+  void Load();
+};
+
+class HeapNumber : public Module {
+ public:
+  MODULE_DEFAULT_METHODS(HeapNumber);
+
+  int64_t kValueOffset;
 
  protected:
   void Load();
@@ -288,7 +307,11 @@ class DescriptorArray : public Module {
   int64_t kPropertyIndexMask;
   int64_t kPropertyIndexShift;
   int64_t kPropertyTypeMask;
+  int64_t kRepresentationMask;
+  int64_t kRepresentationShift;
+
   int64_t kFieldType;
+  int64_t kRepresentationDouble;
 
   int64_t kFirstIndex;
   int64_t kSize;
@@ -339,6 +362,7 @@ class Types : public Module {
 
   int64_t kFirstNonstringType;
 
+  int64_t kHeapNumberType;
   int64_t kMapType;
   int64_t kGlobalObjectType;
   int64_t kOddballType;

@@ -10,9 +10,20 @@ using namespace lldb;
 
 static std::string kConstantPrefix = "v8dbg_";
 
-void Module::SetTarget(SBTarget target) {
+void Module::Assign(SBTarget target, Common* common) {
   loaded_ = false;
   target_ = target;
+  common_ = common;
+}
+
+
+int64_t Module::LoadRawConstant(const char* name, int64_t def) {
+  SBValue v = target_.FindFirstGlobalVariable(name);
+
+  if (v.GetError().Fail())
+    fprintf(stderr, "Failed to load %s\n", name);
+
+  return v.GetValueAsSigned(def);
 }
 
 
@@ -42,6 +53,8 @@ int64_t Module::LoadConstant(const char* name, const char* fallback,
 
 void Common::Load() {
   kPointerSize = 1 << LoadConstant("PointerSizeLog2");
+  kVersionMajor = LoadRawConstant("v8::internal::Version::major_");
+  kVersionMinor = LoadRawConstant("v8::internal::Version::minor_");
 }
 
 
@@ -75,12 +88,23 @@ void Map::Load() {
   kInstanceSizeOffset = LoadConstant("class_Map__instance_size__int");
 
   kDictionaryMapShift = LoadConstant("bit_field3_dictionary_map_shift");
+
+  // TODO(indutny): PR for more postmortem data
+  static const int64_t kDescriptorIndexBitCount = 10;
+  kNumberOfOwnDescriptorsShift = kDictionaryMapShift - kDescriptorIndexBitCount;
+  kNumberOfOwnDescriptorsMask = (1 << kDescriptorIndexBitCount) - 1;
+  kNumberOfOwnDescriptorsMask <<= kNumberOfOwnDescriptorsShift;
 }
 
 
 void JSObject::Load() {
   kPropertiesOffset = LoadConstant("class_JSObject__properties__FixedArray");
   kElementsOffset = LoadConstant("class_JSObject__elements__Object");
+}
+
+
+void HeapNumber::Load() {
+  kValueOffset = LoadConstant("class_HeapNumber__value__double");
 }
 
 
@@ -188,12 +212,11 @@ void JSArrayBuffer::Load() {
 
   // v4 compatibility fix
   if (kBackingStoreOffset == 0) {
-    // TODO(indutny): pass `common()` here somehow
-    int64_t kPointerSize = 1 << LoadConstant("PointerSizeLog2");
+    common_->Load();
 
-    kBackingStoreOffset = kByteLengthOffset + kPointerSize;
-    kBitFieldOffset = kBackingStoreOffset + kPointerSize;
-    if (kPointerSize == 8)
+    kBackingStoreOffset = kByteLengthOffset + common_->kPointerSize;
+    kBitFieldOffset = kBackingStoreOffset + common_->kPointerSize;
+    if (common_->kPointerSize == 8)
       kBitFieldOffset += 4;
   }
 
@@ -219,7 +242,14 @@ void DescriptorArray::Load() {
   kPropertyIndexMask = LoadConstant("prop_index_mask");
   kPropertyIndexShift = LoadConstant("prop_index_shift");
   kPropertyTypeMask = LoadConstant("prop_type_mask");
+
+  // TODO(indutny): move to postmortem
+  kRepresentationShift = 5;
+  kRepresentationMask = ((1 << 4) - 1) << kRepresentationShift;
+
   kFieldType = LoadConstant("prop_type_field");
+  // TODO(indutny): move to postmortem
+  kRepresentationDouble = 7;
 
   kFirstIndex = LoadConstant("prop_idx_first");
   kSize = LoadConstant("prop_desc_size");
@@ -232,7 +262,10 @@ void NameDictionary::Load() {
   kValueOffset = 1;
 
   kEntrySize = LoadConstant("class_NameDictionaryShape__entry_size__int");
-  kPrefixSize = LoadConstant("class_NameDictionaryShape__prefix_size__int");
+
+  // TODO(indutny): move extra entry size bytes to postmortem
+  kPrefixSize = LoadConstant("class_NameDictionaryShape__prefix_size__int") +
+      kEntrySize;
 }
 
 
@@ -256,6 +289,7 @@ void Frame::Load() {
 void Types::Load() {
   kFirstNonstringType = LoadConstant("FirstNonstringType");
 
+  kHeapNumberType = LoadConstant("type_HeapNumber__HEAP_NUMBER_TYPE");
   kMapType = LoadConstant("type_Map__MAP_TYPE");
   kGlobalObjectType =
       LoadConstant("type_JSGlobalObject__JS_GLOBAL_OBJECT_TYPE");

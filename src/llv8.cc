@@ -19,29 +19,30 @@ void LLV8::Load(SBTarget target) {
   target_ = target;
   process_ = target_.GetProcess();
 
-  common.SetTarget(target);
-  smi.SetTarget(target);
-  heap_obj.SetTarget(target);
-  map.SetTarget(target);
-  js_object.SetTarget(target);
-  js_array.SetTarget(target);
-  js_function.SetTarget(target);
-  shared_info.SetTarget(target);
-  script.SetTarget(target);
-  string.SetTarget(target);
-  one_byte_string.SetTarget(target);
-  two_byte_string.SetTarget(target);
-  cons_string.SetTarget(target);
-  sliced_string.SetTarget(target);
-  fixed_array_base.SetTarget(target);
-  fixed_array.SetTarget(target);
-  oddball.SetTarget(target);
-  js_array_buffer.SetTarget(target);
-  js_array_buffer_view.SetTarget(target);
-  descriptor_array.SetTarget(target);
-  name_dictionary.SetTarget(target);
-  frame.SetTarget(target);
-  types.SetTarget(target);
+  common.Assign(target);
+  smi.Assign(target, &common);
+  heap_obj.Assign(target, &common);
+  map.Assign(target, &common);
+  js_object.Assign(target, &common);
+  heap_number.Assign(target, &common);
+  js_array.Assign(target, &common);
+  js_function.Assign(target, &common);
+  shared_info.Assign(target, &common);
+  script.Assign(target, &common);
+  string.Assign(target, &common);
+  one_byte_string.Assign(target, &common);
+  two_byte_string.Assign(target, &common);
+  cons_string.Assign(target, &common);
+  sliced_string.Assign(target, &common);
+  fixed_array_base.Assign(target, &common);
+  fixed_array.Assign(target, &common);
+  oddball.Assign(target, &common);
+  js_array_buffer.Assign(target, &common);
+  js_array_buffer_view.Assign(target, &common);
+  descriptor_array.Assign(target, &common);
+  name_dictionary.Assign(target, &common);
+  frame.Assign(target, &common);
+  types.Assign(target, &common);
 }
 
 
@@ -67,6 +68,21 @@ int64_t LLV8::LoadPtr(int64_t addr, Error& err) {
 
   err = Error::Ok();
   return value;
+}
+
+
+double LLV8::LoadDouble(int64_t addr, Error& err) {
+  SBError sberr;
+  int64_t value = process_.ReadUnsignedFromMemory(static_cast<addr_t>(addr),
+      sizeof(double), sberr);
+  if (sberr.Fail()) {
+    // TODO(indutny): add more information
+    err = Error::Failure("Failed to load V8 double value");
+    return -1.0;
+  }
+
+  err = Error::Ok();
+  return *reinterpret_cast<double*>(&value);
 }
 
 
@@ -377,6 +393,11 @@ std::string HeapObject::ToString(Error& err) {
   int64_t type = GetType(err);
   if (err.Fail()) return std::string();
 
+  if (type == v8()->types()->kHeapNumberType) {
+    HeapNumber n(this);
+    return n.ToString(err);
+  }
+
   if (type < v8()->types()->kFirstNonstringType) {
     String str(this);
     return str.ToString(err);
@@ -401,6 +422,11 @@ std::string HeapObject::Inspect(bool detailed, Error& err) {
   if (type == v8()->types()->kJSObjectType) {
     JSObject o(this);
     return pre + o.Inspect(detailed, err);
+  }
+
+  if (type == v8()->types()->kHeapNumberType) {
+    HeapNumber n(this);
+    return pre + n.Inspect(err);
   }
 
   if (type == v8()->types()->kJSArrayType) {
@@ -452,6 +478,19 @@ std::string Smi::ToString(Error& err) {
 
 std::string Smi::Inspect(Error& err) {
   return "<Smi: " + ToString(err) + ">";
+}
+
+
+std::string HeapNumber::ToString(Error& err) {
+  char buf[128];
+  snprintf(buf, sizeof(buf), "%f", GetValue(err));
+  err = Error::Ok();
+  return buf;
+}
+
+
+std::string HeapNumber::Inspect(Error& err) {
+  return "<Number: " + ToString(err) + ">";
 }
 
 
@@ -751,21 +790,36 @@ std::string JSObject::InspectDescriptors(Map map, Error& err) {
     Value key = descriptors.GetKey(i, err);
     if (err.Fail()) return std::string();
 
-    int64_t index = descriptors.FieldIndex(details);
-
-    Value value;
-    if (index < in_object_count)
-      value = GetInObjectValue(instance_size, index - in_object_count, err);
-    else
-      value = extra_properties.Get<Value>(index - in_object_count, err);
-    if (err.Fail()) return std::string();
-
     if (!res.empty()) res += ",\n";
 
     res += "    ." + key.ToString(err) + "=";
     if (err.Fail()) return std::string();
 
-    res += value.Inspect(false, err);
+    int64_t index = descriptors.FieldIndex(details) - in_object_count;
+
+    if (descriptors.IsDoubleField(details)) {
+      double value;
+      if (index < 0)
+        value = GetInObjectValue<double>(instance_size, index, err);
+      else
+        value = extra_properties.Get<double>(index, err);
+
+      if (err.Fail()) return std::string();
+
+      char tmp[100];
+      snprintf(tmp, sizeof(tmp), "%f", value);
+      res += tmp;
+    } else {
+      Value value;
+      if (index < 0)
+        value = GetInObjectValue<Value>(instance_size, index, err);
+      else
+        value = extra_properties.Get<Value>(index, err);
+
+      if (err.Fail()) return std::string();
+
+      res += value.Inspect(false, err);
+    }
     if (err.Fail()) return std::string();
   }
 
@@ -773,8 +827,9 @@ std::string JSObject::InspectDescriptors(Map map, Error& err) {
 }
 
 
-Value JSObject::GetInObjectValue(int64_t size, int index, Error& err) {
-  return LoadFieldValue<Value>(size + index * v8()->common()->kPointerSize,
+template <class T>
+T JSObject::GetInObjectValue(int64_t size, int index, Error& err) {
+  return LoadFieldValue<T>(size + index * v8()->common()->kPointerSize,
       err);
 }
 

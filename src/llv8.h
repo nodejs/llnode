@@ -102,10 +102,6 @@ class Map : public HeapObject {
   inline int64_t NumberOfOwnDescriptors(Error& err);
 
   HeapObject Constructor(Error& err);
-
- private:
-  // TODO(indutny): PR for more postmortem data
-  static const int64_t kDescriptorIndexBitCount = 10;
 };
 
 class String : public HeapObject {
@@ -183,6 +179,16 @@ class SlicedString : public String {
   inline std::string ToString(Error& err);
 };
 
+class HeapNumber : public HeapObject {
+ public:
+  V8_VALUE_DEFAULT_METHODS(HeapNumber, HeapObject)
+
+  inline double GetValue(Error& err);
+
+  std::string ToString(Error& err);
+  std::string Inspect(Error& err);
+};
+
 class JSObject : public HeapObject {
  public:
   V8_VALUE_DEFAULT_METHODS(JSObject, HeapObject);
@@ -194,7 +200,8 @@ class JSObject : public HeapObject {
   std::string InspectProperties(Error& err);
 
  protected:
-  Value GetInObjectValue(int64_t size, int index, Error& err);
+  template <class T>
+  T GetInObjectValue(int64_t size, int index, Error& err);
 
   std::string InspectElements(Error& err);
   std::string InspectDictionary(Error& err);
@@ -250,6 +257,7 @@ class DescriptorArray : public FixedArray {
   inline Value GetKey(int index, Error& err);
 
   inline bool IsFieldDetails(Smi details);
+  inline bool IsDoubleField(Smi details);
   inline int64_t FieldIndex(Smi details);
 };
 
@@ -321,6 +329,7 @@ class LLV8 {
 
   int64_t LoadConstant(const char* name);
   int64_t LoadPtr(int64_t addr, Error& err);
+  double LoadDouble(int64_t addr, Error& err);
   std::string LoadString(int64_t addr, int64_t length, Error& err);
   std::string LoadTwoByteString(int64_t addr, int64_t length, Error& err);
   uint8_t* LoadChunk(int64_t addr, int64_t length, Error& err);
@@ -333,6 +342,7 @@ class LLV8 {
   constants::HeapObject heap_obj;
   constants::Map map;
   constants::JSObject js_object;
+  constants::HeapNumber heap_number;
   constants::JSArray js_array;
   constants::JSFunction js_function;
   constants::SharedInfo shared_info;
@@ -365,6 +375,7 @@ class LLV8 {
   friend class TwoByteString;
   friend class ConsString;
   friend class SlicedString;
+  friend class HeapNumber;
   friend class JSObject;
   friend class JSArray;
   friend class FixedArrayBase;

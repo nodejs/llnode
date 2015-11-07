@@ -6,6 +6,11 @@
 namespace llnode {
 namespace v8 {
 
+template <>
+double LLV8::LoadValue<double>(int64_t addr, Error& err) {
+  return LoadDouble(addr, err);
+}
+
 template <class T>
 T LLV8::LoadValue(int64_t addr, Error& err) {
   int64_t ptr;
@@ -44,6 +49,12 @@ int64_t HeapObject::LeaField(int64_t off) const {
 
 int64_t HeapObject::LoadField(int64_t off, Error& err) {
   return v8()->LoadPtr(LeaField(off), err);
+}
+
+
+template <>
+double HeapObject::LoadFieldValue<double>(int64_t off, Error& err) {
+  return v8()->LoadValue<double>(LeaField(off), err);
 }
 
 
@@ -113,10 +124,9 @@ int64_t Map::NumberOfOwnDescriptors(Error& err) {
   int64_t field = BitField3(err);
   if (err.Fail()) return false;
 
-  // TODO(indutny): this should really be controlled by postmortem data
   // Skip EnumLength
-  field >>= (v8()->map()->kDictionaryMapShift - kDescriptorIndexBitCount);
-  field &= (1 << kDescriptorIndexBitCount) - 1;
+  field &= v8()->map()->kNumberOfOwnDescriptorsMask;
+  field >>= v8()->map()->kNumberOfOwnDescriptorsShift;
   return field;
 }
 
@@ -147,6 +157,8 @@ int64_t Map::InstanceSize(Error& err) {
 
 ACCESSOR(JSObject, Properties, js_object()->kPropertiesOffset, HeapObject)
 ACCESSOR(JSObject, Elements, js_object()->kElementsOffset, HeapObject)
+
+ACCESSOR(HeapNumber, GetValue, heap_number()->kValueOffset, double)
 
 ACCESSOR(JSArray, Length, js_array()->kLengthOffset, Smi)
 
@@ -296,6 +308,14 @@ Value DescriptorArray::GetKey(int index, Error& err) {
 bool DescriptorArray::IsFieldDetails(Smi details) {
   return (details.GetValue() & v8()->descriptor_array()->kPropertyTypeMask) ==
       v8()->descriptor_array()->kFieldType;
+}
+
+bool DescriptorArray::IsDoubleField(Smi details) {
+  int64_t repr = details.GetValue();
+  repr &= v8()->descriptor_array()->kRepresentationMask;
+  repr >>= v8()->descriptor_array()->kRepresentationShift;
+
+  return repr == v8()->descriptor_array()->kRepresentationDouble;
 }
 
 int64_t DescriptorArray::FieldIndex(Smi details) {
