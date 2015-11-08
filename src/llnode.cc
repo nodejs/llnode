@@ -21,7 +21,8 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
   }
 
   errno = 0;
-  int number = *cmd != nullptr ? strtol(*cmd, nullptr, 10) : -1;
+  int number = (cmd != nullptr && *cmd != nullptr) ?
+      strtol(*cmd, nullptr, 10) : -1;
   if ((number == 0 && errno == EINVAL) || (number < 0 && number != -1)) {
     result.SetError("Invalid number of frames");
     return false;
@@ -82,7 +83,7 @@ bool PrintCmd::DoExecute(SBDebugger d, char** cmd,
   }
 
   std::string full_cmd;
-  for (char** start = cmd; *start != nullptr; start++) {
+  for (char** start = cmd; start != nullptr && *start != nullptr; start++) {
     full_cmd += *start;
   }
 
