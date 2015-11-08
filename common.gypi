@@ -10,7 +10,7 @@
     "gcc_version%": "unknown",
     "clang%": 1,
     "lldb_dir%": "lldb",
-    "lldb_lib%": "",
+    "lldb_lib%": "lldb",
     "conditions": [
       ["GENERATOR == 'ninja'", {
         "OBJ_DIR": "<(PRODUCT_DIR)/obj",

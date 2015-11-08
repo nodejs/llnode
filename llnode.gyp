@@ -29,7 +29,7 @@
         },
       }, {
         "ldflags": [
-          "-l<(lldb_lir)",
+          "-l<(lldb_lib)",
         ],
       }],
     ],
