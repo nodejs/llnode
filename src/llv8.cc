@@ -1,5 +1,4 @@
 #include <assert.h>
-#include <string.h>
 
 #include "llv8.h"
 #include "llv8-inl.h"
@@ -45,16 +44,6 @@ void LLV8::Load(SBTarget target) {
   name_dictionary.Assign(target, &common);
   frame.Assign(target, &common);
   types.Assign(target, &common);
-}
-
-
-int64_t LLV8::LoadConstant(const char* name) {
-  SBValue v = target_.FindFirstGlobalVariable((kConstantPrefix + name).c_str());
-
-  if (v.GetError().Fail())
-    fprintf(stderr, "Failed to load %s\n", name);
-
-  return v.GetValueAsSigned(0);
 }
 
 

@@ -1,3 +1,6 @@
+#include <stdlib.h>
+#include <string.h>
+
 #include <string>
 
 #include "src/llv8-constants.h"
@@ -10,6 +13,14 @@ using namespace lldb;
 
 static std::string kConstantPrefix = "v8dbg_";
 
+static bool IsDebugMode() {
+  char* var = getenv("LLNODE_DEBUG");
+  if (var == nullptr) return false;
+
+  return strlen(var) != 0;
+}
+
+
 void Module::Assign(SBTarget target, Common* common) {
   loaded_ = false;
   target_ = target;
@@ -20,7 +31,7 @@ void Module::Assign(SBTarget target, Common* common) {
 int64_t Module::LoadRawConstant(const char* name, int64_t def) {
   SBValue v = target_.FindFirstGlobalVariable(name);
 
-  if (v.GetError().Fail())
+  if (v.GetError().Fail() && IsDebugMode())
     fprintf(stderr, "Failed to load %s\n", name);
 
   return v.GetValueAsSigned(def);
@@ -30,7 +41,7 @@ int64_t Module::LoadRawConstant(const char* name, int64_t def) {
 int64_t Module::LoadConstant(const char* name, int64_t def) {
   SBValue v = target_.FindFirstGlobalVariable((kConstantPrefix + name).c_str());
 
-  if (v.GetError().Fail())
+  if (v.GetError().Fail() && IsDebugMode())
     fprintf(stderr, "Failed to load %s\n", name);
 
   return v.GetValueAsSigned(def);
@@ -44,7 +55,7 @@ int64_t Module::LoadConstant(const char* name, const char* fallback,
   if (v.GetError().Fail())
     v = target_.FindFirstGlobalVariable((kConstantPrefix + fallback).c_str());
 
-  if (v.GetError().Fail())
+  if (v.GetError().Fail() && IsDebugMode())
     fprintf(stderr, "Failed to load both %s and %s\n", name, fallback);
 
   return v.GetValueAsSigned(def);
