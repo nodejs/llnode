@@ -475,7 +475,7 @@ std::string HeapObject::Inspect(bool detailed, Error& err) {
 
   if (type == v8()->types()->kFixedArrayType) {
     FixedArray arr(this);
-    return pre + arr.Inspect(err);
+    return pre + arr.Inspect(detailed, err);
   }
 
   if (type == v8()->types()->kJSArrayBufferType) {
@@ -565,10 +565,39 @@ std::string String::Inspect(Error& err) {
 }
 
 
-std::string FixedArray::Inspect(Error& err) {
-  Smi length = Length(err);
+std::string FixedArray::Inspect(bool detailed, Error& err) {
+  Smi length_smi = Length(err);
   if (err.Fail()) return std::string();
-  return "<FixedArray, len=" + length.ToString(err) + ">";
+
+  std::string res = "<FixedArray, len=" + length_smi.ToString(err);
+  if (err.Fail()) return std::string();
+
+  if (detailed) {
+    std::string contents = InspectContents(length_smi.GetValue(), err);
+    if (!contents.empty())
+      res += " contents={\n" + contents + "}";
+  }
+
+  return res + ">";
+}
+
+
+std::string FixedArray::InspectContents(int length, Error& err) {
+  std::string res;
+
+  for (int i = 0; i < length; i++) {
+    Value value = Get<Value>(i, err);
+    if (err.Fail()) return std::string();
+
+    if (!res.empty()) res += ",\n";
+
+    char tmp[128];
+    snprintf(tmp, sizeof(tmp), "    [%d]=", i);
+    res += tmp + value.Inspect(false, err);
+    if (err.Fail()) return std::string();
+  }
+
+  return res;
 }
 
 

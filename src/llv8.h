@@ -247,7 +247,10 @@ class FixedArray : public FixedArrayBase {
 
   inline int64_t LeaData() const;
 
-  std::string Inspect(Error& err);
+  std::string Inspect(bool detailed, Error& err);
+
+ private:
+  std::string InspectContents(int length, Error& err);
 };
 
 class DescriptorArray : public FixedArray {
