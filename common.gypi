@@ -36,7 +36,7 @@
       }
     },
     "cflags": [
-      "-std=c++11",
+      "-std=c++11", "-fPIC",
     ],
     "xcode_settings": {
       "GCC_VERSION": "com.apple.compilers.llvm.clang.1_0",
