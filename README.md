@@ -2,6 +2,10 @@
 
 Node.js v4.0.0-v5.0.0 C++ plugin for LLDB (work in progress).
 
+## Demo
+
+https://asciinema.org/a/29589
+
 ## Build instructions
 
 ### OS X
