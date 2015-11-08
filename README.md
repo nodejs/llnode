@@ -18,8 +18,10 @@ svn co http://llvm.org/svn/llvm-project/lldb/tags/RELEASE_34/final/ lldb
 # Initialize GYP
 git clone https://chromium.googlesource.com/external/gyp.git tools/gyp
 
-# Build
+# Configure
 ./gyp_lldb
+
+# Build
 make -C out/ -j9
 
 # Install
@@ -28,7 +30,22 @@ make install-osx
 
 ### Linux
 
-Someone please check and contribute this section.
+```bash
+# Install lldb and headers
+sudo apt-get install lldb-3.6 lldb-3.6-dev
+
+# Initialize GYP
+git clone https://chromium.googlesource.com/external/gyp.git tools/gyp
+
+# Configure
+./gyp_llnode -Dlldb_dir=/usr/lib/llvm-3.6/ -Dlldb_lib=lldb-3.6
+
+# Build
+make -C out/ -j9
+
+# Install
+sudo make install-linux
+```
 
 ### Usage
 
