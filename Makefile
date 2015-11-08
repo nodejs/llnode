@@ -9,4 +9,11 @@ install-osx:
 uninstall-osx:
 	rm ~/Library/Application\ Support/LLDB/PlugIns/llnode.dylib
 
+install-linux:
+	mkidr -p ~/.local/share/lldb
+	cp -rf ./out/Release/lib.target/llnode.so ~/.local/share/lldb/
+
+uninstall-linux:
+	rm ./out/Release/lib.target/llnode.so ~/.local/share/lldb/llnode.so
+
 .PHONY: all
