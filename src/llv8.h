@@ -139,6 +139,7 @@ class SharedFunctionInfo : public HeapObject {
   inline String Name(Error& err);
   inline String InferredName(Error& err);
   inline Script GetScript(Error& err);
+  inline HeapObject GetScopeInfo(Error& err);
   inline int64_t ParameterCount(Error& err);
   inline int64_t StartPosition(Error& err);
 
@@ -222,13 +223,13 @@ class JSFunction : public JSObject {
   V8_VALUE_DEFAULT_METHODS(JSFunction, JSObject)
 
   inline SharedFunctionInfo Info(Error& err);
+  inline HeapObject GetContext(Error& err);
   inline std::string Name(Error& err);
 
   std::string Name(SharedFunctionInfo info, Error& err);
   std::string GetDebugLine(std::string args, Error& err);
-  std::string Inspect(Error& err);
+  std::string Inspect(bool detailed, Error& err);
 };
-
 
 class FixedArrayBase : public HeapObject {
  public:
@@ -268,6 +269,31 @@ class NameDictionary : public FixedArray {
   inline Value GetKey(int index, Error& err);
   inline Value GetValue(int index, Error& err);
   inline int64_t Length(Error& err);
+};
+
+class Context : public FixedArray {
+ public:
+  V8_VALUE_DEFAULT_METHODS(Context, FixedArray)
+
+  inline JSFunction Closure(Error& err);
+  inline JSObject Global(Error& err);
+  inline Context Previous(Error& err);
+  inline Value ContextSlot(int index, Error& err);
+
+  std::string Inspect(Error& err);
+};
+
+class ScopeInfo : public FixedArray {
+ public:
+  V8_VALUE_DEFAULT_METHODS(ScopeInfo, FixedArray)
+
+  inline Smi ParameterCount(Error& err);
+  inline Smi StackLocalCount(Error& err);
+  inline Smi ContextLocalCount(Error& err);
+  inline Smi ContextGlobalCount(Error& err);
+
+  inline String ContextLocalName(int index, int param_count, int stack_count,
+      Error& err);
 };
 
 class Oddball : public HeapObject {
@@ -384,6 +410,8 @@ class LLV8 {
   friend class FixedArray;
   friend class DescriptorArray;
   friend class NameDictionary;
+  friend class Context;
+  friend class ScopeInfo;
   friend class Oddball;
   friend class JSArrayBuffer;
   friend class JSArrayBufferView;

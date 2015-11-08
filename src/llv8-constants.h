@@ -162,6 +162,7 @@ class ScopeInfo : public Module {
   int64_t kParameterCountOffset;
   int64_t kStackLocalCountOffset;
   int64_t kContextLocalCountOffset;
+  int64_t kContextGlobalCountOffset;
   int64_t kVariablePartIndex;
 
  protected:

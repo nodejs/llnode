@@ -201,7 +201,9 @@ std::string JSFrame::Inspect(bool with_args, Error& err) {
     if (err.Fail()) return std::string();
   }
 
-  return fn.GetDebugLine(args, err);
+  char tmp[128];
+  snprintf(tmp, sizeof(tmp), " fn=0x%016llx", fn.raw());
+  return fn.GetDebugLine(args, err) + tmp;
 }
 
 
@@ -270,8 +272,28 @@ std::string JSFunction::GetDebugLine(std::string args, Error& err) {
 }
 
 
-std::string JSFunction::Inspect(Error& err) {
-  return "<function: " + GetDebugLine(std::string(), err) + ">";
+std::string JSFunction::Inspect(bool detailed, Error& err) {
+  std::string res = "<function: " + GetDebugLine(std::string(), err);
+  if (err.Fail()) return std::string();
+
+  if (detailed) {
+    HeapObject context_obj = GetContext(err);
+    if (err.Fail()) return std::string();
+
+    Context context(context_obj);
+
+    char tmp[128];
+    snprintf(tmp, sizeof(tmp), "\n  context=0x%016llx", context.raw());
+    res += tmp;
+
+    std::string context_str = context.Inspect(err);
+    if (err.Fail()) return std::string();
+
+    if (!context_str.empty())
+      res += "{\n" + context_str + "}";
+  }
+
+  return res + ">";
 }
 
 
@@ -443,7 +465,7 @@ std::string HeapObject::Inspect(bool detailed, Error& err) {
 
   if (type == v8()->types()->kJSFunctionType) {
     JSFunction fn(this);
-    return pre + fn.Inspect(err);
+    return pre + fn.Inspect(detailed, err);
   }
 
   if (type < v8()->types()->kFirstNonstringType) {
@@ -547,6 +569,52 @@ std::string FixedArray::Inspect(Error& err) {
   Smi length = Length(err);
   if (err.Fail()) return std::string();
   return "<FixedArray, len=" + length.ToString(err) + ">";
+}
+
+
+std::string Context::Inspect(Error& err) {
+  std::string res;
+  // Not enough postmortem information, return bare minimum
+  if (v8()->shared_info()->kScopeInfoOffset == -1) return res;
+
+  JSFunction closure = Closure(err);
+  if (err.Fail()) return std::string();
+
+  SharedFunctionInfo info = closure.Info(err);
+  if (err.Fail()) return std::string();
+
+  HeapObject scope_obj = info.GetScopeInfo(err);
+  if (err.Fail()) return std::string();
+
+  ScopeInfo scope(scope_obj);
+
+  Smi param_count_smi = scope.ParameterCount(err);
+  if (err.Fail()) return std::string();
+  Smi stack_count_smi = scope.StackLocalCount(err);
+  if (err.Fail()) return std::string();
+  Smi local_count_smi = scope.ContextLocalCount(err);
+  if (err.Fail()) return std::string();
+
+  int param_count = param_count_smi.GetValue();
+  int stack_count = stack_count_smi.GetValue();
+  int local_count = local_count_smi.GetValue();
+  for (int i = 0; i < local_count; i++) {
+    String name = scope.ContextLocalName(i, param_count, stack_count, err);
+    if (err.Fail()) return std::string();
+
+    if (!res.empty()) res += ",\n";
+
+    res += "    " + name.ToString(err) + "=";
+    if (err.Fail()) return std::string();
+
+    Value value = ContextSlot(i, err);
+    if (err.Fail()) return std::string();
+
+    res += value.Inspect(false, err);
+    if (err.Fail()) return std::string();
+  }
+
+  return res;
 }
 
 

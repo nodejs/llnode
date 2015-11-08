@@ -165,14 +165,11 @@ void SharedInfo::Load() {
 
 
 void ScopeInfo::Load() {
-  kParameterCountOffset =
-      LoadConstant("class_ScopeInfo__context_local_count__Smi");
-  kStackLocalCountOffset =
-      LoadConstant("class_ScopeInfo__parameter_count__Smi");
-  kContextLocalCountOffset =
-      LoadConstant("class_ScopeInfo__stack_local_count__Smi");
-  kVariablePartIndex =
-      LoadConstant("class_ScopeInfo__variable_part_index__int");
+  kParameterCountOffset = LoadConstant("scopeinfo_idx_nparams");
+  kStackLocalCountOffset = LoadConstant("scopeinfo_idx_nstacklocals");
+  kContextLocalCountOffset = LoadConstant("scopeinfo_idx_ncontextlocals");
+  kContextGlobalCountOffset = LoadConstant("scopeinfo_idx_ncontextglobals");
+  kVariablePartIndex = LoadConstant("scopeinfo_idx_first_vars");
 }
 
 

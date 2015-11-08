@@ -186,6 +186,8 @@ ACCESSOR(SharedFunctionInfo, Name, shared_info()->kNameOffset, String)
 ACCESSOR(SharedFunctionInfo, InferredName, shared_info()->kInferredNameOffset,
          String)
 ACCESSOR(SharedFunctionInfo, GetScript, shared_info()->kScriptOffset, Script)
+ACCESSOR(SharedFunctionInfo, GetScopeInfo, shared_info()->kScopeInfoOffset,
+         HeapObject)
 
 ACCESSOR(Oddball, Kind, oddball()->kKindOffset, Smi)
 
@@ -220,12 +222,16 @@ int64_t SharedFunctionInfo::StartPosition(Error& err) {
   int64_t field = LoadField(v8()->shared_info()->kStartPositionOffset, err);
   if (err.Fail()) return -1;
 
+  field &= 0xffffffff;
+
   field &= v8()->shared_info()->kStartPositionMask;
   field >>= v8()->shared_info()->kStartPositionShift;
   return field;
 }
 
-ACCESSOR(JSFunction, Info, js_function()->kSharedInfoOffset, SharedFunctionInfo);
+ACCESSOR(JSFunction, Info, js_function()->kSharedInfoOffset,
+         SharedFunctionInfo);
+ACCESSOR(JSFunction, GetContext, js_function()->kContextOffset, HeapObject);
 
 ACCESSOR(ConsString, First, cons_string()->kFirstOffset, String);
 ACCESSOR(ConsString, Second, cons_string()->kSecondOffset, String);
@@ -344,6 +350,46 @@ int64_t NameDictionary::Length(Error& err) {
   int64_t res = length.GetValue() - v8()->name_dictionary()->kPrefixSize;
   res /= v8()->name_dictionary()->kEntrySize;
   return res;
+}
+
+JSFunction Context::Closure(Error& err) {
+  return FixedArray::Get<JSFunction>(v8()->context()->kClosureIndex, err);
+}
+
+JSObject Context::Global(Error& err) {
+  return FixedArray::Get<JSObject>(v8()->context()->kGlobalObjectIndex, err);
+}
+
+Context Context::Previous(Error& err) {
+  return FixedArray::Get<Context>(v8()->context()->kPreviousIndex, err);
+}
+
+Value Context::ContextSlot(int index, Error& err) {
+  return FixedArray::Get<Value>(v8()->context()->kMinContextSlots + index, err);
+}
+
+Smi ScopeInfo::ParameterCount(Error& err) {
+  return FixedArray::Get<Smi>(v8()->scope_info()->kParameterCountOffset, err);
+}
+
+Smi ScopeInfo::StackLocalCount(Error& err) {
+  return FixedArray::Get<Smi>(v8()->scope_info()->kStackLocalCountOffset, err);
+}
+
+Smi ScopeInfo::ContextLocalCount(Error& err) {
+  return FixedArray::Get<Smi>(v8()->scope_info()->kContextLocalCountOffset,
+      err);
+}
+
+Smi ScopeInfo::ContextGlobalCount(Error& err) {
+  return FixedArray::Get<Smi>(v8()->scope_info()->kContextGlobalCountOffset, err);
+}
+
+String ScopeInfo::ContextLocalName(int index, int param_count, int stack_count,
+                                   Error& err) {
+  int proper_index = index + stack_count + 1 + param_count;
+  proper_index += v8()->scope_info()->kVariablePartIndex;
+  return FixedArray::Get<String>(proper_index, err);
 }
 
 bool Oddball::IsHoleOrUndefined(Error& err) {
