@@ -40,6 +40,7 @@ void LLV8::Load(SBTarget target) {
   oddball.Assign(target, &common);
   js_array_buffer.Assign(target, &common);
   js_array_buffer_view.Assign(target, &common);
+  js_regexp.Assign(target, &common);
   descriptor_array.Assign(target, &common);
   name_dictionary.Assign(target, &common);
   frame.Assign(target, &common);
@@ -455,6 +456,11 @@ std::string HeapObject::Inspect(bool detailed, Error& err) {
   if (type == v8()->types()->kJSFunctionType) {
     JSFunction fn(this);
     return pre + fn.Inspect(detailed, err);
+  }
+
+  if (type == v8()->types()->kJSRegExpType) {
+    JSRegExp re(this);
+    return pre + re.Inspect(detailed, err);
   }
 
   if (type < v8()->types()->kFirstNonstringType) {
