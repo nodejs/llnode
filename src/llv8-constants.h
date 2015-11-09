@@ -145,6 +145,16 @@ class JSRegExp : public Module {
   void Load();
 };
 
+class JSDate : public Module {
+ public:
+  MODULE_DEFAULT_METHODS(JSDate);
+
+  int64_t kValueOffset;
+
+ protected:
+  void Load();
+};
+
 class SharedInfo : public Module {
  public:
   MODULE_DEFAULT_METHODS(SharedInfo);
@@ -414,6 +424,7 @@ class Types : public Module {
   int64_t kJSArrayBufferType;
   int64_t kJSTypedArrayType;
   int64_t kJSRegExpType;
+  int64_t kJSDateType;
 
  protected:
   void Load();

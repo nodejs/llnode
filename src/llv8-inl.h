@@ -162,6 +162,8 @@ ACCESSOR(HeapNumber, GetValue, heap_number()->kValueOffset, double)
 
 ACCESSOR(JSArray, Length, js_array()->kLengthOffset, Smi)
 
+ACCESSOR(JSDate, GetValue, js_date()->kValueOffset, Value)
+
 int64_t String::Representation(Error& err) {
   int64_t type = GetType(err);
   if (err.Fail()) return -1;

@@ -203,6 +203,11 @@ void JSFunction::Load() {
 }
 
 
+void JSDate::Load() {
+  kValueOffset = LoadConstant("class_JSDate__value__Object");
+};
+
+
 void SharedInfo::Load() {
   kNameOffset = LoadConstant("class_SharedFunctionInfo__name__Object");
   kInferredNameOffset =
@@ -434,6 +439,7 @@ void Types::Load() {
   kJSArrayBufferType = LoadConstant("type_JSArrayBuffer__JS_ARRAY_BUFFER_TYPE");
   kJSTypedArrayType = LoadConstant("type_JSTypedArray__JS_TYPED_ARRAY_TYPE");
   kJSRegExpType = LoadConstant("type_JSRegExp__JS_REGEXP_TYPE");
+  kJSDateType = LoadConstant("type_JSDate__JS_DATE_TYPE");
 }
 
 }  // namespace constants

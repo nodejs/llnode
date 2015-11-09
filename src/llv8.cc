@@ -41,6 +41,7 @@ void LLV8::Load(SBTarget target) {
   js_array_buffer.Assign(target, &common);
   js_array_buffer_view.Assign(target, &common);
   js_regexp.Assign(target, &common);
+  js_date.Assign(target, &common);
   descriptor_array.Assign(target, &common);
   name_dictionary.Assign(target, &common);
   frame.Assign(target, &common);
@@ -286,6 +287,36 @@ std::string JSFunction::Inspect(bool detailed, Error& err) {
   return res + ">";
 }
 
+std::string JSDate::Inspect(Error& err) {
+  std::string pre = "<JSDate: ";
+
+  Value val = GetValue(err);
+
+  Smi smi(val);
+  if (smi.Check()) {
+    std::string s = smi.ToString(err);
+    if (err.Fail()) {
+      return pre + ">";
+    }
+
+    return pre + s + ">";
+  }
+
+  HeapNumber hn(val);
+  if (hn.Check()) {
+    std::string s = hn.ToString(true, err);
+    if (err.Fail()) {
+      return pre + ">";
+    }
+    return pre + s + ">";
+  }
+
+  double d = static_cast<double>(val.raw());
+  char buf[128];
+  snprintf(buf, sizeof(buf), "%f", d);
+
+  return pre + ">";
+}
 
 std::string SharedFunctionInfo::GetPostfix(Error& err) {
   Script script = GetScript(err);
@@ -409,7 +440,7 @@ std::string HeapObject::ToString(Error& err) {
 
   if (type == v8()->types()->kHeapNumberType) {
     HeapNumber n(this);
-    return n.ToString(err);
+    return n.ToString(false, err);
   }
 
   if (type < v8()->types()->kFirstNonstringType) {
@@ -483,6 +514,11 @@ std::string HeapObject::Inspect(bool detailed, Error& err) {
     return pre + view.Inspect(err);
   }
 
+  if (type == v8()->types()->kJSDateType) {
+    JSDate date(this);
+    return pre + date.Inspect(err);
+  }
+
   return pre + "<unknown>";
 }
 
@@ -500,16 +536,17 @@ std::string Smi::Inspect(Error& err) {
 }
 
 
-std::string HeapNumber::ToString(Error& err) {
+std::string HeapNumber::ToString(bool whole, Error& err) {
   char buf[128];
-  snprintf(buf, sizeof(buf), "%f", GetValue(err));
+  const char* fmt = whole ? "%.0lf" : "%f";
+  snprintf(buf, sizeof(buf), fmt, GetValue(err));
   err = Error::Ok();
   return buf;
 }
 
 
 std::string HeapNumber::Inspect(Error& err) {
-  return "<Number: " + ToString(err) + ">";
+  return "<Number: " + ToString(true, err) + ">";
 }
 
 

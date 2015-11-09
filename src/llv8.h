@@ -186,7 +186,7 @@ class HeapNumber : public HeapObject {
 
   inline double GetValue(Error& err);
 
-  std::string ToString(Error& err);
+  std::string ToString(bool whole, Error& err);
   std::string Inspect(Error& err);
 };
 
@@ -234,6 +234,15 @@ class JSFunction : public JSObject {
 class JSRegExp : public JSObject {
  public:
   V8_VALUE_DEFAULT_METHODS(JSRegExp, JSObject);
+};
+
+class JSDate : public JSObject {
+ public:
+  V8_VALUE_DEFAULT_METHODS(JSDate, JSObject);
+
+  inline Value GetValue(Error& err);
+
+  std::string Inspect(Error& err);
 };
 
 class FixedArrayBase : public HeapObject {
@@ -394,6 +403,7 @@ class LLV8 {
   constants::JSArrayBuffer js_array_buffer;
   constants::JSArrayBufferView js_array_buffer_view;
   constants::JSRegExp js_regexp;
+  constants::JSDate js_date;
   constants::DescriptorArray descriptor_array;
   constants::NameDictionary name_dictionary;
   constants::Frame frame;
@@ -425,6 +435,7 @@ class LLV8 {
   friend class JSArrayBuffer;
   friend class JSArrayBufferView;
   friend class JSRegExp;
+  friend class JSDate;
 };
 
 #undef V8_VALUE_DEFAULT_METHODS
