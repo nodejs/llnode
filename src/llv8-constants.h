@@ -137,6 +137,14 @@ class JSFunction : public Module {
   void Load();
 };
 
+class JSRegExp : public Module {
+ public:
+  MODULE_DEFAULT_METHODS(JSRegExp);
+
+ protected:
+  void Load();
+};
+
 class SharedInfo : public Module {
  public:
   MODULE_DEFAULT_METHODS(SharedInfo);
@@ -405,6 +413,7 @@ class Types : public Module {
   int64_t kFixedArrayType;
   int64_t kJSArrayBufferType;
   int64_t kJSTypedArrayType;
+  int64_t kJSRegExpType;
 
  protected:
   void Load();

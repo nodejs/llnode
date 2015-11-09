@@ -231,6 +231,11 @@ class JSFunction : public JSObject {
   std::string Inspect(bool detailed, Error& err);
 };
 
+class JSRegExp : public JSObject {
+ public:
+  V8_VALUE_DEFAULT_METHODS(JSRegExp, JSObject);
+};
+
 class FixedArrayBase : public HeapObject {
  public:
   V8_VALUE_DEFAULT_METHODS(FixedArrayBase, HeapObject);
@@ -388,6 +393,7 @@ class LLV8 {
   constants::Oddball oddball;
   constants::JSArrayBuffer js_array_buffer;
   constants::JSArrayBufferView js_array_buffer_view;
+  constants::JSRegExp js_regexp;
   constants::DescriptorArray descriptor_array;
   constants::NameDictionary name_dictionary;
   constants::Frame frame;
@@ -418,6 +424,7 @@ class LLV8 {
   friend class Oddball;
   friend class JSArrayBuffer;
   friend class JSArrayBufferView;
+  friend class JSRegExp;
 };
 
 #undef V8_VALUE_DEFAULT_METHODS

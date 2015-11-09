@@ -379,6 +379,7 @@ void Types::Load() {
   kFixedArrayType = LoadConstant("type_FixedArray__FIXED_ARRAY_TYPE");
   kJSArrayBufferType = LoadConstant("type_JSArrayBuffer__JS_ARRAY_BUFFER_TYPE");
   kJSTypedArrayType = LoadConstant("type_JSTypedArray__JS_TYPED_ARRAY_TYPE");
+  kJSRegExpType = LoadConstant("type_JSRegExp__JS_REGEXP_TYPE");
 }
 
 }  // namespace constants
