@@ -3,6 +3,7 @@
 
 #include <string>
 
+#include "src/llv8.h"
 #include "src/llv8-constants.h"
 
 namespace llnode {
@@ -28,37 +29,90 @@ void Module::Assign(SBTarget target, Common* common) {
 }
 
 
+static int64_t LookupConstant(SBTarget target, const char* name, int64_t def,
+    Error& err) {
+  int64_t res;
+
+  res = def;
+
+  SBSymbolContextList context_list = target.FindSymbols(name);
+  if (!context_list.IsValid() || context_list.GetSize() == 0) {
+    err = Error::Failure("Failed to find symbol");
+    return res;
+  }
+
+  SBSymbolContext context = context_list.GetContextAtIndex(0);
+  SBSymbol symbol = context.GetSymbol();
+  if (!symbol.IsValid()) {
+    err = Error::Failure("Failed to fetch symbol");
+    return res;
+  }
+
+  SBAddress start = symbol.GetStartAddress();
+  SBAddress end = symbol.GetEndAddress();
+  size_t size = end.GetOffset() - start.GetOffset();
+
+  SBError sberr;
+
+  SBProcess process = target.GetProcess();
+  addr_t addr = start.GetLoadAddress(target);
+  if (size == 8) {
+    process.ReadMemory(addr, &res, size, sberr);
+  } else if (size == 4) {
+    int32_t tmp;
+    process.ReadMemory(addr, &tmp, size, sberr);
+    res = static_cast<int64_t>(tmp);
+  } else if (size == 2) {
+    int16_t tmp;
+    process.ReadMemory(addr, &tmp, size, sberr);
+    res = static_cast<int64_t>(tmp);
+  } else if (size == 1) {
+    int8_t tmp;
+    process.ReadMemory(addr, &tmp, size, sberr);
+    res = static_cast<int64_t>(tmp);
+  } else {
+    err = Error::Failure("Unexpected symbol size");
+    return res;
+  }
+
+  if (sberr.Fail())
+    err = Error::Failure("Failed to load symbol");
+  else
+    err = Error::Ok();
+
+  return res;
+}
+
+
 int64_t Module::LoadRawConstant(const char* name, int64_t def) {
-  SBValue v = target_.FindFirstGlobalVariable(name);
+  Error err;
+  int64_t v = LookupConstant(target_, name, def, err);
+  if (err.Fail() && IsDebugMode()) fprintf(stderr, "Failed to load %s\n", name);
 
-  if (v.GetError().Fail() && IsDebugMode())
-    fprintf(stderr, "Failed to load %s\n", name);
-
-  return v.GetValueAsSigned(def);
+  return v;
 }
 
 
 int64_t Module::LoadConstant(const char* name, int64_t def) {
-  SBValue v = target_.FindFirstGlobalVariable((kConstantPrefix + name).c_str());
+  Error err;
+  int64_t v = LookupConstant(target_, (kConstantPrefix + name).c_str(), def,
+      err);
+  if (err.Fail() && IsDebugMode()) fprintf(stderr, "Failed to load %s\n", name);
 
-  if (v.GetError().Fail() && IsDebugMode())
-    fprintf(stderr, "Failed to load %s\n", name);
-
-  return v.GetValueAsSigned(def);
+  return v;
 }
 
 
 int64_t Module::LoadConstant(const char* name, const char* fallback,
                              int64_t def) {
-  SBValue v = target_.FindFirstGlobalVariable((kConstantPrefix + name).c_str());
+  Error err;
+  int64_t v = LookupConstant(target_, (kConstantPrefix + name).c_str(), def,
+      err);
+  if (err.Fail())
+    v = LookupConstant(target_, (kConstantPrefix + fallback).c_str(), def, err);
+  if (err.Fail() && IsDebugMode()) fprintf(stderr, "Failed to load %s\n", name);
 
-  if (v.GetError().Fail())
-    v = target_.FindFirstGlobalVariable((kConstantPrefix + fallback).c_str());
-
-  if (v.GetError().Fail() && IsDebugMode())
-    fprintf(stderr, "Failed to load both %s and %s\n", name, fallback);
-
-  return v.GetValueAsSigned(def);
+  return v;
 }
 
 
