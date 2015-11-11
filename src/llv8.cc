@@ -142,6 +142,55 @@ uint8_t* LLV8::LoadChunk(int64_t addr, int64_t length, Error& err) {
 }
 
 
+// reset_line - make line_start absolute vs start of function
+//            otherwise relative to last end
+// returns line cursor
+uint32_t JSFrame::GetSourceForDisplay(bool reset_line, uint32_t line_start,
+                                  uint32_t line_limit, std::string lines[],
+                                  uint32_t& lines_found, Error& err) {
+
+  v8::JSFunction fn = GetFunction(err);
+  if (err.Fail()) {
+    return line_start;
+  }
+
+  v8::SharedFunctionInfo info = fn.Info(err);
+  if (err.Fail()) {
+    return line_start;
+  }
+
+  v8::Script script = info.GetScript(err);
+  if (err.Fail()) {
+    return line_start;
+  }
+
+  // Check if this is being run multiple times against the same frame
+  // if not, reset last line
+  if (reset_line) {
+    uint32_t pos = info.StartPosition(err);
+    if (err.Fail()) {
+      return line_start;
+    }
+    int64_t tmp_line;
+    int64_t tmp_col;
+    script.GetLineColumnFromPos(pos, tmp_line, tmp_col, err);
+    if (err.Fail()) {
+      return line_start;
+    }
+    line_start += tmp_line;
+  }
+
+  script.GetLines(line_start, lines, line_limit, lines_found, err);
+  if (err.Fail()) {
+    const char* msg = err.GetMessage();
+    if (msg == nullptr) {
+      err = Error(true, "Failed to get Function Source");
+    }
+    return line_start;
+  }
+  return line_start + lines_found;
+}
+
 std::string JSFrame::Inspect(bool with_args, Error& err) {
   Value context =
       v8()->LoadValue<Value>(raw() + v8()->frame()->kContextOffset, err);
@@ -178,8 +227,7 @@ std::string JSFrame::Inspect(bool with_args, Error& err) {
   }
 
   // We are dealing with function or internal code (probably stub)
-  JSFunction fn =
-      v8()->LoadValue<JSFunction>(raw() + v8()->frame()->kFunctionOffset, err);
+  JSFunction fn = GetFunction(err);
   if (err.Fail()) return std::string();
 
   int64_t fn_type = fn.GetType(err);
@@ -337,12 +385,16 @@ std::string SharedFunctionInfo::GetPostfix(Error& err) {
   if (res.empty())
     res = "(no script)";
 
-  res += script.GetLineColumnFromPos(start_pos, err);
+  int64_t line = 0;
+  int64_t column = 0;
+  script.GetLineColumnFromPos(start_pos, line, column, err);
   if (err.Fail()) return std::string();
 
-  return res;
+  char tmp[128];
+  snprintf(tmp, sizeof(tmp), ":%d:%d", static_cast<int>(line),
+      static_cast<int>(column));
+  return res + tmp;
 }
-
 
 std::string SharedFunctionInfo::ToString(Error& err) {
   std::string res = ProperName(err);
@@ -352,19 +404,70 @@ std::string SharedFunctionInfo::ToString(Error& err) {
 }
 
 
-std::string Script::GetLineColumnFromPos(int64_t pos, Error& err) {
-  char tmp[128];
+// return end_char+1, which may be less than line_limit if source
+// ends before end_inclusive
+void Script::GetLines(uint64_t start_line, std::string lines[],
+                      uint64_t line_limit, uint32_t &lines_found, Error& err) {
+  lines_found = 0;
 
   HeapObject source = Source(err);
-  if (err.Fail()) return std::string();
+  if (err.Fail()) return;
 
   int64_t type = source.GetType(err);
-  if (err.Fail()) return std::string();
+  if (err.Fail()) return;
 
   // No source
   if (type > v8()->types()->kFirstNonstringType) {
-    snprintf(tmp, sizeof(tmp), ":0:%d", static_cast<int>(pos));
-    return tmp;
+    err = Error(true, "No source");
+    return;
+  }
+
+  String str(source);
+  std::string source_str = str.ToString(err);
+  uint64_t limit = source_str.length();
+
+  uint64_t length = 0;
+  uint64_t line_i = 0;
+  uint64_t i = 0;
+  for (; i < limit && lines_found < line_limit; i++) {
+    // \r\n should ski adding a line and column on \r
+    if (source_str[i] == '\r' && i < limit - 1 && source_str[i + 1] == '\n') {
+      i++;
+    }
+    if (source_str[i] == '\n' || source_str[i] == '\r') {
+      if (line_i >= start_line) {
+        lines[lines_found] = std::string(source_str, i - length, length);
+        lines_found++;
+      }
+      line_i++;
+      length = 0;
+    }
+    else {
+      length++;
+    }
+  }
+  if (line_i >= start_line && length != 0 && lines_found < line_limit) {
+    lines[lines_found] = std::string(source_str, limit - length, length);
+    lines_found++;
+  }
+}
+
+
+void Script::GetLineColumnFromPos(int64_t pos, int64_t& line, int64_t& column,
+                                  Error& err) {
+  line = 0;
+  column = 0;
+
+  HeapObject source = Source(err);
+  if (err.Fail()) return;
+
+  int64_t type = source.GetType(err);
+  if (err.Fail()) return;
+
+  // No source
+  if (type > v8()->types()->kFirstNonstringType) {
+    err = Error(true, "No source");
+    return;
   }
 
   String str(source);
@@ -373,20 +476,17 @@ std::string Script::GetLineColumnFromPos(int64_t pos, Error& err) {
   if (limit > pos)
     limit = pos;
 
-  int line = 1;
-  int column = 1;
   for (int64_t i = 0; i < limit; i++, column++) {
+    // \r\n should ski adding a line and column on \r
+    if (source_str[i] == '\r' && i < limit - 1 && source_str[i + 1] == '\n') {
+      i++;
+    }
     if (source_str[i] == '\n' || source_str[i] == '\r') {
       column = 0;
       line++;
     }
   }
-
-  snprintf(tmp, sizeof(tmp), ":%d:%d", static_cast<int>(line),
-      static_cast<int>(column));
-  return tmp;
 }
-
 
 bool Value::IsHoleOrUndefined(Error& err) {
   HeapObject obj(this);

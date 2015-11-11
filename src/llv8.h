@@ -25,6 +25,8 @@ class Error {
   inline bool Success() const { return !Fail(); }
   inline bool Fail() const { return failed_; }
 
+  inline const char* GetMessage() { return msg_; }
+
  private:
   bool failed_;
   const char* msg_;
@@ -131,7 +133,11 @@ class Script : public HeapObject {
   inline HeapObject Source(Error& err);
   inline HeapObject LineEnds(Error& err);
 
-  std::string GetLineColumnFromPos(int64_t pos, Error& err);
+  void GetLines(uint64_t start_line, std::string lines[],
+                          uint64_t line_limit, uint32_t &lines_found,
+                          Error& err);
+  void GetLineColumnFromPos(int64_t pos,
+                            int64_t& line, int64_t& column, Error& err);
 };
 
 class Code : public HeapObject {
@@ -365,9 +371,13 @@ class JSFrame : public Value {
   V8_VALUE_DEFAULT_METHODS(JSFrame, Value)
 
   inline int64_t LeaParamSlot(int slot, int count) const;
+  inline JSFunction GetFunction(Error& err);
   inline Value GetReceiver(int count, Error &err);
   inline Value GetParam(int slot, int count, Error &err);
 
+  uint32_t GetSourceForDisplay(bool set_line, uint32_t line_start,
+                           uint32_t line_limit, std::string lines[],
+                           uint32_t& lines_found, Error& err);
   std::string Inspect(bool with_args, Error& err);
   std::string InspectArgs(JSFunction fn, Error& err);
 };

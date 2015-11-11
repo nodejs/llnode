@@ -113,6 +113,7 @@ bool PrintCmd::DoExecute(SBDebugger d, char** cmd,
   return true;
 }
 
+
 bool CodeMap::DoExecute(SBDebugger d, char** cmd,
                         SBCommandReturnObject& result) {
   SBTarget target = d.GetSelectedTarget();
@@ -133,6 +134,93 @@ bool CodeMap::DoExecute(SBDebugger d, char** cmd,
   }
 
   result.Printf("%s\n", res.c_str());
+
+  return true;
+}
+
+
+bool ListCmd::DoExecute(SBDebugger d, char** cmd,
+                         SBCommandReturnObject& result) {
+  static SBFrame last_frame;
+  static uint64_t last_line = 0;
+  SBTarget target = d.GetSelectedTarget();
+  SBThread thread = target.GetProcess().GetSelectedThread();
+  if (!thread.IsValid()) {
+    result.SetError("No valid process, please start something\n");
+    return false;
+  }
+
+  std::string full_cmd;
+  bool grab_line = false;
+  bool line_switch = false;
+  int line_from_switch = 0;
+  for (char** start = cmd; *start != nullptr; start++) {
+    if (grab_line) {
+      grab_line = false;
+      line_switch = true;
+      errno = 0;
+      line_from_switch = strtol(*start, nullptr, 10);
+      if (errno) {
+        result.SetError("Invalid line number");
+        return false;
+      }
+      line_from_switch--;
+    }
+    if (strcmp(*start, "-l") == 0) {
+      grab_line = true;
+    }
+    full_cmd += *start;
+  }
+  if (grab_line || (line_switch && line_from_switch < 0)) {
+    result.SetError("Expected line number after -l");
+    return false;
+  }
+
+  // Load V8 constants from postmortem data
+  llv8.Load(target);
+  SBFrame frame = thread.GetSelectedFrame();
+  SBSymbol symbol = frame.GetSymbol();
+
+  bool reset_line = false;
+  if (line_switch) {
+    reset_line = true;
+    last_line = line_from_switch;
+  }
+  else if (frame != last_frame) {
+    last_line = 0;
+    reset_line = true;
+  }
+  last_frame = frame;
+  // C++ symbol
+  if (symbol.IsValid()) {
+    SBCommandInterpreter interpreter = d.GetCommandInterpreter();
+    std::string cmd = "source list ";
+    cmd += full_cmd;
+    interpreter.HandleCommand(cmd.c_str(), result, false);
+    return true;
+  }
+
+  // V8 frame
+  v8::Error err;
+  v8::JSFrame v8_frame(&llv8, static_cast<int64_t>(frame.GetFP()));
+
+  const static uint32_t kDisplayLines = 4;
+  std::string* lines = new std::string[kDisplayLines];
+  uint32_t lines_found = 0;
+
+  uint32_t line_cursor = v8_frame.GetSourceForDisplay(
+                              reset_line, last_line, kDisplayLines,
+                              lines, lines_found, err);
+  if (err.Fail()) {
+    result.SetError(err.GetMessage());
+    return false;
+  }
+  last_line = line_cursor;
+
+  for (uint32_t i = 0; i < lines_found; i++) {
+    result.Printf("  %d %s\n", line_cursor - lines_found + i + 1,
+        lines[i].c_str());
+  }
 
   return true;
 }
@@ -164,6 +252,12 @@ bool PluginInitialize(SBDebugger d) {
   v8.AddCommand("code-map", new llnode::CodeMap(),
       "Print code map of all compiled functions.\n\n"
       "Syntax: v8 code-map\n");
+
+  SBCommand source = v8.AddMultiwordCommand("source",
+      "Source code information");
+  source.AddCommand("list", new llnode::ListCmd(),
+      "Print source lines around a selected JavaScript frame.\n\n"
+      "Syntax: v8 source list\n");
 
   return true;
 }
