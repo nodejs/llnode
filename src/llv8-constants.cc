@@ -456,13 +456,18 @@ void Frame::Load() {
 
 void Node::Load() {
   kNodeIsolate = LoadRawConstant("_ZN4nodeL12node_isolateE");
-  kIsolateHeapOffset = Eval("&((v8::internal::Isolate*)(0))->heap_");
-  kOldSpaceHeapOffset = Eval("&((v8::internal::OldSpace*)(0))->heap_");
-  kOldSpaceIdOffset = Eval("&((v8::internal::OldSpace*)(0))->id_");
-  kOldSpaceExecutableOffset =
-      Eval("&((v8::internal::OldSpace*)(0))->executable_");
-  kPageAreaStartOffset = Eval("&((v8::internal::Page*)(0))->area_start_");
-  kPageAreaEndOffset = Eval("&((v8::internal::Page*)(0))->area_end_");
+  // &&((v8::internal::Isolate*)(0))->heap_((v8::internal::Isolate*)(0))->heap_
+  kIsolateHeapOffset = 0x20;
+  // &((v8::internal::OldSpace*)(0))->heap_
+  kOldSpaceHeapOffset = 0x8;
+  // &((v8::internal::OldSpace*)(0))->id_
+  kOldSpaceIdOffset = 0x10;
+  // &((v8::internal::OldSpace*)(0))->executable_
+  kOldSpaceExecutableOffset = 0x14;
+  // &((v8::internal::Page*)(0))->area_start_
+  kPageAreaStartOffset = 0x10;
+  // &((v8::internal::Page*)(0))->area_end_
+  kPageAreaEndOffset = 0x18;
 
   // TODO(indutny): move it to postmortem
   kOldSpaceId = 1;
