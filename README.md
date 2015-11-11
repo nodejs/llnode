@@ -54,19 +54,22 @@ lldb
 (lldb) help v8
 The following subcommands are supported:
 
-      bt      -- Show a backtrace with node.js JavaScript functions and their
-                 args. An optional argument is accepted; if that argument is a
-                 number, it specifies the number of frames to display. Otherwise
-                 all frames will be dumped.
+      bt       -- Show a backtrace with node.js JavaScript functions and their
+                  args. An optional argument is accepted; if that argument is a
+                  number, it specifies the number of frames to display. Otherwise
+                  all frames will be dumped.
 
-                 Syntax: v8 bt [number]
-      inspect -- Print detailed description and contents of the JavaScript
-                 value.
+                  Syntax: v8 bt [number]
+      code-map -- Print code map of all compiled functions.
 
-                 Syntax: v8 inspect expr
-      print   -- Print short description of the JavaScript value.
+                  Syntax: v8 code-map
+      inspect  -- Print detailed description and contents of the JavaScript
+                  value.
 
-                 Syntax: v8 print expr
+                  Syntax: v8 inspect expr
+      print    -- Print short description of the JavaScript value.
+
+                  Syntax: v8 print expr
 
 For more help on any particular subcommand, type 'help <command> <subcommand>'.
 ```
