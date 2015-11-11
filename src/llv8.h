@@ -32,11 +32,11 @@ class Error {
   const char* msg_;
 };
 
-#define V8_VALUE_DEFAULT_METHODS(NAME, PARENT)                                \
-  NAME(const NAME& v) = default;                                              \
-  NAME() : PARENT() {}                                                        \
-  NAME(LLV8* v8, int64_t raw) : PARENT(v8, raw) {}                            \
-  NAME(Value& v) : PARENT(v) {}                                               \
+#define V8_VALUE_DEFAULT_METHODS(NAME, PARENT)     \
+  NAME(const NAME& v) = default;                   \
+  NAME() : PARENT() {}                             \
+  NAME(LLV8* v8, int64_t raw) : PARENT(v8, raw) {} \
+  NAME(Value& v) : PARENT(v) {}                    \
   NAME(Value* v) : PARENT(v->v8(), v->raw()) {}
 
 class Value {
@@ -133,11 +133,10 @@ class Script : public HeapObject {
   inline HeapObject Source(Error& err);
   inline HeapObject LineEnds(Error& err);
 
-  void GetLines(uint64_t start_line, std::string lines[],
-                          uint64_t line_limit, uint32_t &lines_found,
-                          Error& err);
-  void GetLineColumnFromPos(int64_t pos,
-                            int64_t& line, int64_t& column, Error& err);
+  void GetLines(uint64_t start_line, std::string lines[], uint64_t line_limit,
+                uint32_t& lines_found, Error& err);
+  void GetLineColumnFromPos(int64_t pos, int64_t& line, int64_t& column,
+                            Error& err);
 };
 
 class Code : public HeapObject {
@@ -328,7 +327,7 @@ class ScopeInfo : public FixedArray {
   inline Smi ContextGlobalCount(Error& err);
 
   inline String ContextLocalName(int index, int param_count, int stack_count,
-      Error& err);
+                                 Error& err);
 };
 
 class Oddball : public HeapObject {
@@ -372,12 +371,12 @@ class JSFrame : public Value {
 
   inline int64_t LeaParamSlot(int slot, int count) const;
   inline JSFunction GetFunction(Error& err);
-  inline Value GetReceiver(int count, Error &err);
-  inline Value GetParam(int slot, int count, Error &err);
+  inline Value GetReceiver(int count, Error& err);
+  inline Value GetParam(int slot, int count, Error& err);
 
   uint32_t GetSourceForDisplay(bool set_line, uint32_t line_start,
-                           uint32_t line_limit, std::string lines[],
-                           uint32_t& lines_found, Error& err);
+                               uint32_t line_limit, std::string lines[],
+                               uint32_t& lines_found, Error& err);
   std::string Inspect(bool with_args, Error& err);
   std::string InspectArgs(JSFunction fn, Error& err);
 };

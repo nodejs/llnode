@@ -10,8 +10,7 @@ namespace v8 {
 
 class CodeMap {
  public:
-  CodeMap(LLV8* v8) : v8_(v8) {
-  }
+  CodeMap(LLV8* v8) : v8_(v8) {}
 
   std::string Collect(Error& err);
 
@@ -20,10 +19,8 @@ class CodeMap {
  private:
   class QueueItem {
    public:
-    QueueItem(int64_t start, int64_t end, std::string name) : start_(start),
-                                                              end_(end),
-                                                              name_(name) {
-    }
+    QueueItem(int64_t start, int64_t end, std::string name)
+        : start_(start), end_(end), name_(name) {}
 
     static bool Sort(QueueItem a, QueueItem b);
 
@@ -51,4 +48,4 @@ class CodeMap {
 }  // namespace v8
 }  // namespace llnode
 
-#endif // SRC_LLV8_CODE_MAP_H_
+#endif  // SRC_LLV8_CODE_MAP_H_

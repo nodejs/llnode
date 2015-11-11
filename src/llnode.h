@@ -9,8 +9,7 @@ namespace llnode {
 
 class BacktraceCmd : public lldb::SBCommandPluginInterface {
  public:
-  ~BacktraceCmd() override {
-  }
+  ~BacktraceCmd() override {}
 
   bool DoExecute(lldb::SBDebugger d, char** cmd,
                  lldb::SBCommandReturnObject& result) override;
@@ -18,11 +17,9 @@ class BacktraceCmd : public lldb::SBCommandPluginInterface {
 
 class PrintCmd : public lldb::SBCommandPluginInterface {
  public:
-  PrintCmd(bool detailed) : detailed_(detailed) {
-  }
+  PrintCmd(bool detailed) : detailed_(detailed) {}
 
-  ~PrintCmd() override {
-  }
+  ~PrintCmd() override {}
 
   bool DoExecute(lldb::SBDebugger d, char** cmd,
                  lldb::SBCommandReturnObject& result) override;
@@ -33,8 +30,7 @@ class PrintCmd : public lldb::SBCommandPluginInterface {
 
 class CodeMap : public lldb::SBCommandPluginInterface {
  public:
-  ~CodeMap() override {
-  }
+  ~CodeMap() override {}
 
   bool DoExecute(lldb::SBDebugger d, char** cmd,
                  lldb::SBCommandReturnObject& result) override;
@@ -42,8 +38,7 @@ class CodeMap : public lldb::SBCommandPluginInterface {
 
 class ListCmd : public lldb::SBCommandPluginInterface {
  public:
-  ~ListCmd() override {
-  }
+  ~ListCmd() override {}
 
   bool DoExecute(lldb::SBDebugger d, char** cmd,
                  lldb::SBCommandReturnObject& result) override;

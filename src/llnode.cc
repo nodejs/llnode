@@ -22,8 +22,8 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
   }
 
   errno = 0;
-  int number = (cmd != nullptr && *cmd != nullptr) ?
-      strtol(*cmd, nullptr, 10) : -1;
+  int number =
+      (cmd != nullptr && *cmd != nullptr) ? strtol(*cmd, nullptr, 10) : -1;
   if ((number == 0 && errno == EINVAL) || (number < 0 && number != -1)) {
     result.SetError("Invalid number of frames");
     return false;
@@ -41,8 +41,7 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
   SBFrame selected_frame = thread.GetSelectedFrame();
 
   uint32_t num_frames = thread.GetNumFrames();
-  if (number != -1)
-    num_frames = number;
+  if (number != -1) num_frames = number;
   for (uint32_t i = 0; i < num_frames; i++) {
     SBFrame frame = thread.GetFrameAtIndex(i);
     SBSymbol symbol = frame.GetSymbol();
@@ -52,7 +51,7 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
       SBStream desc;
       if (!frame.GetDescription(desc)) continue;
       result.Printf(frame == selected_frame ? "  * %s" : "    %s",
-          desc.GetData());
+                    desc.GetData());
       continue;
     }
 
@@ -65,10 +64,10 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
     if (err.Fail()) continue;
 
     // V8 symbol
-    result.Printf(
-        frame == selected_frame ? "  * frame #%u: 0x%016llx %s\n" :
-            "    frame #%u: 0x%016llx %s\n",
-        i, static_cast<unsigned long long int>(frame.GetPC()), res.c_str());
+    result.Printf(frame == selected_frame ? "  * frame #%u: 0x%016llx %s\n"
+                                          : "    frame #%u: 0x%016llx %s\n",
+                  i, static_cast<unsigned long long int>(frame.GetPC()),
+                  res.c_str());
   }
 
   return true;
@@ -140,7 +139,7 @@ bool CodeMap::DoExecute(SBDebugger d, char** cmd,
 
 
 bool ListCmd::DoExecute(SBDebugger d, char** cmd,
-                         SBCommandReturnObject& result) {
+                        SBCommandReturnObject& result) {
   static SBFrame last_frame;
   static uint64_t last_line = 0;
   SBTarget target = d.GetSelectedTarget();
@@ -185,8 +184,7 @@ bool ListCmd::DoExecute(SBDebugger d, char** cmd,
   if (line_switch) {
     reset_line = true;
     last_line = line_from_switch;
-  }
-  else if (frame != last_frame) {
+  } else if (frame != last_frame) {
     last_line = 0;
     reset_line = true;
   }
@@ -209,8 +207,7 @@ bool ListCmd::DoExecute(SBDebugger d, char** cmd,
   uint32_t lines_found = 0;
 
   uint32_t line_cursor = v8_frame.GetSourceForDisplay(
-                              reset_line, last_line, kDisplayLines,
-                              lines, lines_found, err);
+      reset_line, last_line, kDisplayLines, lines, lines_found, err);
   if (err.Fail()) {
     result.SetError(err.GetMessage());
     return false;
@@ -219,7 +216,7 @@ bool ListCmd::DoExecute(SBDebugger d, char** cmd,
 
   for (uint32_t i = 0; i < lines_found; i++) {
     result.Printf("  %d %s\n", line_cursor - lines_found + i + 1,
-        lines[i].c_str());
+                  lines[i].c_str());
   }
 
   return true;
@@ -234,7 +231,8 @@ bool PluginInitialize(SBDebugger d) {
 
   SBCommand v8 = interpreter.AddMultiwordCommand("v8", "Node.js helpers");
 
-  v8.AddCommand("bt", new llnode::BacktraceCmd(),
+  v8.AddCommand(
+      "bt", new llnode::BacktraceCmd(),
       "Show a backtrace with node.js JavaScript functions and their args. "
       "An optional argument is accepted; if that argument is a number, it "
       "specifies the number of frames to display. Otherwise all frames will "
@@ -242,22 +240,23 @@ bool PluginInitialize(SBDebugger d) {
       "Syntax: v8 bt [number]\n");
 
   v8.AddCommand("print", new llnode::PrintCmd(false),
-      "Print short description of the JavaScript value.\n\n"
-      "Syntax: v8 print expr\n");
+                "Print short description of the JavaScript value.\n\n"
+                "Syntax: v8 print expr\n");
 
-  v8.AddCommand("inspect", new llnode::PrintCmd(true),
+  v8.AddCommand(
+      "inspect", new llnode::PrintCmd(true),
       "Print detailed description and contents of the JavaScript value.\n\n"
       "Syntax: v8 inspect expr\n");
 
   v8.AddCommand("code-map", new llnode::CodeMap(),
-      "Print code map of all compiled functions.\n\n"
-      "Syntax: v8 code-map\n");
+                "Print code map of all compiled functions.\n\n"
+                "Syntax: v8 code-map\n");
 
-  SBCommand source = v8.AddMultiwordCommand("source",
-      "Source code information");
+  SBCommand source =
+      v8.AddMultiwordCommand("source", "Source code information");
   source.AddCommand("list", new llnode::ListCmd(),
-      "Print source lines around a selected JavaScript frame.\n\n"
-      "Syntax: v8 source list\n");
+                    "Print source lines around a selected JavaScript frame.\n\n"
+                    "Syntax: v8 source list\n");
 
   return true;
 }

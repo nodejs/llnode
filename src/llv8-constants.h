@@ -12,8 +12,7 @@ class Common;
 
 class Module {
  public:
-  Module() : loaded_(false) {
-  }
+  Module() : loaded_(false) {}
 
   inline bool is_loaded() const { return loaded_; }
 
@@ -23,7 +22,7 @@ class Module {
   int64_t LoadRawConstant(const char* name, int64_t def = -1);
   int64_t LoadConstant(const char* name, int64_t def = -1);
   int64_t LoadConstant(const char* name, const char* fallback,
-      int64_t def = -1);
+                       int64_t def = -1);
   int64_t Eval(const char* expr, int64_t def = -1);
 
   lldb::SBTarget target_;
@@ -31,14 +30,14 @@ class Module {
   bool loaded_;
 };
 
-#define MODULE_DEFAULT_METHODS(NAME)                                          \
-    NAME() {}                                                                 \
-    inline NAME* operator()() {                                               \
-      if (loaded_) return this;                                               \
-      loaded_ = true;                                                         \
-      Load();                                                                 \
-      return this;                                                            \
-    }
+#define MODULE_DEFAULT_METHODS(NAME) \
+  NAME() {}                          \
+  inline NAME* operator()() {        \
+    if (loaded_) return this;        \
+    loaded_ = true;                  \
+    Load();                          \
+    return this;                     \
+  }
 
 class Common : public Module {
  public:

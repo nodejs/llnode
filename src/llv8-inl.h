@@ -88,18 +88,18 @@ inline int64_t Map::GetType(Error& err) {
 
 
 inline JSFunction JSFrame::GetFunction(Error& err) {
-  return v8()->LoadValue<JSFunction>(
-      raw() + v8()->frame()->kFunctionOffset, err);
+  return v8()->LoadValue<JSFunction>(raw() + v8()->frame()->kFunctionOffset,
+                                     err);
 }
 
 
 inline int64_t JSFrame::LeaParamSlot(int slot, int count) const {
   return raw() + v8()->frame()->kArgsOffset +
-      (count - slot - 1) * v8()->common()->kPointerSize;
+         (count - slot - 1) * v8()->common()->kPointerSize;
 }
 
 
-inline Value JSFrame::GetReceiver(int count, Error &err) {
+inline Value JSFrame::GetReceiver(int count, Error& err) {
   return GetParam(-1, count, err);
 }
 
@@ -137,16 +137,17 @@ inline int64_t Map::NumberOfOwnDescriptors(Error& err) {
 }
 
 
-#define ACCESSOR(CLASS, METHOD, OFF, TYPE)                                    \
-    inline TYPE CLASS::METHOD(Error& err) {                                   \
-      return LoadFieldValue<TYPE>(v8()->OFF, err);                            \
-    }
+#define ACCESSOR(CLASS, METHOD, OFF, TYPE)       \
+  inline TYPE CLASS::METHOD(Error& err) {        \
+    return LoadFieldValue<TYPE>(v8()->OFF, err); \
+  }
 
 
 ACCESSOR(HeapObject, GetMap, heap_obj()->kMapOffset, HeapObject)
 
 ACCESSOR(Map, MaybeConstructor, map()->kMaybeConstructorOffset, HeapObject)
-ACCESSOR(Map, InstanceDescriptors, map()->kInstanceDescriptorsOffset, HeapObject)
+ACCESSOR(Map, InstanceDescriptors, map()->kInstanceDescriptorsOffset,
+         HeapObject)
 
 inline int64_t Map::BitField3(Error& err) {
   return LoadField(v8()->map()->kBitField3Offset, err) & 0xffffffff;
@@ -158,7 +159,7 @@ inline int64_t Map::InObjectProperties(Error& err) {
 
 inline int64_t Map::InstanceSize(Error& err) {
   return (LoadField(v8()->map()->kInstanceSizeOffset, err) & 0xff) *
-      v8()->common()->kPointerSize;
+         v8()->common()->kPointerSize;
 }
 
 ACCESSOR(JSObject, Properties, js_object()->kPropertiesOffset, HeapObject)
@@ -198,9 +199,7 @@ ACCESSOR(SharedFunctionInfo, GetCode, shared_info()->kCodeOffset, Code)
 ACCESSOR(SharedFunctionInfo, GetScopeInfo, shared_info()->kScopeInfoOffset,
          HeapObject)
 
-inline int64_t Code::Start() {
-  return LeaField(v8()->code()->kStartOffset);
-}
+inline int64_t Code::Start() { return LeaField(v8()->code()->kStartOffset); }
 
 inline int64_t Code::Size(Error& err) {
   return LoadField(v8()->code()->kSizeOffset, err) & 0xffffffff;
@@ -220,10 +219,10 @@ ACCESSOR(JSArrayBuffer, ByteLength, js_array_buffer()->kByteLengthOffset, Smi)
 
 ACCESSOR(JSArrayBufferView, Buffer, js_array_buffer_view()->kBufferOffset,
          JSArrayBuffer)
-ACCESSOR(JSArrayBufferView, ByteOffset, js_array_buffer_view()->kByteOffsetOffset,
-         Smi)
-ACCESSOR(JSArrayBufferView, ByteLength, js_array_buffer_view()->kByteLengthOffset,
-         Smi)
+ACCESSOR(JSArrayBufferView, ByteOffset,
+         js_array_buffer_view()->kByteOffsetOffset, Smi)
+ACCESSOR(JSArrayBufferView, ByteLength,
+         js_array_buffer_view()->kByteLengthOffset, Smi)
 
 // TODO(indutny): this field is a Smi on 32bit
 inline int64_t SharedFunctionInfo::ParameterCount(Error& err) {
@@ -309,8 +308,8 @@ inline int64_t FixedArray::LeaData() const {
 
 template <class T>
 inline T FixedArray::Get(int index, Error& err) {
-  int64_t off = v8()->fixed_array()->kDataOffset +
-      index * v8()->common()->kPointerSize;
+  int64_t off =
+      v8()->fixed_array()->kDataOffset + index * v8()->common()->kPointerSize;
   return LoadFieldValue<T>(off, err);
 }
 
@@ -330,7 +329,7 @@ inline Value DescriptorArray::GetKey(int index, Error& err) {
 
 inline bool DescriptorArray::IsFieldDetails(Smi details) {
   return (details.GetValue() & v8()->descriptor_array()->kPropertyTypeMask) ==
-      v8()->descriptor_array()->kFieldType;
+         v8()->descriptor_array()->kFieldType;
 }
 
 inline bool DescriptorArray::IsDoubleField(Smi details) {
@@ -343,20 +342,20 @@ inline bool DescriptorArray::IsDoubleField(Smi details) {
 
 inline int64_t DescriptorArray::FieldIndex(Smi details) {
   return (details.GetValue() & v8()->descriptor_array()->kPropertyIndexMask) >>
-      v8()->descriptor_array()->kPropertyIndexShift;
+         v8()->descriptor_array()->kPropertyIndexShift;
 }
 
 inline Value NameDictionary::GetKey(int index, Error& err) {
   int64_t off = v8()->name_dictionary()->kPrefixSize +
-      index * v8()->name_dictionary()->kEntrySize +
-      v8()->name_dictionary()->kKeyOffset;
+                index * v8()->name_dictionary()->kEntrySize +
+                v8()->name_dictionary()->kKeyOffset;
   return FixedArray::Get<Value>(off, err);
 }
 
 inline Value NameDictionary::GetValue(int index, Error& err) {
   int64_t off = v8()->name_dictionary()->kPrefixSize +
-      index * v8()->name_dictionary()->kEntrySize +
-      v8()->name_dictionary()->kValueOffset;
+                index * v8()->name_dictionary()->kEntrySize +
+                v8()->name_dictionary()->kValueOffset;
   return FixedArray::Get<Value>(off, err);
 }
 
@@ -395,16 +394,16 @@ inline Smi ScopeInfo::StackLocalCount(Error& err) {
 
 inline Smi ScopeInfo::ContextLocalCount(Error& err) {
   return FixedArray::Get<Smi>(v8()->scope_info()->kContextLocalCountOffset,
-      err);
+                              err);
 }
 
 inline Smi ScopeInfo::ContextGlobalCount(Error& err) {
   return FixedArray::Get<Smi>(v8()->scope_info()->kContextGlobalCountOffset,
-      err);
+                              err);
 }
 
 inline String ScopeInfo::ContextLocalName(int index, int param_count,
-    int stack_count, Error& err) {
+                                          int stack_count, Error& err) {
   int proper_index = index + stack_count + 1 + param_count;
   proper_index += v8()->scope_info()->kVariablePartIndex;
   return FixedArray::Get<String>(proper_index, err);

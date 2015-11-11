@@ -32,7 +32,7 @@ void Module::Assign(SBTarget target, Common* common) {
 
 
 static int64_t LookupConstant(SBTarget target, const char* name, int64_t def,
-    Error& err) {
+                              Error& err) {
   int64_t res;
 
   res = def;
@@ -99,8 +99,8 @@ int64_t Module::LoadRawConstant(const char* name, int64_t def) {
 
 int64_t Module::LoadConstant(const char* name, int64_t def) {
   Error err;
-  int64_t v = LookupConstant(target_, (kConstantPrefix + name).c_str(), def,
-      err);
+  int64_t v =
+      LookupConstant(target_, (kConstantPrefix + name).c_str(), def, err);
   if (err.Fail() && IsDebugMode()) fprintf(stderr, "Failed to load %s\n", name);
 
   return v;
@@ -110,8 +110,8 @@ int64_t Module::LoadConstant(const char* name, int64_t def) {
 int64_t Module::LoadConstant(const char* name, const char* fallback,
                              int64_t def) {
   Error err;
-  int64_t v = LookupConstant(target_, (kConstantPrefix + name).c_str(), def,
-      err);
+  int64_t v =
+      LookupConstant(target_, (kConstantPrefix + name).c_str(), def, err);
   if (err.Fail())
     v = LookupConstant(target_, (kConstantPrefix + fallback).c_str(), def, err);
   if (err.Fail() && IsDebugMode()) fprintf(stderr, "Failed to load %s\n", name);
@@ -162,15 +162,14 @@ void HeapObject::Load() {
 
 
 void Map::Load() {
-  kInstanceAttrsOffset =
-      LoadConstant("class_Map__instance_attributes__int");
+  kInstanceAttrsOffset = LoadConstant("class_Map__instance_attributes__int");
   kMaybeConstructorOffset =
       LoadConstant("class_Map__constructor_or_backpointer__Object",
                    "class_Map__constructor__Object");
   kInstanceDescriptorsOffset =
       LoadConstant("class_Map__instance_descriptors__DescriptorArray");
-  kBitField3Offset = LoadConstant("class_Map__bit_field3__int",
-                                  "class_Map__bit_field3__SMI");
+  kBitField3Offset =
+      LoadConstant("class_Map__bit_field3__int", "class_Map__bit_field3__SMI");
   kInObjectPropertiesOffset = LoadConstant(
       "class_Map__inobject_properties_or_constructor_function_index__int",
       "class_Map__inobject_properties__int");
@@ -215,8 +214,7 @@ void JSArray::Load() {
 void JSFunction::Load() {
   kSharedInfoOffset =
       LoadConstant("class_JSFunction__shared__SharedFunctionInfo");
-  kContextOffset =
-      LoadConstant("class_JSFunction__context__Context");
+  kContextOffset = LoadConstant("class_JSFunction__context__Context");
 
   if (kContextOffset == -1) {
     common_->Load();
@@ -307,13 +305,13 @@ void String::Load() {
 
 void OneByteString::Load() {
   kCharsOffset = LoadConstant("class_SeqOneByteString__chars__char",
-      "class_SeqAsciiString__chars__char");
+                              "class_SeqAsciiString__chars__char");
 }
 
 
 void TwoByteString::Load() {
   kCharsOffset = LoadConstant("class_SeqTwoByteString__chars__char",
-      "class_SeqAsciiString__chars__char");
+                              "class_SeqAsciiString__chars__char");
 }
 
 
@@ -363,8 +361,7 @@ void JSArrayBuffer::Load() {
 
     kBackingStoreOffset = kByteLengthOffset + common_->kPointerSize;
     kBitFieldOffset = kBackingStoreOffset + common_->kPointerSize;
-    if (common_->kPointerSize == 8)
-      kBitFieldOffset += 4;
+    if (common_->kPointerSize == 8) kBitFieldOffset += 4;
   }
 
   kWasNeuteredMask = LoadConstant("jsarray_buffer_was_neutered_mask");
@@ -433,7 +430,7 @@ void NameDictionary::Load() {
   }
 
   kPrefixSize = LoadConstant("class_NameDictionaryShape__prefix_size__int") +
-      kPrefixStartIndex;
+                kPrefixStartIndex;
 }
 
 
@@ -506,8 +503,8 @@ void Types::Load() {
   kJSTypedArrayType = LoadConstant("type_JSTypedArray__JS_TYPED_ARRAY_TYPE");
   kJSRegExpType = LoadConstant("type_JSRegExp__JS_REGEXP_TYPE");
   kJSDateType = LoadConstant("type_JSDate__JS_DATE_TYPE");
-  kSharedFunctionInfoType = LoadConstant(
-      "type_SharedFunctionInfo__SHARED_FUNCTION_INFO_TYPE");
+  kSharedFunctionInfoType =
+      LoadConstant("type_SharedFunctionInfo__SHARED_FUNCTION_INFO_TYPE");
 }
 
 }  // namespace constants

@@ -16,4 +16,7 @@ install-linux:
 uninstall-linux:
 	rm /usr/lib/lldb/llnode.so
 
+format:
+	clang-format -i src/*
+
 .PHONY: all

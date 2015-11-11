@@ -12,8 +12,7 @@ static std::string kConstantPrefix = "v8dbg_";
 
 void LLV8::Load(SBTarget target) {
   // No need to reload
-  if (target_ == target)
-    return;
+  if (target_ == target) return;
 
   target_ = target;
   process_ = target_.GetProcess();
@@ -53,8 +52,8 @@ void LLV8::Load(SBTarget target) {
 
 int64_t LLV8::LoadPtr(int64_t addr, Error& err) {
   SBError sberr;
-  int64_t value = process_.ReadPointerFromMemory(static_cast<addr_t>(addr),
-      sberr);
+  int64_t value =
+      process_.ReadPointerFromMemory(static_cast<addr_t>(addr), sberr);
   if (sberr.Fail()) {
     // TODO(indutny): add more information
     err = Error::Failure("Failed to load V8 value");
@@ -69,7 +68,7 @@ int64_t LLV8::LoadPtr(int64_t addr, Error& err) {
 double LLV8::LoadDouble(int64_t addr, Error& err) {
   SBError sberr;
   int64_t value = process_.ReadUnsignedFromMemory(static_cast<addr_t>(addr),
-      sizeof(double), sberr);
+                                                  sizeof(double), sberr);
   if (sberr.Fail()) {
     // TODO(indutny): add more information
     err = Error::Failure("Failed to load V8 double value");
@@ -85,7 +84,7 @@ std::string LLV8::LoadString(int64_t addr, int64_t length, Error& err) {
   char* buf = new char[length + 1];
   SBError sberr;
   process_.ReadMemory(static_cast<addr_t>(addr), buf,
-      static_cast<size_t>(length), sberr);
+                      static_cast<size_t>(length), sberr);
   if (sberr.Fail()) {
     // TODO(indutny): add more information
     err = Error::Failure("Failed to load V8 one byte string");
@@ -106,7 +105,7 @@ std::string LLV8::LoadTwoByteString(int64_t addr, int64_t length, Error& err) {
   char* buf = new char[length * 2 + 1];
   SBError sberr;
   process_.ReadMemory(static_cast<addr_t>(addr), buf,
-      static_cast<size_t>(length * 2), sberr);
+                      static_cast<size_t>(length * 2), sberr);
   if (sberr.Fail()) {
     // TODO(indutny): add more information
     err = Error::Failure("Failed to load V8 one byte string");
@@ -114,8 +113,7 @@ std::string LLV8::LoadTwoByteString(int64_t addr, int64_t length, Error& err) {
     return std::string();
   }
 
-  for (int64_t i = 0; i < length; i++)
-    buf[i] = buf[i * 2];
+  for (int64_t i = 0; i < length; i++) buf[i] = buf[i * 2];
   buf[length] = '\0';
 
   std::string res = buf;
@@ -129,7 +127,7 @@ uint8_t* LLV8::LoadChunk(int64_t addr, int64_t length, Error& err) {
   uint8_t* buf = new uint8_t[length];
   SBError sberr;
   process_.ReadMemory(static_cast<addr_t>(addr), buf,
-      static_cast<size_t>(length), sberr);
+                      static_cast<size_t>(length), sberr);
   if (sberr.Fail()) {
     // TODO(indutny): add more information
     err = Error::Failure("Failed to load V8 memory chunk");
@@ -146,9 +144,8 @@ uint8_t* LLV8::LoadChunk(int64_t addr, int64_t length, Error& err) {
 //            otherwise relative to last end
 // returns line cursor
 uint32_t JSFrame::GetSourceForDisplay(bool reset_line, uint32_t line_start,
-                                  uint32_t line_limit, std::string lines[],
-                                  uint32_t& lines_found, Error& err) {
-
+                                      uint32_t line_limit, std::string lines[],
+                                      uint32_t& lines_found, Error& err) {
   v8::JSFunction fn = GetFunction(err);
   if (err.Fail()) {
     return line_start;
@@ -280,8 +277,7 @@ std::string JSFunction::GetDebugLine(std::string args, Error& err) {
   std::string res = info.ProperName(err);
   if (err.Fail()) return std::string();
 
-  if (!args.empty())
-    res += "(" + args + ")";
+  if (!args.empty()) res += "(" + args + ")";
 
   res += " at ";
 
@@ -311,8 +307,7 @@ std::string JSFunction::Inspect(bool detailed, Error& err) {
     std::string context_str = context.Inspect(err);
     if (err.Fail()) return std::string();
 
-    if (!context_str.empty())
-      res += "{\n" + context_str + "}";
+    if (!context_str.empty()) res += "{\n" + context_str + "}";
   }
 
   return res + ">";
@@ -364,8 +359,7 @@ std::string SharedFunctionInfo::ProperName(Error& err) {
     if (err.Fail()) return std::string();
   }
 
-  if (res.empty())
-    res = "(anonymous)";
+  if (res.empty()) res = "(anonymous)";
 
   return res;
 }
@@ -382,8 +376,7 @@ std::string SharedFunctionInfo::GetPostfix(Error& err) {
   if (err.Fail()) return std::string();
 
   std::string res = name.ToString(err);
-  if (res.empty())
-    res = "(no script)";
+  if (res.empty()) res = "(no script)";
 
   int64_t line = 0;
   int64_t column = 0;
@@ -392,7 +385,7 @@ std::string SharedFunctionInfo::GetPostfix(Error& err) {
 
   char tmp[128];
   snprintf(tmp, sizeof(tmp), ":%d:%d", static_cast<int>(line),
-      static_cast<int>(column));
+           static_cast<int>(column));
   return res + tmp;
 }
 
@@ -407,7 +400,7 @@ std::string SharedFunctionInfo::ToString(Error& err) {
 // return end_char+1, which may be less than line_limit if source
 // ends before end_inclusive
 void Script::GetLines(uint64_t start_line, std::string lines[],
-                      uint64_t line_limit, uint32_t &lines_found, Error& err) {
+                      uint64_t line_limit, uint32_t& lines_found, Error& err) {
   lines_found = 0;
 
   HeapObject source = Source(err);
@@ -441,8 +434,7 @@ void Script::GetLines(uint64_t start_line, std::string lines[],
       }
       line_i++;
       length = 0;
-    }
-    else {
+    } else {
       length++;
     }
   }
@@ -473,8 +465,7 @@ void Script::GetLineColumnFromPos(int64_t pos, int64_t& line, int64_t& column,
   String str(source);
   std::string source_str = str.ToString(err);
   int64_t limit = source_str.length();
-  if (limit > pos)
-    limit = pos;
+  if (limit > pos) limit = pos;
 
   for (int64_t i = 0; i < limit; i++, column++) {
     // \r\n should ski adding a line and column on \r
@@ -519,8 +510,7 @@ bool Value::IsHole(Error& err) {
 
 std::string Value::Inspect(bool detailed, Error& err) {
   Smi smi(this);
-  if (smi.Check())
-    return smi.Inspect(err);
+  if (smi.Check()) return smi.Inspect(err);
 
   HeapObject obj(this);
   if (!obj.Check()) {
@@ -534,8 +524,7 @@ std::string Value::Inspect(bool detailed, Error& err) {
 
 std::string Value::ToString(Error& err) {
   Smi smi(this);
-  if (smi.Check())
-    return smi.ToString(err);
+  if (smi.Check()) return smi.ToString(err);
 
   HeapObject obj(this);
   if (!obj.Check()) {
@@ -644,9 +633,7 @@ std::string Smi::ToString(Error& err) {
 }
 
 
-std::string Smi::Inspect(Error& err) {
-  return "<Smi: " + ToString(err) + ">";
-}
+std::string Smi::Inspect(Error& err) { return "<Smi: " + ToString(err) + ">"; }
 
 
 std::string HeapNumber::ToString(bool whole, Error& err) {
@@ -703,8 +690,7 @@ std::string String::Inspect(Error& err) {
   if (err.Fail()) return std::string();
 
   // TODO(indutny): add length
-  if (val.length() > kInspectSize)
-    val = val.substr(0, kInspectSize) + "...";
+  if (val.length() > kInspectSize) val = val.substr(0, kInspectSize) + "...";
 
   return "<String: \"" + val + "\">";
 }
@@ -719,8 +705,7 @@ std::string FixedArray::Inspect(bool detailed, Error& err) {
 
   if (detailed) {
     std::string contents = InspectContents(length_smi.GetValue(), err);
-    if (!contents.empty())
-      res += " contents={\n" + contents + "}";
+    if (!contents.empty()) res += " contents={\n" + contents + "}";
   }
 
   return res + ">";
@@ -822,7 +807,7 @@ std::string JSArrayBuffer::Inspect(Error& err) {
 
   char tmp[128];
   snprintf(tmp, sizeof(tmp), "<ArrayBuffer 0x%016llx:%d>", data,
-      static_cast<int>(length.GetValue()));
+           static_cast<int>(length.GetValue()));
   return tmp;
 }
 
@@ -847,7 +832,8 @@ std::string JSArrayBufferView::Inspect(Error& err) {
 
   char tmp[128];
   snprintf(tmp, sizeof(tmp), "<ArrayBufferView 0x%016llx+%d:%d>", data,
-      static_cast<int>(off.GetValue()), static_cast<int>(length.GetValue()));
+           static_cast<int>(off.GetValue()),
+           static_cast<int>(length.GetValue()));
   return tmp;
 }
 
@@ -925,8 +911,7 @@ std::string JSObject::InspectProperties(Error& err) {
   if (err.Fail()) return std::string();
 
   if (!props.empty()) {
-    if (!res.empty())
-      res += "\n  ";
+    if (!res.empty()) res += "\n  ";
     res += "properties {\n" + props + "}";
   }
 
@@ -1073,8 +1058,7 @@ std::string JSObject::InspectDescriptors(Map map, Error& err) {
 
 template <class T>
 T JSObject::GetInObjectValue(int64_t size, int index, Error& err) {
-  return LoadFieldValue<T>(size + index * v8()->common()->kPointerSize,
-      err);
+  return LoadFieldValue<T>(size + index * v8()->common()->kPointerSize, err);
 }
 
 

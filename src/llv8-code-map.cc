@@ -56,7 +56,7 @@ std::string CodeMap::Collect(Error& err) {
 
     char tmp[128];
     snprintf(tmp, sizeof(tmp), "0x%016llx, 0x%016llx, ", entry.start(),
-        entry.end());
+             entry.end());
     res += tmp + entry.name() + "\n";
   }
   entries_.clear();
@@ -135,8 +135,7 @@ void CodeMap::CollectArea(int64_t start, int64_t end, Error& err) {
     CollectObject(obj, &instance_size, err);
     if (err.Fail()) continue;
 
-    if (instance_size < kPointerSize)
-      instance_size = kPointerSize;
+    if (instance_size < kPointerSize) instance_size = kPointerSize;
 
     // Align
     if ((instance_size % kPointerSize) != 0)
