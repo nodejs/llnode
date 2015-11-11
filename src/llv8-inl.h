@@ -7,12 +7,12 @@ namespace llnode {
 namespace v8 {
 
 template <>
-double LLV8::LoadValue<double>(int64_t addr, Error& err) {
+inline double LLV8::LoadValue<double>(int64_t addr, Error& err) {
   return LoadDouble(addr, err);
 }
 
 template <class T>
-T LLV8::LoadValue(int64_t addr, Error& err) {
+inline T LLV8::LoadValue(int64_t addr, Error& err) {
   int64_t ptr;
   ptr = LoadPtr(addr, err);
   if (err.Fail()) return T();
@@ -27,17 +27,17 @@ T LLV8::LoadValue(int64_t addr, Error& err) {
 }
 
 
-bool Smi::Check() const {
+inline bool Smi::Check() const {
   return (raw() & v8()->smi()->kTagMask) == v8()->smi()->kTag;
 }
 
 
-int64_t Smi::GetValue() const {
+inline int64_t Smi::GetValue() const {
   return raw() >> (v8()->smi()->kShiftSize + v8()->smi()->kTagMask);
 }
 
 
-bool HeapObject::Check() const {
+inline bool HeapObject::Check() const {
   return (raw() & v8()->heap_obj()->kTagMask) == v8()->heap_obj()->kTag;
 }
 
@@ -47,19 +47,19 @@ int64_t HeapObject::LeaField(int64_t off) const {
 }
 
 
-int64_t HeapObject::LoadField(int64_t off, Error& err) {
+inline int64_t HeapObject::LoadField(int64_t off, Error& err) {
   return v8()->LoadPtr(LeaField(off), err);
 }
 
 
 template <>
-double HeapObject::LoadFieldValue<double>(int64_t off, Error& err) {
+inline double HeapObject::LoadFieldValue<double>(int64_t off, Error& err) {
   return v8()->LoadValue<double>(LeaField(off), err);
 }
 
 
 template <class T>
-T HeapObject::LoadFieldValue(int64_t off, Error& err) {
+inline T HeapObject::LoadFieldValue(int64_t off, Error& err) {
   T res = v8()->LoadValue<T>(LeaField(off), err);
   if (err.Fail()) return T();
   if (!res.Check()) {
@@ -71,7 +71,7 @@ T HeapObject::LoadFieldValue(int64_t off, Error& err) {
 }
 
 
-int64_t HeapObject::GetType(Error& err) {
+inline int64_t HeapObject::GetType(Error& err) {
   HeapObject obj = GetMap(err);
   if (err.Fail()) return -1;
 
@@ -80,39 +80,39 @@ int64_t HeapObject::GetType(Error& err) {
 }
 
 
-int64_t Map::GetType(Error& err) {
+inline int64_t Map::GetType(Error& err) {
   int64_t type = LoadField(v8()->map()->kInstanceAttrsOffset, err);
   if (err.Fail()) return -1;
   return type & 0xff;
 }
 
 
-int64_t JSFrame::LeaParamSlot(int slot, int count) const {
+inline int64_t JSFrame::LeaParamSlot(int slot, int count) const {
   return raw() + v8()->frame()->kArgsOffset +
       (count - slot - 1) * v8()->common()->kPointerSize;
 }
 
 
-Value JSFrame::GetReceiver(int count, Error &err) {
+inline Value JSFrame::GetReceiver(int count, Error &err) {
   return GetParam(-1, count, err);
 }
 
 
-Value JSFrame::GetParam(int slot, int count, Error& err) {
+inline Value JSFrame::GetParam(int slot, int count, Error& err) {
   int64_t addr = LeaParamSlot(slot, count);
   return v8()->LoadValue<Value>(addr, err);
 }
 
 
-std::string JSFunction::Name(Error& err) {
+inline std::string JSFunction::Name(Error& err) {
   SharedFunctionInfo info = Info(err);
   if (err.Fail()) return std::string();
 
-  return Name(info, err);
+  return info.ProperName(err);
 }
 
 
-bool Map::IsDictionary(Error& err) {
+inline bool Map::IsDictionary(Error& err) {
   int64_t field = BitField3(err);
   if (err.Fail()) return false;
 
@@ -120,7 +120,7 @@ bool Map::IsDictionary(Error& err) {
 }
 
 
-int64_t Map::NumberOfOwnDescriptors(Error& err) {
+inline int64_t Map::NumberOfOwnDescriptors(Error& err) {
   int64_t field = BitField3(err);
   if (err.Fail()) return false;
 
@@ -132,7 +132,7 @@ int64_t Map::NumberOfOwnDescriptors(Error& err) {
 
 
 #define ACCESSOR(CLASS, METHOD, OFF, TYPE)                                    \
-    TYPE CLASS::METHOD(Error& err) {                                          \
+    inline TYPE CLASS::METHOD(Error& err) {                                   \
       return LoadFieldValue<TYPE>(v8()->OFF, err);                            \
     }
 
@@ -142,15 +142,15 @@ ACCESSOR(HeapObject, GetMap, heap_obj()->kMapOffset, HeapObject)
 ACCESSOR(Map, MaybeConstructor, map()->kMaybeConstructorOffset, HeapObject)
 ACCESSOR(Map, InstanceDescriptors, map()->kInstanceDescriptorsOffset, HeapObject)
 
-int64_t Map::BitField3(Error& err) {
+inline int64_t Map::BitField3(Error& err) {
   return LoadField(v8()->map()->kBitField3Offset, err) & 0xffffffff;
 }
 
-int64_t Map::InObjectProperties(Error& err) {
+inline int64_t Map::InObjectProperties(Error& err) {
   return LoadField(v8()->map()->kInObjectPropertiesOffset, err) & 0xff;
 }
 
-int64_t Map::InstanceSize(Error& err) {
+inline int64_t Map::InstanceSize(Error& err) {
   return (LoadField(v8()->map()->kInstanceSizeOffset, err) & 0xff) *
       v8()->common()->kPointerSize;
 }
@@ -164,14 +164,14 @@ ACCESSOR(JSArray, Length, js_array()->kLengthOffset, Smi)
 
 ACCESSOR(JSDate, GetValue, js_date()->kValueOffset, Value)
 
-int64_t String::Representation(Error& err) {
+inline int64_t String::Representation(Error& err) {
   int64_t type = GetType(err);
   if (err.Fail()) return -1;
   return type & v8()->string()->kRepresentationMask;
 }
 
 
-int64_t String::Encoding(Error& err) {
+inline int64_t String::Encoding(Error& err) {
   int64_t type = GetType(err);
   if (err.Fail()) return -1;
   return type & v8()->string()->kEncodingMask;
@@ -188,16 +188,25 @@ ACCESSOR(SharedFunctionInfo, Name, shared_info()->kNameOffset, String)
 ACCESSOR(SharedFunctionInfo, InferredName, shared_info()->kInferredNameOffset,
          String)
 ACCESSOR(SharedFunctionInfo, GetScript, shared_info()->kScriptOffset, Script)
+ACCESSOR(SharedFunctionInfo, GetCode, shared_info()->kCodeOffset, Code)
 ACCESSOR(SharedFunctionInfo, GetScopeInfo, shared_info()->kScopeInfoOffset,
          HeapObject)
 
+inline int64_t Code::Start() {
+  return LeaField(v8()->code()->kStartOffset);
+}
+
+inline int64_t Code::Size(Error& err) {
+  return LoadField(v8()->code()->kSizeOffset, err) & 0xffffffff;
+}
+
 ACCESSOR(Oddball, Kind, oddball()->kKindOffset, Smi)
 
-int64_t JSArrayBuffer::BackingStore(Error& err) {
+inline int64_t JSArrayBuffer::BackingStore(Error& err) {
   return LoadField(v8()->js_array_buffer()->kBackingStoreOffset, err);
 }
 
-int64_t JSArrayBuffer::BitField(Error& err) {
+inline int64_t JSArrayBuffer::BitField(Error& err) {
   return LoadField(v8()->js_array_buffer()->kBitFieldOffset, err) & 0xffffffff;
 }
 
@@ -211,7 +220,7 @@ ACCESSOR(JSArrayBufferView, ByteLength, js_array_buffer_view()->kByteLengthOffse
          Smi)
 
 // TODO(indutny): this field is a Smi on 32bit
-int64_t SharedFunctionInfo::ParameterCount(Error& err) {
+inline int64_t SharedFunctionInfo::ParameterCount(Error& err) {
   int64_t field = LoadField(v8()->shared_info()->kParameterCountOffset, err);
   if (err.Fail()) return -1;
 
@@ -220,7 +229,7 @@ int64_t SharedFunctionInfo::ParameterCount(Error& err) {
 }
 
 // TODO(indutny): this field is a Smi on 32bit
-int64_t SharedFunctionInfo::StartPosition(Error& err) {
+inline int64_t SharedFunctionInfo::StartPosition(Error& err) {
   int64_t field = LoadField(v8()->shared_info()->kStartPositionOffset, err);
   if (err.Fail()) return -1;
 
@@ -243,21 +252,21 @@ ACCESSOR(SlicedString, Offset, sliced_string()->kOffsetOffset, Smi);
 
 ACCESSOR(FixedArrayBase, Length, fixed_array_base()->kLengthOffset, Smi);
 
-std::string OneByteString::ToString(Error& err) {
+inline std::string OneByteString::ToString(Error& err) {
   int64_t chars = LeaField(v8()->one_byte_string()->kCharsOffset);
   Smi len = Length(err);
   if (err.Fail()) return std::string();
   return v8()->LoadString(chars, len.GetValue(), err);
 }
 
-std::string TwoByteString::ToString(Error& err) {
+inline std::string TwoByteString::ToString(Error& err) {
   int64_t chars = LeaField(v8()->two_byte_string()->kCharsOffset);
   Smi len = Length(err);
   if (err.Fail()) return std::string();
   return v8()->LoadTwoByteString(chars, len.GetValue(), err);
 }
 
-std::string ConsString::ToString(Error& err) {
+inline std::string ConsString::ToString(Error& err) {
   String first = First(err);
   if (err.Fail()) return std::string();
 
@@ -272,7 +281,7 @@ std::string ConsString::ToString(Error& err) {
   return tmp;
 }
 
-std::string SlicedString::ToString(Error& err) {
+inline std::string SlicedString::ToString(Error& err) {
   String parent = Parent(err);
   if (err.Fail()) return std::string();
 
@@ -288,37 +297,37 @@ std::string SlicedString::ToString(Error& err) {
   return tmp.substr(offset.GetValue(), length.GetValue());
 }
 
-int64_t FixedArray::LeaData() const {
+inline int64_t FixedArray::LeaData() const {
   return LeaField(v8()->fixed_array()->kDataOffset);
 }
 
 template <class T>
-T FixedArray::Get(int index, Error& err) {
+inline T FixedArray::Get(int index, Error& err) {
   int64_t off = v8()->fixed_array()->kDataOffset +
       index * v8()->common()->kPointerSize;
   return LoadFieldValue<T>(off, err);
 }
 
-Smi DescriptorArray::GetDetails(int index, Error& err) {
+inline Smi DescriptorArray::GetDetails(int index, Error& err) {
   return Get<Smi>(v8()->descriptor_array()->kFirstIndex +
                       index * v8()->descriptor_array()->kSize +
                       v8()->descriptor_array()->kDetailsOffset,
                   err);
 }
 
-Value DescriptorArray::GetKey(int index, Error& err) {
+inline Value DescriptorArray::GetKey(int index, Error& err) {
   return Get<Value>(v8()->descriptor_array()->kFirstIndex +
                         index * v8()->descriptor_array()->kSize +
                         v8()->descriptor_array()->kKeyOffset,
                     err);
 }
 
-bool DescriptorArray::IsFieldDetails(Smi details) {
+inline bool DescriptorArray::IsFieldDetails(Smi details) {
   return (details.GetValue() & v8()->descriptor_array()->kPropertyTypeMask) ==
       v8()->descriptor_array()->kFieldType;
 }
 
-bool DescriptorArray::IsDoubleField(Smi details) {
+inline bool DescriptorArray::IsDoubleField(Smi details) {
   int64_t repr = details.GetValue();
   repr &= v8()->descriptor_array()->kRepresentationMask;
   repr >>= v8()->descriptor_array()->kRepresentationShift;
@@ -326,26 +335,26 @@ bool DescriptorArray::IsDoubleField(Smi details) {
   return repr == v8()->descriptor_array()->kRepresentationDouble;
 }
 
-int64_t DescriptorArray::FieldIndex(Smi details) {
+inline int64_t DescriptorArray::FieldIndex(Smi details) {
   return (details.GetValue() & v8()->descriptor_array()->kPropertyIndexMask) >>
       v8()->descriptor_array()->kPropertyIndexShift;
 }
 
-Value NameDictionary::GetKey(int index, Error& err) {
+inline Value NameDictionary::GetKey(int index, Error& err) {
   int64_t off = v8()->name_dictionary()->kPrefixSize +
       index * v8()->name_dictionary()->kEntrySize +
       v8()->name_dictionary()->kKeyOffset;
   return FixedArray::Get<Value>(off, err);
 }
 
-Value NameDictionary::GetValue(int index, Error& err) {
+inline Value NameDictionary::GetValue(int index, Error& err) {
   int64_t off = v8()->name_dictionary()->kPrefixSize +
       index * v8()->name_dictionary()->kEntrySize +
       v8()->name_dictionary()->kValueOffset;
   return FixedArray::Get<Value>(off, err);
 }
 
-int64_t NameDictionary::Length(Error& err) {
+inline int64_t NameDictionary::Length(Error& err) {
   Smi length = FixedArray::Length(err);
   if (err.Fail()) return -1;
 
@@ -354,47 +363,48 @@ int64_t NameDictionary::Length(Error& err) {
   return res;
 }
 
-JSFunction Context::Closure(Error& err) {
+inline JSFunction Context::Closure(Error& err) {
   return FixedArray::Get<JSFunction>(v8()->context()->kClosureIndex, err);
 }
 
-JSObject Context::Global(Error& err) {
+inline JSObject Context::Global(Error& err) {
   return FixedArray::Get<JSObject>(v8()->context()->kGlobalObjectIndex, err);
 }
 
-Context Context::Previous(Error& err) {
+inline Context Context::Previous(Error& err) {
   return FixedArray::Get<Context>(v8()->context()->kPreviousIndex, err);
 }
 
-Value Context::ContextSlot(int index, Error& err) {
+inline Value Context::ContextSlot(int index, Error& err) {
   return FixedArray::Get<Value>(v8()->context()->kMinContextSlots + index, err);
 }
 
-Smi ScopeInfo::ParameterCount(Error& err) {
+inline Smi ScopeInfo::ParameterCount(Error& err) {
   return FixedArray::Get<Smi>(v8()->scope_info()->kParameterCountOffset, err);
 }
 
-Smi ScopeInfo::StackLocalCount(Error& err) {
+inline Smi ScopeInfo::StackLocalCount(Error& err) {
   return FixedArray::Get<Smi>(v8()->scope_info()->kStackLocalCountOffset, err);
 }
 
-Smi ScopeInfo::ContextLocalCount(Error& err) {
+inline Smi ScopeInfo::ContextLocalCount(Error& err) {
   return FixedArray::Get<Smi>(v8()->scope_info()->kContextLocalCountOffset,
       err);
 }
 
-Smi ScopeInfo::ContextGlobalCount(Error& err) {
-  return FixedArray::Get<Smi>(v8()->scope_info()->kContextGlobalCountOffset, err);
+inline Smi ScopeInfo::ContextGlobalCount(Error& err) {
+  return FixedArray::Get<Smi>(v8()->scope_info()->kContextGlobalCountOffset,
+      err);
 }
 
-String ScopeInfo::ContextLocalName(int index, int param_count, int stack_count,
-                                   Error& err) {
+inline String ScopeInfo::ContextLocalName(int index, int param_count,
+    int stack_count, Error& err) {
   int proper_index = index + stack_count + 1 + param_count;
   proper_index += v8()->scope_info()->kVariablePartIndex;
   return FixedArray::Get<String>(proper_index, err);
 }
 
-bool Oddball::IsHoleOrUndefined(Error& err) {
+inline bool Oddball::IsHoleOrUndefined(Error& err) {
   Smi kind = Kind(err);
   if (err.Fail()) return false;
 
@@ -402,14 +412,14 @@ bool Oddball::IsHoleOrUndefined(Error& err) {
          kind.GetValue() == v8()->oddball()->kUndefined;
 }
 
-bool Oddball::IsHole(Error& err) {
+inline bool Oddball::IsHole(Error& err) {
   Smi kind = Kind(err);
   if (err.Fail()) return false;
 
   return kind.GetValue() == v8()->oddball()->kTheHole;
 }
 
-bool JSArrayBuffer::WasNeutered(Error& err) {
+inline bool JSArrayBuffer::WasNeutered(Error& err) {
   int64_t field = BitField(err);
   if (err.Fail()) return false;
 

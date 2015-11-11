@@ -4,6 +4,7 @@
 
 #include "src/llnode.h"
 #include "src/llv8.h"
+#include "src/llv8-code-map.h"
 
 namespace llnode {
 
@@ -112,6 +113,30 @@ bool PrintCmd::DoExecute(SBDebugger d, char** cmd,
   return true;
 }
 
+bool CodeMap::DoExecute(SBDebugger d, char** cmd,
+                        SBCommandReturnObject& result) {
+  SBTarget target = d.GetSelectedTarget();
+  if (!target.IsValid()) {
+    result.SetError("No valid process, please start something\n");
+    return false;
+  }
+
+  // Load V8 constants from postmortem data
+  llv8.Load(target);
+  v8::CodeMap code_map(&llv8);
+
+  v8::Error err;
+  std::string res = code_map.Collect(err);
+  if (err.Fail()) {
+    result.SetError("Failed to collect code map");
+    return false;
+  }
+
+  result.Printf("%s\n", res.c_str());
+
+  return true;
+}
+
 }  // namespace llnode
 
 namespace lldb {
@@ -127,12 +152,18 @@ bool PluginInitialize(SBDebugger d) {
       "specifies the number of frames to display. Otherwise all frames will "
       "be dumped.\n\n"
       "Syntax: v8 bt [number]\n");
+
   v8.AddCommand("print", new llnode::PrintCmd(false),
       "Print short description of the JavaScript value.\n\n"
       "Syntax: v8 print expr\n");
+
   v8.AddCommand("inspect", new llnode::PrintCmd(true),
       "Print detailed description and contents of the JavaScript value.\n\n"
       "Syntax: v8 inspect expr\n");
+
+  v8.AddCommand("code-map", new llnode::CodeMap(),
+      "Print code map of all compiled functions.\n\n"
+      "Syntax: v8 code-map\n");
 
   return true;
 }

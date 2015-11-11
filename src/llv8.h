@@ -10,7 +10,9 @@
 namespace llnode {
 namespace v8 {
 
+// Forward declarations
 class LLV8;
+class CodeMap;
 
 class Error {
  public:
@@ -132,6 +134,14 @@ class Script : public HeapObject {
   std::string GetLineColumnFromPos(int64_t pos, Error& err);
 };
 
+class Code : public HeapObject {
+ public:
+  V8_VALUE_DEFAULT_METHODS(Code, HeapObject)
+
+  inline int64_t Start();
+  inline int64_t Size(Error& err);
+};
+
 class SharedFunctionInfo : public HeapObject {
  public:
   V8_VALUE_DEFAULT_METHODS(SharedFunctionInfo, HeapObject)
@@ -139,11 +149,14 @@ class SharedFunctionInfo : public HeapObject {
   inline String Name(Error& err);
   inline String InferredName(Error& err);
   inline Script GetScript(Error& err);
+  inline Code GetCode(Error& err);
   inline HeapObject GetScopeInfo(Error& err);
   inline int64_t ParameterCount(Error& err);
   inline int64_t StartPosition(Error& err);
 
+  std::string ProperName(Error& err);
   std::string GetPostfix(Error& err);
+  std::string ToString(Error& err);
 };
 
 class OneByteString : public String {
@@ -226,7 +239,6 @@ class JSFunction : public JSObject {
   inline HeapObject GetContext(Error& err);
   inline std::string Name(Error& err);
 
-  std::string Name(SharedFunctionInfo info, Error& err);
   std::string GetDebugLine(std::string args, Error& err);
   std::string Inspect(bool detailed, Error& err);
 };
@@ -389,6 +401,7 @@ class LLV8 {
   constants::JSArray js_array;
   constants::JSFunction js_function;
   constants::SharedInfo shared_info;
+  constants::Code code;
   constants::ScopeInfo scope_info;
   constants::Context context;
   constants::Script script;
@@ -407,6 +420,7 @@ class LLV8 {
   constants::DescriptorArray descriptor_array;
   constants::NameDictionary name_dictionary;
   constants::Frame frame;
+  constants::Node node;
   constants::Types types;
 
   friend class Value;
@@ -417,6 +431,7 @@ class LLV8 {
   friend class String;
   friend class Script;
   friend class SharedFunctionInfo;
+  friend class Code;
   friend class JSFunction;
   friend class OneByteString;
   friend class TwoByteString;
@@ -436,6 +451,7 @@ class LLV8 {
   friend class JSArrayBufferView;
   friend class JSRegExp;
   friend class JSDate;
+  friend class CodeMap;
 };
 
 #undef V8_VALUE_DEFAULT_METHODS

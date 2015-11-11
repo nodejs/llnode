@@ -27,6 +27,7 @@ void LLV8::Load(SBTarget target) {
   js_array.Assign(target, &common);
   js_function.Assign(target, &common);
   shared_info.Assign(target, &common);
+  code.Assign(target, &common);
   scope_info.Assign(target, &common);
   context.Assign(target, &common);
   script.Assign(target, &common);
@@ -45,6 +46,7 @@ void LLV8::Load(SBTarget target) {
   descriptor_array.Assign(target, &common);
   name_dictionary.Assign(target, &common);
   frame.Assign(target, &common);
+  node.Assign(target, &common);
   types.Assign(target, &common);
 }
 
@@ -223,32 +225,13 @@ std::string JSFrame::InspectArgs(JSFunction fn, Error& err) {
 }
 
 
-std::string JSFunction::Name(SharedFunctionInfo info, Error& err) {
-  String name = info.Name(err);
-  if (err.Fail()) return std::string();
-
-  std::string res = name.ToString(err);
-  if (err.Fail() || res.empty()) {
-    name = info.InferredName(err);
-    if (err.Fail()) return std::string();
-
-    res = name.ToString(err);
-    if (err.Fail()) return std::string();
-  }
-
-  return res;
-}
-
-
 std::string JSFunction::GetDebugLine(std::string args, Error& err) {
   SharedFunctionInfo info = Info(err);
   if (err.Fail()) return std::string();
 
-  std::string res = Name(info, err);
+  std::string res = info.ProperName(err);
   if (err.Fail()) return std::string();
 
-  if (res.empty())
-    res = "(anonymous)";
   if (!args.empty())
     res += "(" + args + ")";
 
@@ -287,6 +270,7 @@ std::string JSFunction::Inspect(bool detailed, Error& err) {
   return res + ">";
 }
 
+
 std::string JSDate::Inspect(Error& err) {
   std::string pre = "<JSDate: ";
 
@@ -318,6 +302,27 @@ std::string JSDate::Inspect(Error& err) {
   return pre + ">";
 }
 
+
+std::string SharedFunctionInfo::ProperName(Error& err) {
+  String name = Name(err);
+  if (err.Fail()) return std::string();
+
+  std::string res = name.ToString(err);
+  if (err.Fail() || res.empty()) {
+    name = InferredName(err);
+    if (err.Fail()) return std::string();
+
+    res = name.ToString(err);
+    if (err.Fail()) return std::string();
+  }
+
+  if (res.empty())
+    res = "(anonymous)";
+
+  return res;
+}
+
+
 std::string SharedFunctionInfo::GetPostfix(Error& err) {
   Script script = GetScript(err);
   if (err.Fail()) return std::string();
@@ -336,6 +341,14 @@ std::string SharedFunctionInfo::GetPostfix(Error& err) {
   if (err.Fail()) return std::string();
 
   return res;
+}
+
+
+std::string SharedFunctionInfo::ToString(Error& err) {
+  std::string res = ProperName(err);
+  if (err.Fail()) return std::string();
+
+  return res + " at " + GetPostfix(err);
 }
 
 

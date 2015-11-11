@@ -3,6 +3,8 @@
 
 #include <string>
 
+#include <lldb/API/SBExpressionOptions.h>
+
 #include "src/llv8.h"
 #include "src/llv8-constants.h"
 
@@ -56,8 +58,10 @@ static int64_t LookupConstant(SBTarget target, const char* name, int64_t def,
 
   SBProcess process = target.GetProcess();
   addr_t addr = start.GetLoadAddress(target);
-  if (size == 8) {
-    process.ReadMemory(addr, &res, size, sberr);
+
+  // NOTE: size could be bigger for at the end symbols
+  if (size >= 8) {
+    process.ReadMemory(addr, &res, 8, sberr);
   } else if (size == 4) {
     int32_t tmp;
     process.ReadMemory(addr, &tmp, size, sberr);
@@ -116,10 +120,30 @@ int64_t Module::LoadConstant(const char* name, const char* fallback,
 }
 
 
+int64_t Module::Eval(const char* expr, int64_t def) {
+  SBExpressionOptions options;
+  SBValue value = target_.EvaluateExpression(expr, options);
+  if (value.GetError().Fail() && IsDebugMode())
+    fprintf(stderr, "Failed to evaluate \"%s\"\n", expr);
+
+  return value.GetValueAsSigned(def);
+}
+
+
 void Common::Load() {
   kPointerSize = 1 << LoadConstant("PointerSizeLog2");
   kVersionMajor = LoadRawConstant("v8::internal::Version::major_");
   kVersionMinor = LoadRawConstant("v8::internal::Version::minor_");
+}
+
+
+bool Common::CheckVersion(int64_t major, int64_t minor) {
+  Load();
+
+  if (major > kVersionMajor) return false;
+  if (minor > kVersionMinor) return false;
+
+  return true;
 }
 
 
@@ -213,6 +237,7 @@ void SharedInfo::Load() {
   kInferredNameOffset =
       LoadConstant("class_SharedFunctionInfo__inferred_name__String");
   kScriptOffset = LoadConstant("class_SharedFunctionInfo__script__Object");
+  kCodeOffset = LoadConstant("class_SharedFunctionInfo__code__Code");
   kStartPositionOffset =
       LoadConstant("class_SharedFunctionInfo__start_position_and_type__SMI");
   kParameterCountOffset = LoadConstant(
@@ -231,6 +256,12 @@ void SharedInfo::Load() {
     kStartPositionShift = 2;
     kStartPositionMask = ~((1 << kStartPositionShift) - 1);
   }
+}
+
+
+void Code::Load() {
+  kStartOffset = LoadConstant("class_Code__instruction_start__uintptr_t");
+  kSizeOffset = LoadConstant("class_Code__instruction_size__int");
 }
 
 
@@ -423,6 +454,36 @@ void Frame::Load() {
 }
 
 
+void Node::Load() {
+  kNodeIsolate = LoadRawConstant("_ZN4nodeL12node_isolateE");
+  kIsolateHeapOffset = Eval("&((v8::internal::Isolate*)(0))->heap_");
+  kOldSpaceHeapOffset = Eval("&((v8::internal::OldSpace*)(0))->heap_");
+  kOldSpaceIdOffset = Eval("&((v8::internal::OldSpace*)(0))->id_");
+  kOldSpaceExecutableOffset =
+      Eval("&((v8::internal::OldSpace*)(0))->executable_");
+  kPageAreaStartOffset = Eval("&((v8::internal::Page*)(0))->area_start_");
+  kPageAreaEndOffset = Eval("&((v8::internal::Page*)(0))->area_end_");
+
+  // TODO(indutny): move it to postmortem
+  kOldSpaceId = 1;
+
+  // TODO(indutny): 32bit constants
+  //
+  // For some reason lldb seems to give a wrong offsets when evaluating these
+  // kOldSpaceAnchorOffset = Eval("&((v8::internal::OldSpace*)(0))->anchor_");
+  // kPageNextOffset = Eval("&((v8::internal::Page*)(0))->next_chunk_");
+  if (common_->CheckVersion(4, 6)) {
+    // v5.0.0
+    kOldSpaceAnchorOffset = 0x40;
+    kPageNextOffset = 0x90;
+  } else if (common_->CheckVersion(4, 5)) {
+    // v4.2.1
+    kOldSpaceAnchorOffset = 0x48;
+    kPageNextOffset = 0x88;
+  }
+}
+
+
 void Types::Load() {
   kFirstNonstringType = LoadConstant("FirstNonstringType");
 
@@ -440,6 +501,8 @@ void Types::Load() {
   kJSTypedArrayType = LoadConstant("type_JSTypedArray__JS_TYPED_ARRAY_TYPE");
   kJSRegExpType = LoadConstant("type_JSRegExp__JS_REGEXP_TYPE");
   kJSDateType = LoadConstant("type_JSDate__JS_DATE_TYPE");
+  kSharedFunctionInfoType = LoadConstant(
+      "type_SharedFunctionInfo__SHARED_FUNCTION_INFO_TYPE");
 }
 
 }  // namespace constants

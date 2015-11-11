@@ -24,6 +24,7 @@ class Module {
   int64_t LoadConstant(const char* name, int64_t def = -1);
   int64_t LoadConstant(const char* name, const char* fallback,
       int64_t def = -1);
+  int64_t Eval(const char* expr, int64_t def = -1);
 
   lldb::SBTarget target_;
   Common* common_;
@@ -46,6 +47,8 @@ class Common : public Module {
   int64_t kPointerSize;
   int64_t kVersionMajor;
   int64_t kVersionMinor;
+
+  bool CheckVersion(int64_t major, int64_t minor);
 
   // Public, because other modules may use it
   void Load();
@@ -162,12 +165,24 @@ class SharedInfo : public Module {
   int64_t kNameOffset;
   int64_t kInferredNameOffset;
   int64_t kScriptOffset;
+  int64_t kCodeOffset;
   int64_t kStartPositionOffset;
   int64_t kParameterCountOffset;
   int64_t kScopeInfoOffset;
 
   int64_t kStartPositionMask;
   int64_t kStartPositionShift;
+
+ protected:
+  void Load();
+};
+
+class Code : public Module {
+ public:
+  MODULE_DEFAULT_METHODS(Code)
+
+  int64_t kStartOffset;
+  int64_t kSizeOffset;
 
  protected:
   void Load();
@@ -406,6 +421,26 @@ class Frame : public Module {
   void Load();
 };
 
+class Node : public Module {
+ public:
+  MODULE_DEFAULT_METHODS(Node);
+
+  int64_t kNodeIsolate;
+  int64_t kIsolateHeapOffset;
+  int64_t kOldSpaceHeapOffset;
+  int64_t kOldSpaceIdOffset;
+  int64_t kOldSpaceExecutableOffset;
+  int64_t kOldSpaceAnchorOffset;
+  int64_t kPageNextOffset;
+  int64_t kPageAreaStartOffset;
+  int64_t kPageAreaEndOffset;
+
+  int64_t kOldSpaceId;
+
+ protected:
+  void Load();
+};
+
 class Types : public Module {
  public:
   MODULE_DEFAULT_METHODS(Types);
@@ -425,6 +460,7 @@ class Types : public Module {
   int64_t kJSTypedArrayType;
   int64_t kJSRegExpType;
   int64_t kJSDateType;
+  int64_t kSharedFunctionInfoType;
 
  protected:
   void Load();

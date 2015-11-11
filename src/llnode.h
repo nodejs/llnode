@@ -31,6 +31,15 @@ class PrintCmd : public lldb::SBCommandPluginInterface {
   bool detailed_;
 };
 
+class CodeMap : public lldb::SBCommandPluginInterface {
+ public:
+  ~CodeMap() override {
+  }
+
+  bool DoExecute(lldb::SBDebugger d, char** cmd,
+                 lldb::SBCommandReturnObject& result) override;
+};
+
 }  // namespace llnode
 
 #endif  // SRC_LLNODE_H_
