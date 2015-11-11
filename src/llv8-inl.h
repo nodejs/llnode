@@ -87,6 +87,12 @@ inline int64_t Map::GetType(Error& err) {
 }
 
 
+inline JSFunction JSFrame::GetFunction(Error& err) {
+  return v8()->LoadValue<JSFunction>(
+      raw() + v8()->frame()->kFunctionOffset, err);
+}
+
+
 inline int64_t JSFrame::LeaParamSlot(int slot, int count) const {
   return raw() + v8()->frame()->kArgsOffset +
       (count - slot - 1) * v8()->common()->kPointerSize;
