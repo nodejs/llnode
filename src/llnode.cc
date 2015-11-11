@@ -1,6 +1,7 @@
-#include <errno.h>
 #include <lldb/API/SBExpressionOptions.h>
+#include <errno.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "src/llnode.h"
 #include "src/llv8.h"
