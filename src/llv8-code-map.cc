@@ -6,6 +6,11 @@
 namespace llnode {
 namespace v8 {
 
+bool CodeMap::QueueItem::Sort(QueueItem a, QueueItem b) {
+  return a.start() > b.start();
+}
+
+
 std::string CodeMap::Collect(Error& err) {
   int64_t isolate = v8()->node()->kNodeIsolate;
   if (isolate <= 0) {
@@ -18,7 +23,7 @@ std::string CodeMap::Collect(Error& err) {
   if (err.Fail()) return std::string();
   int64_t anchor = old_space + v8()->node()->kOldSpaceAnchorOffset;
 
-  std::string res;
+  entries_.clear();
 
   int64_t current = anchor;
   do {
@@ -34,9 +39,27 @@ std::string CodeMap::Collect(Error& err) {
         v8()->LoadPtr(current + v8()->node()->kPageAreaEndOffset, err);
     if (err.Fail()) break;
 
-    res += CollectArea(area_start, area_end, err);
+    CollectArea(area_start, area_end, err);
     if (err.Fail()) continue;
   } while (current != anchor);
+
+  std::sort(entries_.begin(), entries_.end(), QueueItem::Sort);
+
+  std::string res;
+  int64_t prev = 0;
+  for (size_t i = 0; i < entries_.size(); i++) {
+    auto entry = entries_[i];
+
+    // Skip duplicates
+    if (entry.start() == prev) continue;
+    prev = entry.start();
+
+    char tmp[128];
+    snprintf(tmp, sizeof(tmp), "0x%016llx, 0x%016llx, ", entry.start(),
+        entry.end());
+    res += tmp + entry.name() + "\n";
+  }
+  entries_.clear();
 
   err = Error::Ok();
   return res;
@@ -91,10 +114,9 @@ int64_t CodeMap::FindOldSpace(int64_t heap, Error& err) {
 }
 
 
-std::string CodeMap::CollectArea(int64_t start, int64_t end, Error& err) {
+void CodeMap::CollectArea(int64_t start, int64_t end, Error& err) {
   int64_t kPointerSize = v8()->common()->kPointerSize;
 
-  std::string res;
   for (int64_t current = start; current < end; current += kPointerSize) {
     int64_t ptr = v8()->LoadPtr(current, err);
     if (err.Fail()) break;
@@ -110,52 +132,64 @@ std::string CodeMap::CollectArea(int64_t start, int64_t end, Error& err) {
     // TODO(indutny): use map instance_size to speed up search
     int64_t instance_size;
 
-    res += CollectObject(obj, &instance_size, err);
+    CollectObject(obj, &instance_size, err);
     if (err.Fail()) continue;
 
     if (instance_size < kPointerSize)
       instance_size = kPointerSize;
-    current += instance_size;
-  }
 
-  return res;
+    // Align
+    if ((instance_size % kPointerSize) != 0)
+      instance_size += kPointerSize - (instance_size % kPointerSize);
+  }
 }
 
 
-std::string CodeMap::CollectObject(HeapObject obj, int64_t* size, Error& err) {
+void CodeMap::CollectObject(HeapObject obj, int64_t* size, Error& err) {
   HeapObject map_obj = obj.GetMap(err);
-  if (err.Fail()) return std::string();
+  if (err.Fail()) return;
+
+  // Sanity check
+  int64_t map_type = map_obj.GetType(err);
+  if (map_type != v8()->types()->kMapType) {
+    err = Error::Failure("Map self-check failed");
+    return;
+  }
 
   Map map(map_obj);
   int64_t type = map.GetType(err);
-  if (err.Fail()) return std::string();
+  if (err.Fail()) return;
 
   *size = map.InstanceSize(err);
-  if (err.Fail()) return std::string();
+  if (err.Fail()) return;
 
-  if (type != v8()->types()->kSharedFunctionInfoType) return std::string();
+  if (type != v8()->types()->kSharedFunctionInfoType) {
+    // Only account type of a known objects
+    if (type != v8()->types()->kMapType &&
+        type != v8()->types()->kGlobalObjectType &&
+        type != v8()->types()->kJSObjectType &&
+        type != v8()->types()->kJSFunctionType) {
+      *size = 0;
+    }
+    return;
+  }
 
   SharedFunctionInfo info(obj);
   Code code = info.GetCode(err);
-  if (err.Fail()) return std::string();
+  if (err.Fail()) return;
 
   type = code.GetType(err);
-  if (err.Fail()) return std::string();
-  if (type != v8()->types()->kCodeType) return std::string();
+  if (err.Fail()) return;
+  if (type != v8()->types()->kCodeType) return;
 
   int64_t code_start = code.Start();
   int64_t code_size = code.Size(err);
-  if (err.Fail()) return std::string();
+  if (err.Fail()) return;
 
-  char tmp[128];
-  snprintf(tmp, sizeof(tmp), "0x%016llx, 0x%016llx, ", code_start,
-      code_start + code_size);
-  std::string res = tmp;
+  std::string name = info.ToString(err);
+  if (err.Fail()) return;
 
-  res += info.ToString(err) + "\n";
-  if (err.Fail()) return std::string();
-
-  return res;
+  entries_.push_back(QueueItem(code_start, code_start + code_size, name));
 }
 
 }  // namespace v8
