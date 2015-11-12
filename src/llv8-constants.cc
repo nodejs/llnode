@@ -120,16 +120,6 @@ int64_t Module::LoadConstant(const char* name, const char* fallback,
 }
 
 
-int64_t Module::Eval(const char* expr, int64_t def) {
-  SBExpressionOptions options;
-  SBValue value = target_.EvaluateExpression(expr, options);
-  if (value.GetError().Fail() && IsDebugMode())
-    fprintf(stderr, "Failed to evaluate \"%s\"\n", expr);
-
-  return value.GetValueAsSigned(def);
-}
-
-
 void Common::Load() {
   kPointerSize = 1 << LoadConstant("PointerSizeLog2");
   kVersionMajor = LoadRawConstant("v8::internal::Version::major_");
@@ -453,28 +443,26 @@ void Frame::Load() {
 
 void Node::Load() {
   kNodeIsolate = LoadRawConstant("_ZN4nodeL12node_isolateE");
-  // &&((v8::internal::Isolate*)(0))->heap_((v8::internal::Isolate*)(0))->heap_
-  kIsolateHeapOffset = 0x20;
-  // &((v8::internal::OldSpace*)(0))->heap_
-  kOldSpaceHeapOffset = 0x8;
-  // &((v8::internal::OldSpace*)(0))->id_
-  kOldSpaceIdOffset = 0x10;
-  // &((v8::internal::OldSpace*)(0))->executable_
-  kOldSpaceExecutableOffset = 0x14;
-  // &((v8::internal::Page*)(0))->area_start_
-  kPageAreaStartOffset = 0x10;
-  // &((v8::internal::Page*)(0))->area_end_
-  kPageAreaEndOffset = 0x18;
+  kIsolateHeapOffset = LoadConstant("field_Isolate__heap_", 0x20);
+  kOldSpaceHeapOffset = LoadConstant("field_OldSpace__heap_", 0x8);
+  kOldSpaceIdOffset = LoadConstant("field_OldSpace__id_", 0x10);
+  kOldSpaceExecutableOffset = LoadConstant("field_OldSpace__executable_", 0x14);
+  kPageAreaStartOffset = LoadConstant("field_Page__area_start_", 0x10);
+  kPageAreaEndOffset = LoadConstant("field_Page__area_end_", 0x18);
+
+  // If -1, `FindOldSpace` will determine it in runtime
+  kHeapOldSpaceOffset = LoadConstant("field_Heap__old_space_");
 
   // TODO(indutny): move it to postmortem
-  kOldSpaceId = 1;
+  kOldSpaceId = LoadConstant("old_space", 1);
 
-  // TODO(indutny): 32bit constants
-  //
-  // For some reason lldb seems to give a wrong offsets when evaluating these
-  // kOldSpaceAnchorOffset = Eval("&((v8::internal::OldSpace*)(0))->anchor_");
-  // kPageNextOffset = Eval("&((v8::internal::Page*)(0))->next_chunk_");
-  if (common_->CheckVersion(4, 6)) {
+  kOldSpaceAnchorOffset = LoadConstant("field_OldSpace__anchor_");
+  kPageNextOffset = LoadConstant("field_Page__next_chunk_");
+
+  // TODO(indutny): fallback for 32bit too
+  if (kOldSpaceAnchorOffset != -1) {
+    // Already loaded
+  } else if (common_->CheckVersion(4, 6)) {
     // v5.0.0
     kOldSpaceAnchorOffset = 0x40;
     kPageNextOffset = 0x90;

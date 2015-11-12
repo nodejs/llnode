@@ -23,7 +23,6 @@ class Module {
   int64_t LoadConstant(const char* name, int64_t def = -1);
   int64_t LoadConstant(const char* name, const char* fallback,
                        int64_t def = -1);
-  int64_t Eval(const char* expr, int64_t def = -1);
 
   lldb::SBTarget target_;
   Common* common_;
@@ -426,6 +425,7 @@ class Node : public Module {
 
   int64_t kNodeIsolate;
   int64_t kIsolateHeapOffset;
+  int64_t kHeapOldSpaceOffset;
   int64_t kOldSpaceHeapOffset;
   int64_t kOldSpaceIdOffset;
   int64_t kOldSpaceExecutableOffset;

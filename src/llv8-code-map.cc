@@ -69,7 +69,12 @@ std::string CodeMap::Collect(Error& err) {
 int64_t CodeMap::FindOldSpace(int64_t heap, Error& err) {
   int64_t kPointerSize = v8()->common()->kPointerSize;
 
-  for (int64_t off = 0; off < kMaxOldSpaceSearch; off += kPointerSize) {
+  // Search for old space only if there is no constant available
+  int64_t off = v8()->node()->kHeapOldSpaceOffset;
+  if (off == -1)
+    off = 0;
+
+  for (; off < kMaxOldSpaceSearch; off += kPointerSize) {
     int64_t probe = v8()->LoadPtr(heap + off, err);
     if (err.Fail()) continue;
 
