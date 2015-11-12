@@ -71,8 +71,7 @@ int64_t CodeMap::FindOldSpace(int64_t heap, Error& err) {
 
   // Search for old space only if there is no constant available
   int64_t off = v8()->node()->kHeapOldSpaceOffset;
-  if (off == -1)
-    off = 0;
+  if (off == -1) off = 0;
 
   for (; off < kMaxOldSpaceSearch; off += kPointerSize) {
     int64_t probe = v8()->LoadPtr(heap + off, err);
