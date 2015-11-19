@@ -41,6 +41,16 @@ class Error {
 
 class Value {
  public:
+  class InspectOptions {
+   public:
+    InspectOptions() : detailed(false), string_size(kInspectSize) {}
+
+    static const unsigned int kInspectSize = 16;
+
+    bool detailed;
+    unsigned int string_size;
+  };
+
   Value(const Value& v) = default;
   Value(Value& v) = default;
   Value() : v8_(nullptr), raw_(-1) {}
@@ -54,7 +64,7 @@ class Value {
   bool IsHoleOrUndefined(Error& err);
   bool IsHole(Error& err);
 
-  std::string Inspect(bool detailed, Error& err);
+  std::string Inspect(InspectOptions* options, Error& err);
   std::string ToString(Error& err);
 
  protected:
@@ -88,7 +98,7 @@ class HeapObject : public Value {
   inline int64_t GetType(Error& err);
 
   std::string ToString(Error& err);
-  std::string Inspect(bool detailed, Error& err);
+  std::string Inspect(InspectOptions* options, Error& err);
 };
 
 class Map : public HeapObject {
@@ -117,11 +127,7 @@ class String : public HeapObject {
   inline Smi Length(Error& err);
 
   std::string ToString(Error& err);
-  std::string Inspect(Error& err);
-
- private:
-  // TODO(indutny): should be overridable
-  static const int kInspectSize = 16;
+  std::string Inspect(InspectOptions* options, Error& err);
 };
 
 class Script : public HeapObject {
@@ -215,7 +221,7 @@ class JSObject : public HeapObject {
   inline HeapObject Properties(Error& err);
   inline HeapObject Elements(Error& err);
 
-  std::string Inspect(bool detailed, Error& err);
+  std::string Inspect(InspectOptions* options, Error& err);
   std::string InspectProperties(Error& err);
 
  protected:
@@ -233,7 +239,7 @@ class JSArray : public JSObject {
 
   inline Smi Length(Error& err);
 
-  std::string Inspect(bool detailed, Error& err);
+  std::string Inspect(InspectOptions* options, Error& err);
 };
 
 class JSFunction : public JSObject {
@@ -245,7 +251,7 @@ class JSFunction : public JSObject {
   inline std::string Name(Error& err);
 
   std::string GetDebugLine(std::string args, Error& err);
-  std::string Inspect(bool detailed, Error& err);
+  std::string Inspect(InspectOptions* options, Error& err);
 };
 
 class JSRegExp : public JSObject {
@@ -278,7 +284,7 @@ class FixedArray : public FixedArrayBase {
 
   inline int64_t LeaData() const;
 
-  std::string Inspect(bool detailed, Error& err);
+  std::string Inspect(InspectOptions* options, Error& err);
 
  private:
   std::string InspectContents(int length, Error& err);

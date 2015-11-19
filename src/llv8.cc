@@ -255,14 +255,16 @@ std::string JSFrame::InspectArgs(JSFunction fn, Error& err) {
   Value receiver = GetReceiver(param_count, err);
   if (err.Fail()) return std::string();
 
-  std::string res = "this=" + receiver.Inspect(false, err);
+  InspectOptions options;
+
+  std::string res = "this=" + receiver.Inspect(&options, err);
   if (err.Fail()) return std::string();
 
   for (int64_t i = 0; i < param_count; i++) {
     Value param = GetParam(i, param_count, err);
     if (err.Fail()) return std::string();
 
-    res += ", " + param.Inspect(false, err);
+    res += ", " + param.Inspect(&options, err);
     if (err.Fail()) return std::string();
   }
 
@@ -290,11 +292,11 @@ std::string JSFunction::GetDebugLine(std::string args, Error& err) {
 }
 
 
-std::string JSFunction::Inspect(bool detailed, Error& err) {
+std::string JSFunction::Inspect(InspectOptions* options, Error& err) {
   std::string res = "<function: " + GetDebugLine(std::string(), err);
   if (err.Fail()) return std::string();
 
-  if (detailed) {
+  if (options->detailed) {
     HeapObject context_obj = GetContext(err);
     if (err.Fail()) return std::string();
 
@@ -508,7 +510,7 @@ bool Value::IsHole(Error& err) {
 }
 
 
-std::string Value::Inspect(bool detailed, Error& err) {
+std::string Value::Inspect(InspectOptions* options, Error& err) {
   Smi smi(this);
   if (smi.Check()) return smi.Inspect(err);
 
@@ -518,7 +520,7 @@ std::string Value::Inspect(bool detailed, Error& err) {
     return std::string();
   }
 
-  return obj.Inspect(detailed, err);
+  return obj.Inspect(options, err);
 }
 
 
@@ -554,7 +556,7 @@ std::string HeapObject::ToString(Error& err) {
 }
 
 
-std::string HeapObject::Inspect(bool detailed, Error& err) {
+std::string HeapObject::Inspect(InspectOptions* options, Error& err) {
   int64_t type = GetType(err);
   if (err.Fail()) return std::string();
 
@@ -568,7 +570,7 @@ std::string HeapObject::Inspect(bool detailed, Error& err) {
 
   if (type == v8()->types()->kJSObjectType) {
     JSObject o(this);
-    return pre + o.Inspect(detailed, err);
+    return pre + o.Inspect(options, err);
   }
 
   if (type == v8()->types()->kHeapNumberType) {
@@ -578,7 +580,7 @@ std::string HeapObject::Inspect(bool detailed, Error& err) {
 
   if (type == v8()->types()->kJSArrayType) {
     JSArray arr(this);
-    return pre + arr.Inspect(detailed, err);
+    return pre + arr.Inspect(options, err);
   }
 
   if (type == v8()->types()->kOddballType) {
@@ -588,22 +590,22 @@ std::string HeapObject::Inspect(bool detailed, Error& err) {
 
   if (type == v8()->types()->kJSFunctionType) {
     JSFunction fn(this);
-    return pre + fn.Inspect(detailed, err);
+    return pre + fn.Inspect(options, err);
   }
 
   if (type == v8()->types()->kJSRegExpType) {
     JSRegExp re(this);
-    return pre + re.Inspect(detailed, err);
+    return pre + re.Inspect(options, err);
   }
 
   if (type < v8()->types()->kFirstNonstringType) {
     String str(this);
-    return pre + str.Inspect(err);
+    return pre + str.Inspect(options, err);
   }
 
   if (type == v8()->types()->kFixedArrayType) {
     FixedArray arr(this);
-    return pre + arr.Inspect(detailed, err);
+    return pre + arr.Inspect(options, err);
   }
 
   if (type == v8()->types()->kJSArrayBufferType) {
@@ -685,25 +687,26 @@ std::string String::ToString(Error& err) {
 }
 
 
-std::string String::Inspect(Error& err) {
+std::string String::Inspect(InspectOptions* options, Error& err) {
   std::string val = ToString(err);
   if (err.Fail()) return std::string();
 
-  // TODO(indutny): add length
-  if (val.length() > kInspectSize) val = val.substr(0, kInspectSize) + "...";
+  unsigned int size = options->string_size;
+
+  if (size != 0 && val.length() > size) val = val.substr(0, size - 3) + "...";
 
   return "<String: \"" + val + "\">";
 }
 
 
-std::string FixedArray::Inspect(bool detailed, Error& err) {
+std::string FixedArray::Inspect(InspectOptions* options, Error& err) {
   Smi length_smi = Length(err);
   if (err.Fail()) return std::string();
 
   std::string res = "<FixedArray, len=" + length_smi.ToString(err);
   if (err.Fail()) return std::string();
 
-  if (detailed) {
+  if (options->detailed) {
     std::string contents = InspectContents(length_smi.GetValue(), err);
     if (!contents.empty()) res += " contents={\n" + contents + "}";
   }
@@ -714,6 +717,7 @@ std::string FixedArray::Inspect(bool detailed, Error& err) {
 
 std::string FixedArray::InspectContents(int length, Error& err) {
   std::string res;
+  InspectOptions options;
 
   for (int i = 0; i < length; i++) {
     Value value = Get<Value>(i, err);
@@ -723,7 +727,7 @@ std::string FixedArray::InspectContents(int length, Error& err) {
 
     char tmp[128];
     snprintf(tmp, sizeof(tmp), "    [%d]=", i);
-    res += tmp + value.Inspect(false, err);
+    res += tmp + value.Inspect(&options, err);
     if (err.Fail()) return std::string();
   }
 
@@ -754,6 +758,8 @@ std::string Context::Inspect(Error& err) {
   Smi local_count_smi = scope.ContextLocalCount(err);
   if (err.Fail()) return std::string();
 
+  InspectOptions options;
+
   int param_count = param_count_smi.GetValue();
   int stack_count = stack_count_smi.GetValue();
   int local_count = local_count_smi.GetValue();
@@ -769,7 +775,7 @@ std::string Context::Inspect(Error& err) {
     Value value = ContextSlot(i, err);
     if (err.Fail()) return std::string();
 
-    res += value.Inspect(false, err);
+    res += value.Inspect(&options, err);
     if (err.Fail()) return std::string();
   }
 
@@ -856,7 +862,7 @@ HeapObject Map::Constructor(Error& err) {
 }
 
 
-std::string JSObject::Inspect(bool detailed, Error& err) {
+std::string JSObject::Inspect(InspectOptions* options, Error& err) {
   HeapObject map_obj = GetMap(err);
   if (err.Fail()) return std::string();
 
@@ -876,7 +882,7 @@ std::string JSObject::Inspect(bool detailed, Error& err) {
   if (err.Fail()) return std::string();
 
   // Print properties in detailed mode
-  if (detailed) {
+  if (options->detailed) {
     res += " " + InspectProperties(err);
     if (err.Fail()) return std::string();
   }
@@ -928,6 +934,8 @@ std::string JSObject::InspectElements(Error& err) {
   Smi length_smi = elements.Length(err);
   if (err.Fail()) return std::string();
 
+  InspectOptions options;
+
   int64_t length = length_smi.GetValue();
   std::string res;
   for (int64_t i = 0; i < length; i++) {
@@ -946,7 +954,7 @@ std::string JSObject::InspectElements(Error& err) {
     snprintf(tmp, sizeof(tmp), "    [%d]=", static_cast<int>(i));
     res += tmp;
 
-    res += value.Inspect(false, err);
+    res += value.Inspect(&options, err);
     if (err.Fail()) return std::string();
   }
 
@@ -962,6 +970,8 @@ std::string JSObject::InspectDictionary(Error& err) {
 
   int64_t length = dictionary.Length(err);
   if (err.Fail()) return std::string();
+
+  InspectOptions options;
 
   std::string res;
   for (int64_t i = 0; i < length; i++) {
@@ -981,7 +991,7 @@ std::string JSObject::InspectDictionary(Error& err) {
     res += "    ." + key.ToString(err) + "=";
     if (err.Fail()) return std::string();
 
-    res += value.Inspect(false, err);
+    res += value.Inspect(&options, err);
     if (err.Fail()) return std::string();
   }
 
@@ -1007,6 +1017,8 @@ std::string JSObject::InspectDescriptors(Map map, Error& err) {
   if (err.Fail()) return std::string();
 
   FixedArray extra_properties(extra_properties_obj);
+
+  InspectOptions options;
 
   std::string res;
   for (int64_t i = 0; i < own_descriptors_count; i++) {
@@ -1047,7 +1059,7 @@ std::string JSObject::InspectDescriptors(Map map, Error& err) {
 
       if (err.Fail()) return std::string();
 
-      res += value.Inspect(false, err);
+      res += value.Inspect(&options, err);
     }
     if (err.Fail()) return std::string();
   }
@@ -1062,12 +1074,12 @@ T JSObject::GetInObjectValue(int64_t size, int index, Error& err) {
 }
 
 
-std::string JSArray::Inspect(bool detailed, Error& err) {
+std::string JSArray::Inspect(InspectOptions* options, Error& err) {
   Smi length = Length(err);
   if (err.Fail()) return std::string();
 
   std::string res = "<Array: length=" + length.ToString(err);
-  if (detailed) {
+  if (options->detailed) {
     std::string elems = InspectElements(err);
     if (err.Fail()) return std::string();
 

@@ -100,9 +100,13 @@ bool PrintCmd::DoExecute(SBDebugger d, char** cmd,
   // Load V8 constants from postmortem data
   llv8.Load(target);
 
+  v8::Value::InspectOptions inspect_options;
+
+  inspect_options.detailed = detailed_;
+
   v8::Value v8_value(&llv8, value.GetValueAsSigned());
   v8::Error err;
-  std::string res = v8_value.Inspect(detailed_, err);
+  std::string res = v8_value.Inspect(&inspect_options, err);
   if (err.Fail()) {
     result.SetError("Failed to evaluate expression");
     return false;
