@@ -288,13 +288,13 @@ bool PluginInitialize(SBDebugger d) {
                 "Syntax: v8 print expr\n");
 
   v8.AddCommand(
-      "inspect [flags]", new llnode::PrintCmd(true),
+      "inspect", new llnode::PrintCmd(true),
       "Print detailed description and contents of the JavaScript value.\n\n"
       "Possible flags (all optional):\n\n"
       " * -F, --full-string    - print whole string without adding ellipsis\n"
       " * --string-length num  - print maximum of `num` characters in string\n"
       "\n"
-      "Syntax: v8 inspect expr\n");
+      "Syntax: v8 inspect [flags] expr\n");
 
   v8.AddCommand("code-map", new llnode::CodeMap(),
                 "Print code map of all compiled functions.\n\n"

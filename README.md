@@ -71,7 +71,7 @@ The following subcommands are supported:
                   * -F, --full-string    - print whole string without adding ellipsis
                   * --string-length num  - print maximum of `num` characters in string
 
-                  Syntax: v8 inspect expr
+                  Syntax: v8 inspect [flags] expr
       print    -- Print short description of the JavaScript value.
 
                   Syntax: v8 print expr
