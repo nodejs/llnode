@@ -691,9 +691,9 @@ std::string String::Inspect(InspectOptions* options, Error& err) {
   std::string val = ToString(err);
   if (err.Fail()) return std::string();
 
-  unsigned int size = options->string_size;
+  unsigned int len = options->string_length;
 
-  if (size != 0 && val.length() > size) val = val.substr(0, size - 3) + "...";
+  if (len != 0 && val.length() > len) val = val.substr(0, len) + "...";
 
   return "<String: \"" + val + "\">";
 }

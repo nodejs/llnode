@@ -1,7 +1,9 @@
-#include <lldb/API/SBExpressionOptions.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <getopt.h>
+
+#include <lldb/API/SBExpressionOptions.h>
 
 #include "src/llnode.h"
 #include "src/llv8.h"
@@ -12,6 +14,42 @@ namespace llnode {
 using namespace lldb;
 
 v8::LLV8 llv8;
+
+char** CommandBase::ParseInspectOptions(char** cmd,
+                                        v8::Value::InspectOptions* options) {
+  static struct option opts[] = {
+    { "full-string", no_argument, nullptr, 'F' },
+    { "string-length", required_argument, nullptr, 0x1001 },
+    { nullptr, 0, nullptr, 0 }
+  };
+
+  int argc = 0;
+  for (char** p = cmd; p != nullptr && *p != nullptr; p++)
+    argc++;
+
+  optreset = 1;
+  optind = 1;
+  opterr = 1;
+  do {
+    int arg = getopt_long(argc, cmd - 1, "F", opts, nullptr);
+    if (arg == -1)
+      break;
+
+    switch (arg) {
+      case 'F':
+        options->string_length = 0;
+        break;
+      case 0x1001:
+        options->string_length = strtol(optarg, nullptr, 10);
+        break;
+      default:
+        continue;
+    }
+  } while (true);
+
+  return cmd + optind - 1;
+}
+
 
 bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
                              SBCommandReturnObject& result) {
@@ -83,10 +121,15 @@ bool PrintCmd::DoExecute(SBDebugger d, char** cmd,
     return false;
   }
 
+  v8::Value::InspectOptions inspect_options;
+
+  inspect_options.detailed = detailed_;
+
+  char** start = ParseInspectOptions(cmd, &inspect_options);
+
   std::string full_cmd;
-  for (char** start = cmd; start != nullptr && *start != nullptr; start++) {
+  for (; start != nullptr && *start != nullptr; start++)
     full_cmd += *start;
-  }
 
   SBExpressionOptions options;
   SBValue value = target.EvaluateExpression(full_cmd.c_str(), options);
@@ -99,10 +142,6 @@ bool PrintCmd::DoExecute(SBDebugger d, char** cmd,
 
   // Load V8 constants from postmortem data
   llv8.Load(target);
-
-  v8::Value::InspectOptions inspect_options;
-
-  inspect_options.detailed = detailed_;
 
   v8::Value v8_value(&llv8, value.GetValueAsSigned());
   v8::Error err;
@@ -249,8 +288,12 @@ bool PluginInitialize(SBDebugger d) {
                 "Syntax: v8 print expr\n");
 
   v8.AddCommand(
-      "inspect", new llnode::PrintCmd(true),
+      "inspect [flags]", new llnode::PrintCmd(true),
       "Print detailed description and contents of the JavaScript value.\n\n"
+      "Possible flags (all optional):\n\n"
+      " * -F, --full-string    - print whole string without adding ellipsis\n"
+      " * --string-length num  - print maximum of `num` characters in string\n"
+      "\n"
       "Syntax: v8 inspect expr\n");
 
   v8.AddCommand("code-map", new llnode::CodeMap(),

@@ -43,12 +43,12 @@ class Value {
  public:
   class InspectOptions {
    public:
-    InspectOptions() : detailed(false), string_size(kInspectSize) {}
+    InspectOptions() : detailed(false), string_length(kStringLength) {}
 
-    static const unsigned int kInspectSize = 16;
+    static const unsigned int kStringLength = 16;
 
     bool detailed;
-    unsigned int string_size;
+    unsigned int string_length;
   };
 
   Value(const Value& v) = default;

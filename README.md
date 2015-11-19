@@ -66,6 +66,11 @@ The following subcommands are supported:
       inspect  -- Print detailed description and contents of the JavaScript
                   value.
 
+                  Possible flags (all optional):
+
+                  * -F, --full-string    - print whole string without adding ellipsis
+                  * --string-length num  - print maximum of `num` characters in string
+
                   Syntax: v8 inspect expr
       print    -- Print short description of the JavaScript value.
 

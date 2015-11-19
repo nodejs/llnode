@@ -5,9 +5,16 @@
 
 #include <lldb/API/LLDB.h>
 
+#include "src/llv8.h"
+
 namespace llnode {
 
-class BacktraceCmd : public lldb::SBCommandPluginInterface {
+class CommandBase : public lldb::SBCommandPluginInterface {
+ public:
+  char** ParseInspectOptions(char** cmd, v8::Value::InspectOptions* options);
+};
+
+class BacktraceCmd : public CommandBase {
  public:
   ~BacktraceCmd() override {}
 
@@ -15,7 +22,7 @@ class BacktraceCmd : public lldb::SBCommandPluginInterface {
                  lldb::SBCommandReturnObject& result) override;
 };
 
-class PrintCmd : public lldb::SBCommandPluginInterface {
+class PrintCmd : public CommandBase {
  public:
   PrintCmd(bool detailed) : detailed_(detailed) {}
 
@@ -28,7 +35,7 @@ class PrintCmd : public lldb::SBCommandPluginInterface {
   bool detailed_;
 };
 
-class CodeMap : public lldb::SBCommandPluginInterface {
+class CodeMap : public CommandBase {
  public:
   ~CodeMap() override {}
 
@@ -36,7 +43,7 @@ class CodeMap : public lldb::SBCommandPluginInterface {
                  lldb::SBCommandReturnObject& result) override;
 };
 
-class ListCmd : public lldb::SBCommandPluginInterface {
+class ListCmd : public CommandBase {
  public:
   ~ListCmd() override {}
 
