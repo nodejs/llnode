@@ -69,6 +69,7 @@ The following subcommands are supported:
                   Possible flags (all optional):
 
                   * -F, --full-string    - print whole string without adding ellipsis
+                  * -m, --print-map      - print object's map address
                   * --string-length num  - print maximum of `num` characters in string
 
                   Syntax: v8 inspect [flags] expr

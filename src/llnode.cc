@@ -20,6 +20,7 @@ char** CommandBase::ParseInspectOptions(char** cmd,
   static struct option opts[] = {
       {"full-string", no_argument, nullptr, 'F'},
       {"string-length", required_argument, nullptr, 0x1001},
+      {"print-map", no_argument, nullptr, 'm'},
       {nullptr, 0, nullptr, 0}};
 
   int argc = 0;
@@ -29,12 +30,15 @@ char** CommandBase::ParseInspectOptions(char** cmd,
   optind = 1;
   opterr = 1;
   do {
-    int arg = getopt_long(argc, cmd - 1, "F", opts, nullptr);
+    int arg = getopt_long(argc, cmd - 1, "Fm", opts, nullptr);
     if (arg == -1) break;
 
     switch (arg) {
       case 'F':
         options->string_length = 0;
+        break;
+      case 'm':
+        options->print_map = true;
         break;
       case 0x1001:
         options->string_length = strtol(optarg, nullptr, 10);
@@ -288,6 +292,7 @@ bool PluginInitialize(SBDebugger d) {
       "Print detailed description and contents of the JavaScript value.\n\n"
       "Possible flags (all optional):\n\n"
       " * -F, --full-string    - print whole string without adding ellipsis\n"
+      " * -m, --print-map      - print object's map address\n"
       " * --string-length num  - print maximum of `num` characters in string\n"
       "\n"
       "Syntax: v8 inspect [flags] expr\n");

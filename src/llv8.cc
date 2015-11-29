@@ -563,12 +563,23 @@ std::string HeapObject::Inspect(InspectOptions* options, Error& err) {
   if (err.Fail()) return std::string();
 
   // TODO(indutny): make this configurable
-  char buf[32];
-  snprintf(buf, sizeof(buf), "0x%016llx:", raw());
+  char buf[64];
+  if (options->print_map) {
+    HeapObject map = GetMap(err);
+    if (err.Fail()) return std::string();
+
+    snprintf(buf, sizeof(buf), "0x%016llx(map=0x%016llx):", raw(), map.raw());
+  } else {
+    snprintf(buf, sizeof(buf), "0x%016llx:", raw());
+  }
   std::string pre = buf;
 
   if (type == v8()->types()->kGlobalObjectType) return pre + "<Global>";
   if (type == v8()->types()->kCodeType) return pre + "<Code>";
+  if (type == v8()->types()->kMapType) {
+    Map m(this);
+    return pre + m.Inspect(options, err);
+  }
 
   if (type == v8()->types()->kJSObjectType) {
     JSObject o(this);
@@ -843,6 +854,27 @@ std::string JSArrayBufferView::Inspect(Error& err) {
            static_cast<int>(off.GetValue()),
            static_cast<int>(length.GetValue()));
   return tmp;
+}
+
+
+std::string Map::Inspect(InspectOptions* options, Error& err) {
+  HeapObject descriptors_obj = InstanceDescriptors(err);
+  if (err.Fail()) return std::string();
+
+  int64_t own_descriptors_count = NumberOfOwnDescriptors(err);
+  if (err.Fail()) return std::string();
+
+  char tmp[256];
+  snprintf(tmp, sizeof(tmp), "<Map own_descriptors=%d descriptors=0x%016llx",
+           static_cast<int>(own_descriptors_count), descriptors_obj.raw());
+  if (!options->detailed) {
+    return std::string(tmp) + ">";
+  }
+
+  DescriptorArray descriptors(descriptors_obj);
+  if (err.Fail()) return std::string();
+
+  return std::string(tmp) + ":" + descriptors.Inspect(options, err) + ">";
 }
 
 

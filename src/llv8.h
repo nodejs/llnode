@@ -43,11 +43,13 @@ class Value {
  public:
   class InspectOptions {
    public:
-    InspectOptions() : detailed(false), string_length(kStringLength) {}
+    InspectOptions()
+        : detailed(false), print_map(false), string_length(kStringLength) {}
 
     static const unsigned int kStringLength = 16;
 
     bool detailed;
+    bool print_map;
     unsigned int string_length;
   };
 
@@ -115,6 +117,7 @@ class Map : public HeapObject {
   inline bool IsDictionary(Error& err);
   inline int64_t NumberOfOwnDescriptors(Error& err);
 
+  std::string Inspect(InspectOptions* options, Error& err);
   HeapObject Constructor(Error& err);
 };
 
