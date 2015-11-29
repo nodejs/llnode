@@ -18,22 +18,19 @@ v8::LLV8 llv8;
 char** CommandBase::ParseInspectOptions(char** cmd,
                                         v8::Value::InspectOptions* options) {
   static struct option opts[] = {
-    { "full-string", no_argument, nullptr, 'F' },
-    { "string-length", required_argument, nullptr, 0x1001 },
-    { nullptr, 0, nullptr, 0 }
-  };
+      {"full-string", no_argument, nullptr, 'F'},
+      {"string-length", required_argument, nullptr, 0x1001},
+      {nullptr, 0, nullptr, 0}};
 
   int argc = 0;
-  for (char** p = cmd; p != nullptr && *p != nullptr; p++)
-    argc++;
+  for (char** p = cmd; p != nullptr && *p != nullptr; p++) argc++;
 
   optreset = 1;
   optind = 1;
   opterr = 1;
   do {
     int arg = getopt_long(argc, cmd - 1, "F", opts, nullptr);
-    if (arg == -1)
-      break;
+    if (arg == -1) break;
 
     switch (arg) {
       case 'F':
@@ -128,8 +125,7 @@ bool PrintCmd::DoExecute(SBDebugger d, char** cmd,
   char** start = ParseInspectOptions(cmd, &inspect_options);
 
   std::string full_cmd;
-  for (; start != nullptr && *start != nullptr; start++)
-    full_cmd += *start;
+  for (; start != nullptr && *start != nullptr; start++) full_cmd += *start;
 
   SBExpressionOptions options;
   SBValue value = target.EvaluateExpression(full_cmd.c_str(), options);
