@@ -11,11 +11,13 @@ using namespace lldb;
 static std::string kConstantPrefix = "v8dbg_";
 
 void LLV8::Load(SBTarget target) {
+  // Reload process anyway
+  process_ = target.GetProcess();
+
   // No need to reload
   if (target_ == target) return;
 
   target_ = target;
-  process_ = target_.GetProcess();
 
   common.Assign(target);
   smi.Assign(target, &common);
