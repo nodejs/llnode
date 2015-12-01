@@ -282,6 +282,8 @@ bool PluginInitialize(SBDebugger d) {
       "specifies the number of frames to display. Otherwise all frames will "
       "be dumped.\n\n"
       "Syntax: v8 bt [number]\n");
+  interpreter.AddCommand("jsstack", new llnode::BacktraceCmd(),
+      "Alias for `v8 bt`");
 
   v8.AddCommand("print", new llnode::PrintCmd(false),
                 "Print short description of the JavaScript value.\n\n"
@@ -296,6 +298,9 @@ bool PluginInitialize(SBDebugger d) {
       " * --string-length num  - print maximum of `num` characters in string\n"
       "\n"
       "Syntax: v8 inspect [flags] expr\n");
+  interpreter.AddCommand(
+      "jsprint", new llnode::PrintCmd(true),
+      "Alias for `v8 inspect`");
 
   v8.AddCommand("code-map", new llnode::CodeMap(),
                 "Print code map of all compiled functions.\n\n"
@@ -306,6 +311,9 @@ bool PluginInitialize(SBDebugger d) {
   source.AddCommand("list", new llnode::ListCmd(),
                     "Print source lines around a selected JavaScript frame.\n\n"
                     "Syntax: v8 source list\n");
+  interpreter.AddCommand(
+      "jssource", new llnode::ListCmd(),
+      "Alias for `v8 source list`");
 
   return true;
 }
