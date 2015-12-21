@@ -441,39 +441,6 @@ void Frame::Load() {
 }
 
 
-void Node::Load() {
-  kNodeIsolate = LoadRawConstant("_ZN4nodeL12node_isolateE");
-  kIsolateHeapOffset = LoadConstant("field_Isolate__heap_", 0x20);
-  kOldSpaceHeapOffset = LoadConstant("field_OldSpace__heap_", 0x8);
-  kOldSpaceIdOffset = LoadConstant("field_OldSpace__id_", 0x10);
-  kOldSpaceExecutableOffset = LoadConstant("field_OldSpace__executable_", 0x14);
-  kPageAreaStartOffset = LoadConstant("field_Page__area_start_", 0x10);
-  kPageAreaEndOffset = LoadConstant("field_Page__area_end_", 0x18);
-
-  // If -1, `FindOldSpace` will determine it in runtime
-  kHeapOldSpaceOffset = LoadConstant("field_Heap__old_space_");
-
-  // TODO(indutny): move it to postmortem
-  kOldSpaceId = LoadConstant("old_space", 1);
-
-  kOldSpaceAnchorOffset = LoadConstant("field_OldSpace__anchor_");
-  kPageNextOffset = LoadConstant("field_Page__next_chunk_");
-
-  // TODO(indutny): fallback for 32bit too
-  if (kOldSpaceAnchorOffset != -1) {
-    // Already loaded
-  } else if (common_->CheckVersion(4, 6)) {
-    // v5.0.0
-    kOldSpaceAnchorOffset = 0x40;
-    kPageNextOffset = 0x90;
-  } else if (common_->CheckVersion(4, 5)) {
-    // v4.2.1
-    kOldSpaceAnchorOffset = 0x48;
-    kPageNextOffset = 0x88;
-  }
-}
-
-
 void Types::Load() {
   kFirstNonstringType = LoadConstant("FirstNonstringType");
 

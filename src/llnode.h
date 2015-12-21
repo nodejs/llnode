@@ -35,14 +35,6 @@ class PrintCmd : public CommandBase {
   bool detailed_;
 };
 
-class CodeMap : public CommandBase {
- public:
-  ~CodeMap() override {}
-
-  bool DoExecute(lldb::SBDebugger d, char** cmd,
-                 lldb::SBCommandReturnObject& result) override;
-};
-
 class ListCmd : public CommandBase {
  public:
   ~ListCmd() override {}

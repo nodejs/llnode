@@ -47,7 +47,6 @@ void LLV8::Load(SBTarget target) {
   descriptor_array.Assign(target, &common);
   name_dictionary.Assign(target, &common);
   frame.Assign(target, &common);
-  node.Assign(target, &common);
   types.Assign(target, &common);
 }
 

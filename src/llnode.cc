@@ -7,7 +7,6 @@
 
 #include "src/llnode.h"
 #include "src/llv8.h"
-#include "src/llv8-code-map.h"
 
 namespace llnode {
 
@@ -157,31 +156,6 @@ bool PrintCmd::DoExecute(SBDebugger d, char** cmd,
 }
 
 
-bool CodeMap::DoExecute(SBDebugger d, char** cmd,
-                        SBCommandReturnObject& result) {
-  SBTarget target = d.GetSelectedTarget();
-  if (!target.IsValid()) {
-    result.SetError("No valid process, please start something\n");
-    return false;
-  }
-
-  // Load V8 constants from postmortem data
-  llv8.Load(target);
-  v8::CodeMap code_map(&llv8);
-
-  v8::Error err;
-  std::string res = code_map.Collect(err);
-  if (err.Fail()) {
-    result.SetError("Failed to collect code map");
-    return false;
-  }
-
-  result.Printf("%s\n", res.c_str());
-
-  return true;
-}
-
-
 bool ListCmd::DoExecute(SBDebugger d, char** cmd,
                         SBCommandReturnObject& result) {
   static SBFrame last_frame;
@@ -301,10 +275,6 @@ bool PluginInitialize(SBDebugger d) {
   interpreter.AddCommand(
       "jsprint", new llnode::PrintCmd(true),
       "Alias for `v8 inspect`");
-
-  v8.AddCommand("code-map", new llnode::CodeMap(),
-                "Print code map of all compiled functions.\n\n"
-                "Syntax: v8 code-map\n");
 
   SBCommand source =
       v8.AddMultiwordCommand("source", "Source code information");

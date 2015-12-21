@@ -419,27 +419,6 @@ class Frame : public Module {
   void Load();
 };
 
-class Node : public Module {
- public:
-  MODULE_DEFAULT_METHODS(Node);
-
-  int64_t kNodeIsolate;
-  int64_t kIsolateHeapOffset;
-  int64_t kHeapOldSpaceOffset;
-  int64_t kOldSpaceHeapOffset;
-  int64_t kOldSpaceIdOffset;
-  int64_t kOldSpaceExecutableOffset;
-  int64_t kOldSpaceAnchorOffset;
-  int64_t kPageNextOffset;
-  int64_t kPageAreaStartOffset;
-  int64_t kPageAreaEndOffset;
-
-  int64_t kOldSpaceId;
-
- protected:
-  void Load();
-};
-
 class Types : public Module {
  public:
   MODULE_DEFAULT_METHODS(Types);

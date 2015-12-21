@@ -438,7 +438,6 @@ class LLV8 {
   constants::DescriptorArray descriptor_array;
   constants::NameDictionary name_dictionary;
   constants::Frame frame;
-  constants::Node node;
   constants::Types types;
 
   friend class Value;

@@ -60,9 +60,6 @@ The following subcommands are supported:
                   all frames will be dumped.
 
                   Syntax: v8 bt [number]
-      code-map -- Print code map of all compiled functions.
-
-                  Syntax: v8 code-map
       inspect  -- Print detailed description and contents of the JavaScript
                   value.
 
