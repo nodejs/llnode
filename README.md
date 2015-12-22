@@ -1,6 +1,6 @@
 # llnode
 
-Node.js v4.0.0-v5.0.0 C++ plugin for LLDB (work in progress).
+Node.js v4.0.0-v5.0.0 C++ plugin for LLDB.
 
 ## Demo
 
