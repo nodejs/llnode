@@ -25,8 +25,7 @@ char** CommandBase::ParseInspectOptions(char** cmd,
   int argc = 0;
   for (char** p = cmd; p != nullptr && *p != nullptr; p++) argc++;
 
-  optreset = 1;
-  optind = 1;
+  optind = 0;
   opterr = 1;
   do {
     int arg = getopt_long(argc, cmd - 1, "Fm", opts, nullptr);
