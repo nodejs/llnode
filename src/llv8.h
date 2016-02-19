@@ -319,7 +319,6 @@ class Context : public FixedArray {
   V8_VALUE_DEFAULT_METHODS(Context, FixedArray)
 
   inline JSFunction Closure(Error& err);
-  inline JSObject Global(Error& err);
   inline Context Previous(Error& err);
   inline Value ContextSlot(int index, Error& err);
 

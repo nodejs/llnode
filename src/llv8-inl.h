@@ -372,10 +372,6 @@ inline JSFunction Context::Closure(Error& err) {
   return FixedArray::Get<JSFunction>(v8()->context()->kClosureIndex, err);
 }
 
-inline JSObject Context::Global(Error& err) {
-  return FixedArray::Get<JSObject>(v8()->context()->kGlobalObjectIndex, err);
-}
-
 inline Context Context::Previous(Error& err) {
   return FixedArray::Get<Context>(v8()->context()->kPreviousIndex, err);
 }
