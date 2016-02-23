@@ -20,7 +20,7 @@ format:
 	clang-format -i src/*
 
 _travis:
-	./gyp_llnode -f make
+	./gyp_llnode -Dlldb_dir=/usr/lib/llvm-3.6/ -Dlldb_lib=lldb-3.6 -f make
 	make -C out/
 	npm test
 
