@@ -1,6 +1,6 @@
 # llnode
 
-[![Build Status](https://secure.travis-ci.org/indutny/llnode.js.png)](http://travis-ci.org/indutny/llnode.js)
+[![Build Status](https://secure.travis-ci.org/indutny/llnode.png)](http://travis-ci.org/indutny/llnode)
 
 Node.js v4.0.0-v5.0.0 C++ plugin for LLDB.
 
