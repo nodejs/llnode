@@ -86,15 +86,25 @@ Session.prototype.send = function send(line, callback) {
   this.lldb.stdin.write(line + '\n', callback);
 };
 
-Session.prototype.wait = function wait(regexp, callback) {
+Session.prototype._queueWait = function _queueWait(retry) {
   if (this.waiting) {
-    this.waitQueue.push(() => {
-      this.wait(regexp, callback);
-    });
-    return;
+    this.waitQueue.push(retry);
+    return false;
   }
 
   this.waiting = true;
+  return true;
+};
+
+Session.prototype._unqueueWait = function _unqueueWait() {
+  this.waiting = false;
+  if (this.waitQueue.length > 0)
+    this.waitQueue.shift()();
+};
+
+Session.prototype.wait = function wait(regexp, callback) {
+  if (!this._queueWait(() => { this.wait(regexp, callback); }))
+    return;
 
   const self = this;
   this.on('line', function onLine(line) {
@@ -102,10 +112,7 @@ Session.prototype.wait = function wait(regexp, callback) {
       return;
 
     self.removeListener('line', onLine);
-
-    self.waiting = false;
-    if (self.waitQueue.length > 0)
-      self.waitQueue.shift()();
+    self._unqueueWait();
 
     callback(line);
   });
@@ -113,4 +120,23 @@ Session.prototype.wait = function wait(regexp, callback) {
 
 Session.prototype.waitBreak = function waitBreak(callback) {
   this.wait(/Process \d+ stopped/i, callback);
+};
+
+Session.prototype.linesUntil = function linesUntil(regexp, callback) {
+  if (!this._queueWait(() => { this.linesUntil(regexp, callback); }))
+    return;
+
+  const lines = [];
+  const self = this;
+  this.on('line', function onLine(line) {
+    lines.push(line);
+
+    if (!regexp.test(line))
+      return;
+
+    self.removeListener('line', onLine);
+    self._unqueueWait();
+
+    callback(lines);
+  });
 };
