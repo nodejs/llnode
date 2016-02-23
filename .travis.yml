@@ -3,7 +3,7 @@ sudo: required
 dist: trusty
 before_install:
   - sudo apt-get -qq update
-  - sudo apt-get install lldb-3.6 lldb-3.6-dev
+  - sudo apt-get install lldb-3.6 lldb-3.6-dev -y
   - git clone https://chromium.googlesource.com/external/gyp.git tools/gyp
 node_js:
   - "4"
