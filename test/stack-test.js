@@ -5,6 +5,8 @@ const tape = require('tape');
 const common = require('./common');
 
 tape('v8 stack', (t) => {
+  t.timeoutAfter(15000);
+
   const sess = common.Session.create('stack-scenario.js');
   sess.waitBreak(() => {
     sess.send('v8 bt');
