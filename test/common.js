@@ -10,15 +10,15 @@ exports.addon = require('./addon');
 exports.fixturesDir = path.join(__dirname, 'fixtures');
 exports.buildDir = path.join(__dirname, '..', 'out', 'Release');
 
-let ext;
+let pluginName;
 if (process.platform === 'darwin')
-  ext = '.dylib';
+  pluginName = 'llnode.dylib';
 else if (process.platform === 'windows')
-  ext = '.dll';
+  pluginName = 'llnode.dll';
 else
-  ext = '.so';
+  pluginName = path.join('lib.target', 'llnode.so');
 
-exports.llnodePath = path.join(exports.buildDir, 'llnode' + ext);
+exports.llnodePath = path.join(exports.buildDir, pluginName);
 
 function Session(scenario) {
   EventEmitter.call(this);
