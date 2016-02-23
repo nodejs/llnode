@@ -22,6 +22,6 @@ format:
 _travis:
 	./gyp_llnode -Dlldb_dir=/usr/lib/llvm-3.6/ -Dlldb_lib=lldb-3.6 -f make
 	make -C out/
-	npm test
+	TEST_LLDB_BINARY=`which lldb-3.6` npm test
 
 .PHONY: all

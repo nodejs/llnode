@@ -24,7 +24,7 @@ function Session(scenario) {
   EventEmitter.call(this);
 
   // lldb -- node scenario.js
-  this.lldb = spawn('lldb', [
+  this.lldb = spawn(process.env.TEST_LLDB_BINARY || 'lldb', [
     '--',
     process.execPath,
     path.join(exports.fixturesDir, scenario)
