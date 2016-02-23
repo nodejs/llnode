@@ -62,6 +62,7 @@ function Session(scenario) {
   });
 
   // Ignore errors
+  this.lldb.stdin.on('error', () => {});
   this.lldb.stdout.on('error', () => {});
 }
 util.inherits(Session, EventEmitter);
