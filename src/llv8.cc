@@ -386,8 +386,9 @@ std::string SharedFunctionInfo::GetPostfix(Error& err) {
   script.GetLineColumnFromPos(start_pos, line, column, err);
   if (err.Fail()) return std::string();
 
+  // NOTE: lines start from 1 in most of editors
   char tmp[128];
-  snprintf(tmp, sizeof(tmp), ":%d:%d", static_cast<int>(line),
+  snprintf(tmp, sizeof(tmp), ":%d:%d", static_cast<int>(line + 1),
            static_cast<int>(column));
   return res + tmp;
 }
@@ -652,7 +653,7 @@ std::string Smi::Inspect(Error& err) { return "<Smi: " + ToString(err) + ">"; }
 
 std::string HeapNumber::ToString(bool whole, Error& err) {
   char buf[128];
-  const char* fmt = whole ? "%.0lf" : "%f";
+  const char* fmt = whole ? "%f" : "%.2f";
   snprintf(buf, sizeof(buf), fmt, GetValue(err));
   err = Error::Ok();
   return buf;

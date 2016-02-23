@@ -3,3 +3,7 @@
 tools/
 out/
 lldb/
+build/
+out/
+npm-debug.log
+node_modules/

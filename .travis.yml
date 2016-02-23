@@ -1,0 +1,11 @@
+language: node_js
+before_install:
+  sudo apt-get install lldb-3.6 lldb-3.6-dev
+  git clone https://chromium.googlesource.com/external/gyp.git tools/gyp
+node_js:
+  - "4"
+  - "5"
+branches:
+  only:
+    - master
+script: make _travis

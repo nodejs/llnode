@@ -19,4 +19,9 @@ uninstall-linux:
 format:
 	clang-format -i src/*
 
+_travis:
+	./gyp_llnode -f make
+	make -C out/
+	npm test
+
 .PHONY: all
