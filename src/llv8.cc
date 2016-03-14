@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <inttypes.h>
 
 #include "llv8.h"
 #include "llv8-inl.h"
@@ -241,7 +242,7 @@ std::string JSFrame::Inspect(bool with_args, Error& err) {
   }
 
   char tmp[128];
-  snprintf(tmp, sizeof(tmp), " fn=0x%016llx", fn.raw());
+  snprintf(tmp, sizeof(tmp), " fn=0x%016" PRIx64, fn.raw());
   return fn.GetDebugLine(args, err) + tmp;
 }
 
@@ -304,7 +305,7 @@ std::string JSFunction::Inspect(InspectOptions* options, Error& err) {
     Context context(context_obj);
 
     char tmp[128];
-    snprintf(tmp, sizeof(tmp), "\n  context=0x%016llx", context.raw());
+    snprintf(tmp, sizeof(tmp), "\n  context=0x%016" PRIx64, context.raw());
     res += tmp;
 
     std::string context_str = context.Inspect(err);
@@ -568,9 +569,10 @@ std::string HeapObject::Inspect(InspectOptions* options, Error& err) {
     HeapObject map = GetMap(err);
     if (err.Fail()) return std::string();
 
-    snprintf(buf, sizeof(buf), "0x%016llx(map=0x%016llx):", raw(), map.raw());
+    snprintf(buf, sizeof(buf), "0x%016" PRIx64 "(map=0x%016" PRIx64 "):", raw(),
+        map.raw());
   } else {
-    snprintf(buf, sizeof(buf), "0x%016llx:", raw());
+    snprintf(buf, sizeof(buf), "0x%016" PRIx64 ":", raw());
   }
   std::string pre = buf;
 
@@ -825,7 +827,7 @@ std::string JSArrayBuffer::Inspect(Error& err) {
   if (err.Fail()) return std::string();
 
   char tmp[128];
-  snprintf(tmp, sizeof(tmp), "<ArrayBuffer 0x%016llx:%d>", data,
+  snprintf(tmp, sizeof(tmp), "<ArrayBuffer 0x%016" PRIx64 ":%d>", data,
            static_cast<int>(length.GetValue()));
   return tmp;
 }
@@ -850,7 +852,7 @@ std::string JSArrayBufferView::Inspect(Error& err) {
   if (err.Fail()) return std::string();
 
   char tmp[128];
-  snprintf(tmp, sizeof(tmp), "<ArrayBufferView 0x%016llx+%d:%d>", data,
+  snprintf(tmp, sizeof(tmp), "<ArrayBufferView 0x%016" PRIx64 "+%d:%d>", data,
            static_cast<int>(off.GetValue()),
            static_cast<int>(length.GetValue()));
   return tmp;
@@ -865,7 +867,8 @@ std::string Map::Inspect(InspectOptions* options, Error& err) {
   if (err.Fail()) return std::string();
 
   char tmp[256];
-  snprintf(tmp, sizeof(tmp), "<Map own_descriptors=%d descriptors=0x%016llx",
+  snprintf(tmp, sizeof(tmp),
+           "<Map own_descriptors=%d descriptors=0x%016" PRIx64,
            static_cast<int>(own_descriptors_count), descriptors_obj.raw());
   if (!options->detailed) {
     return std::string(tmp) + ">";
