@@ -428,7 +428,9 @@ void Frame::Load() {
   kContextOffset = LoadConstant("off_fp_context");
   kFunctionOffset = LoadConstant("off_fp_function");
   kArgsOffset = LoadConstant("off_fp_args");
-  kMarkerOffset = LoadConstant("off_fp_marker");
+
+  // NOTE: Starting from 5.1.71 these two reside in the same field
+  kMarkerOffset = LoadConstant("off_fp_marker", "off_fp_context");
 
   kAdaptorFrame = LoadConstant("frametype_ArgumentsAdaptorFrame");
   kEntryFrame = LoadConstant("frametype_EntryFrame");
