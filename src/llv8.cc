@@ -697,6 +697,11 @@ std::string String::ToString(Error& err) {
     return sliced.ToString(err);
   }
 
+  // TODO(indutny): add support for external strings
+  if (repr == v8()->string()->kExternalStringTag) {
+    return std::string("(external)");
+  }
+
   err = Error::Failure("Unsupported string representation");
   return std::string();
 }
