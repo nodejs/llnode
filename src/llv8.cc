@@ -570,7 +570,7 @@ std::string HeapObject::Inspect(InspectOptions* options, Error& err) {
     if (err.Fail()) return std::string();
 
     snprintf(buf, sizeof(buf), "0x%016" PRIx64 "(map=0x%016" PRIx64 "):", raw(),
-        map.raw());
+             map.raw());
   } else {
     snprintf(buf, sizeof(buf), "0x%016" PRIx64 ":", raw());
   }

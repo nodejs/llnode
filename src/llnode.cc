@@ -256,7 +256,7 @@ bool PluginInitialize(SBDebugger d) {
       "be dumped.\n\n"
       "Syntax: v8 bt [number]\n");
   interpreter.AddCommand("jsstack", new llnode::BacktraceCmd(),
-      "Alias for `v8 bt`");
+                         "Alias for `v8 bt`");
 
   v8.AddCommand("print", new llnode::PrintCmd(false),
                 "Print short description of the JavaScript value.\n\n"
@@ -271,18 +271,16 @@ bool PluginInitialize(SBDebugger d) {
       " * --string-length num  - print maximum of `num` characters in string\n"
       "\n"
       "Syntax: v8 inspect [flags] expr\n");
-  interpreter.AddCommand(
-      "jsprint", new llnode::PrintCmd(true),
-      "Alias for `v8 inspect`");
+  interpreter.AddCommand("jsprint", new llnode::PrintCmd(true),
+                         "Alias for `v8 inspect`");
 
   SBCommand source =
       v8.AddMultiwordCommand("source", "Source code information");
   source.AddCommand("list", new llnode::ListCmd(),
                     "Print source lines around a selected JavaScript frame.\n\n"
                     "Syntax: v8 source list\n");
-  interpreter.AddCommand(
-      "jssource", new llnode::ListCmd(),
-      "Alias for `v8 source list`");
+  interpreter.AddCommand("jssource", new llnode::ListCmd(),
+                         "Alias for `v8 source list`");
 
   return true;
 }
