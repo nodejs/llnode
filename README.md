@@ -15,7 +15,7 @@ https://asciinema.org/a/29589
 ```bash
 # Check out source code of the LLDB that is compatible with OS X's default
 # lldb
-svn co http://llvm.org/svn/llvm-project/lldb/tags/RELEASE_34/final/ lldb
+svn co http://llvm.org/svn/llvm-project/lldb/tags/RELEASE_380/final/ lldb
 
 # Initialize GYP
 git clone https://chromium.googlesource.com/external/gyp.git tools/gyp
