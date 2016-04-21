@@ -12,6 +12,12 @@ https://asciinema.org/a/29589
 
 ### OS X
 
+Easy:
+```bash
+brew install llnode
+```
+
+Harder:
 ```bash
 # Check out source code of the LLDB that is compatible with OS X's default
 # lldb
