@@ -1067,9 +1067,6 @@ std::string JSObject::InspectDescriptors(Map map, Error& err) {
     Smi details = descriptors.GetDetails(i, err);
     if (err.Fail()) return std::string();
 
-    // Skip non-fields for now
-    if (!descriptors.IsFieldDetails(details)) continue;
-
     Value key = descriptors.GetKey(i, err);
     if (err.Fail()) return std::string();
 
@@ -1077,6 +1074,23 @@ std::string JSObject::InspectDescriptors(Map map, Error& err) {
 
     res += "    ." + key.ToString(err) + "=";
     if (err.Fail()) return std::string();
+
+    if (descriptors.IsConstFieldDetails(details)) {
+      Value value;
+
+      value = descriptors.GetValue(i, err);
+      if (err.Fail()) return std::string();
+
+      res += value.Inspect(&options, err);
+      if (err.Fail()) return std::string();
+      continue;
+    }
+
+    // Skip non-fields for now
+    if (!descriptors.IsFieldDetails(details)) {
+      res += "<unknown field type>";
+      continue;
+    }
 
     int64_t index = descriptors.FieldIndex(details) - in_object_count;
 

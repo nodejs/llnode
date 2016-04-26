@@ -373,6 +373,7 @@ class DescriptorArray : public Module {
   int64_t kRepresentationShift;
 
   int64_t kFieldType;
+  int64_t kConstFieldType;
   int64_t kRepresentationDouble;
 
   int64_t kFirstIndex;

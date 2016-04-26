@@ -327,9 +327,21 @@ inline Value DescriptorArray::GetKey(int index, Error& err) {
                     err);
 }
 
+inline Value DescriptorArray::GetValue(int index, Error& err) {
+  return Get<Value>(v8()->descriptor_array()->kFirstIndex +
+                        index * v8()->descriptor_array()->kSize +
+                        v8()->descriptor_array()->kValueOffset,
+                    err);
+}
+
 inline bool DescriptorArray::IsFieldDetails(Smi details) {
   return (details.GetValue() & v8()->descriptor_array()->kPropertyTypeMask) ==
          v8()->descriptor_array()->kFieldType;
+}
+
+inline bool DescriptorArray::IsConstFieldDetails(Smi details) {
+  return (details.GetValue() & v8()->descriptor_array()->kPropertyTypeMask) ==
+         v8()->descriptor_array()->kConstFieldType;
 }
 
 inline bool DescriptorArray::IsDoubleField(Smi details) {

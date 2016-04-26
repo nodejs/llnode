@@ -393,6 +393,11 @@ void DescriptorArray::Load() {
   }
 
   kFieldType = LoadConstant("prop_type_field");
+  kConstFieldType = LoadConstant("prop_type_const_field");
+  if (kConstFieldType == -1) {
+    // TODO(indutny): check V8 version?
+    kConstFieldType = kFieldType | 0x2;
+  }
 
   kRepresentationDouble = LoadConstant("prop_representation_double");
   if (kRepresentationDouble == -1) {
