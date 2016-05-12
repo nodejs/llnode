@@ -871,10 +871,20 @@ std::string Map::Inspect(InspectOptions* options, Error& err) {
   int64_t own_descriptors_count = NumberOfOwnDescriptors(err);
   if (err.Fail()) return std::string();
 
+  int64_t in_object_properties = InObjectProperties(err);
+  if (err.Fail()) return std::string();
+
+  int64_t instance_size = InstanceSize(err);
+  if (err.Fail()) return std::string();
+
   char tmp[256];
   snprintf(tmp, sizeof(tmp),
-           "<Map own_descriptors=%d descriptors=0x%016" PRIx64,
-           static_cast<int>(own_descriptors_count), descriptors_obj.raw());
+           "<Map own_descriptors=%d in_object=%d instance_size=%d "
+               "descriptors=0x%016" PRIx64,
+           static_cast<int>(own_descriptors_count),
+           static_cast<int>(in_object_properties),
+           static_cast<int>(instance_size),
+           descriptors_obj.raw());
   if (!options->detailed) {
     return std::string(tmp) + ">";
   }
