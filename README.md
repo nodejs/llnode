@@ -40,13 +40,13 @@ make install-osx
 
 ```bash
 # Install lldb and headers
-sudo apt-get install lldb-3.6 lldb-3.6-dev
+sudo apt-get install lldb-3.8 lldb-3.8-dev
 
 # Initialize GYP
 git clone https://chromium.googlesource.com/external/gyp.git tools/gyp
 
 # Configure
-./gyp_llnode -Dlldb_dir=/usr/lib/llvm-3.6/ -Dlldb_lib=lldb-3.6
+./gyp_llnode -Dlldb_dir=/usr/lib/llvm-3.8/ -Dlldb_lib=lldb-3.8
 
 # Build
 make -C out/ -j9
