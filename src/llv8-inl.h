@@ -169,6 +169,8 @@ ACCESSOR(HeapNumber, GetValue, heap_number()->kValueOffset, double)
 
 ACCESSOR(JSArray, Length, js_array()->kLengthOffset, Smi)
 
+ACCESSOR(JSRegExp, GetSource, js_regexp()->kSourceOffset, String)
+
 ACCESSOR(JSDate, GetValue, js_date()->kValueOffset, Value)
 
 inline int64_t String::Representation(Error& err) {

@@ -318,6 +318,28 @@ std::string JSFunction::Inspect(InspectOptions* options, Error& err) {
 }
 
 
+std::string JSRegExp::Inspect(InspectOptions* options, Error& err) {
+  if (v8()->js_regexp()->kSourceOffset == -1)
+    return JSObject::Inspect(options, err);
+
+  std::string res = "<JSRegExp ";
+
+  String src = GetSource(err);
+  if (err.Fail()) return std::string();
+  res += "source=/" + src.ToString(err) + "/";
+  if (err.Fail()) return std::string();
+
+  // Print properties in detailed mode
+  if (options->detailed) {
+    res += " " + InspectProperties(err);
+    if (err.Fail()) return std::string();
+  }
+
+  res += ">";
+  return res;
+}
+
+
 std::string JSDate::Inspect(Error& err) {
   std::string pre = "<JSDate: ";
 

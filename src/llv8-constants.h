@@ -142,6 +142,8 @@ class JSRegExp : public Module {
  public:
   MODULE_DEFAULT_METHODS(JSRegExp);
 
+  int64_t kSourceOffset;
+
  protected:
   void Load();
 };

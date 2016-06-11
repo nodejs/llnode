@@ -216,6 +216,11 @@ void JSFunction::Load() {
 }
 
 
+void JSRegExp::Load() {
+  kSourceOffset = LoadConstant("class_JSRegExp__source__Object");
+}
+
+
 void JSDate::Load() {
   kValueOffset = LoadConstant("class_JSDate__value__Object");
 };

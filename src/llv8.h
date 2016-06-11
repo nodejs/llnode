@@ -260,6 +260,10 @@ class JSFunction : public JSObject {
 class JSRegExp : public JSObject {
  public:
   V8_VALUE_DEFAULT_METHODS(JSRegExp, JSObject);
+
+  inline String GetSource(Error& err);
+
+  std::string Inspect(InspectOptions* options, Error& err);
 };
 
 class JSDate : public JSObject {
