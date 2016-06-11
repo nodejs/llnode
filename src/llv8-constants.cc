@@ -264,9 +264,12 @@ void ScopeInfo::Load() {
 
 
 void Context::Load() {
-  kClosureIndex = LoadConstant("class_Context__closure_index__int");
-  kPreviousIndex = LoadConstant("class_Context__previous_index__int");
-  kMinContextSlots = LoadConstant("class_Context__min_context_slots__int");
+  kClosureIndex = LoadConstant("class_Context__closure_index__int",
+                               "context_idx_closure");
+  kPreviousIndex = LoadConstant("class_Context__previous_index__int",
+                                "context_idx_prev");
+  kMinContextSlots = LoadConstant("class_Context__min_context_slots__int",
+                                  "context_min_slots");
 }
 
 
@@ -415,16 +418,19 @@ void NameDictionary::Load() {
   kKeyOffset = 0;
   kValueOffset = 1;
 
-  kEntrySize = LoadConstant("class_NameDictionaryShape__entry_size__int");
+  kEntrySize = LoadConstant("class_NameDictionaryShape__entry_size__int",
+                            "namedictionaryshape_entry_size");
 
   kPrefixStartIndex =
-      LoadConstant("class_NameDictionary__prefix_start_index__int");
+      LoadConstant("class_NameDictionary__prefix_start_index__int",
+                   "namedictionary_prefix_start_index");
   if (kPrefixStartIndex == -1) {
     // TODO(indutny): check V8 version?
     kPrefixStartIndex = kEntrySize;
   }
 
-  kPrefixSize = LoadConstant("class_NameDictionaryShape__prefix_size__int") +
+  kPrefixSize = LoadConstant("class_NameDictionaryShape__prefix_size__int",
+                             "namedictionaryshape_prefix_size") +
                 kPrefixStartIndex;
 }
 
