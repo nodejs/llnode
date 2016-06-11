@@ -56,7 +56,7 @@ tape('v8 inspect', (t) => {
     t.ok(/\[4\]=[^\n]*undefined/.test(lines), '[4] undefined element');
 
     const reMatch = lines.match(
-        /\[23\]=(0x[0-9a-f]+):<JSRegExp source=\/regexp\/>/);
+        /\[23\]=(0x[0-9a-f]+):<(?:Object: RegExp|JSRegExp source=\/regexp\/)>/);
     t.ok(reMatch, '[23] RegExp element');
     regexp = reMatch[1];
 
@@ -75,7 +75,9 @@ tape('v8 inspect', (t) => {
 
   sess.linesUntil(/}>/, (lines) => {
     lines = lines.join('\n');
-    t.ok(/source=\/regexp\//.test(lines), 'regexp.source');
+    t.ok(/source=\/regexp\//.test(lines) ||
+             /\.source=[^\n]*<String: "regexp">/.test(lines),
+         'regexp.source');
   });
 
   sess.linesUntil(/">/, (lines) => {
