@@ -782,6 +782,9 @@ std::string Context::Inspect(Error& err) {
   // Not enough postmortem information, return bare minimum
   if (v8()->shared_info()->kScopeInfoOffset == -1) return res;
 
+  Value previous = Previous(err);
+  if (err.Fail()) return std::string();
+
   JSFunction closure = Closure(err);
   if (err.Fail()) return std::string();
 
@@ -801,6 +804,14 @@ std::string Context::Inspect(Error& err) {
   if (err.Fail()) return std::string();
 
   InspectOptions options;
+
+  HeapObject heap_previous = HeapObject(previous);
+  if (heap_previous.Check()) {
+    char tmp[128];
+    snprintf(tmp, sizeof(tmp), "    (previous)=0x%016" PRIx64,
+             heap_previous.raw());
+    res += tmp;
+  }
 
   int param_count = param_count_smi.GetValue();
   int stack_count = stack_count_smi.GetValue();
