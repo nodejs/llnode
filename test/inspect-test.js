@@ -14,12 +14,14 @@ tape('v8 inspect', (t) => {
   });
 
   let that = null;
+  let fn = null;
 
   sess.wait(/inspect-scenario.js/, (line) => {
-    const match = line.match(/this=(0x[0-9a-f]+)/i);
+    let match = line.match(/method\(this=(0x[0-9a-f]+)[^\n]+fn=(0x[0-9a-f]+)/i);
     t.ok(match, 'method should have `this`');
 
     that = match[1];
+    fn = match[2];
 
     sess.send(`v8 inspect ${that}`);
   });
@@ -87,6 +89,26 @@ tape('v8 inspect', (t) => {
                       'this could be a bit smaller, but v8 wants big str.'),
         -1,
         'cons string content');
+
+    sess.send(`v8 inspect ${fn}`);
+  });
+
+  sess.linesUntil(/}>/, (lines) => {
+    lines = lines.join('\n');
+    t.ok(/\(previous\)/.test(lines), 'method.previous');
+    t.ok(/scopedVar[^\n]+"scoped value"/.test(lines), 'method.scopedValue');
+
+    let match = lines.match(
+        /\(closure\)=(0x[0-9a-f]+)[^\n]+function: closure/i);
+    t.ok(match, '`method` should have `closure`');
+
+    sess.send(`v8 inspect ${match[1]}`);
+  });
+
+  sess.linesUntil(/}>/, (lines) => {
+    lines = lines.join('\n');
+    t.ok(/outerVar[^\n]+"outer variable"/.test(lines),
+         'method.closure.outerVar');
 
     sess.quit();
     t.end();

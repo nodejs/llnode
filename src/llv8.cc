@@ -809,8 +809,20 @@ std::string Context::Inspect(Error& err) {
   if (heap_previous.Check()) {
     char tmp[128];
     snprintf(tmp, sizeof(tmp), "    (previous)=0x%016" PRIx64,
-             heap_previous.raw());
+             previous.raw());
     res += tmp;
+  }
+
+  if (!res.empty()) res += "\n";
+  {
+    char tmp[128];
+    snprintf(tmp, sizeof(tmp), "    (closure)=0x%016" PRIx64 " {",
+             closure.raw());
+    res += tmp;
+
+    InspectOptions options;
+    res += closure.Inspect(&options, err) + "}";
+    if (err.Fail()) return std::string();
   }
 
   int param_count = param_count_smi.GetValue();

@@ -386,8 +386,8 @@ inline JSFunction Context::Closure(Error& err) {
   return FixedArray::Get<JSFunction>(v8()->context()->kClosureIndex, err);
 }
 
-inline Context Context::Previous(Error& err) {
-  return FixedArray::Get<Context>(v8()->context()->kPreviousIndex, err);
+inline Value Context::Previous(Error& err) {
+  return FixedArray::Get<Value>(v8()->context()->kPreviousIndex, err);
 }
 
 inline Value Context::ContextSlot(int index, Error& err) {

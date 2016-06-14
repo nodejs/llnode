@@ -327,7 +327,7 @@ class Context : public FixedArray {
   V8_VALUE_DEFAULT_METHODS(Context, FixedArray)
 
   inline JSFunction Closure(Error& err);
-  inline Context Previous(Error& err);
+  inline Value Previous(Error& err);
   inline Value ContextSlot(int index, Error& err);
 
   std::string Inspect(Error& err);
