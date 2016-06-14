@@ -7,8 +7,7 @@
     "test": "test"
   },
   "scripts": {
-    "test": "tape test/*-test.js",
-    "install": "node-gyp rebuild"
+    "test": "tape test/*-test.js"
   },
   "repository": {
     "type": "git",
@@ -28,9 +27,5 @@
   "homepage": "https://github.com/indutny/llnode#readme",
   "devDependencies": {
     "tape": "^4.4.0"
-  },
-  "dependencies": {
-    "bindings": "^1.2.1",
-    "nan": "^2.2.0"
   }
 }

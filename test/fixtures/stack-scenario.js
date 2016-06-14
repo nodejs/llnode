@@ -20,7 +20,7 @@ function Class() {
 }
 
 Class.prototype.method = function method(arg1, arg2, arg3) {
-  return common.addon.method();
+  throw new Error('Uncaught');
 };
 
 first();

@@ -90,7 +90,12 @@ tape('v8 inspect', (t) => {
         -1,
         'cons string content');
 
-    sess.send(`v8 inspect ${fn}`);
+    if (process.version >= 'v5.0.0')
+      return sess.send(`v8 inspect ${fn}`);
+
+    // No Context debugging for older node.js
+    sess.quit();
+    t.end();
   });
 
   sess.linesUntil(/}>/, (lines) => {

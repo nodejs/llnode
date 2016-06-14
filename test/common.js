@@ -5,8 +5,6 @@ const util = require('util');
 const spawn = require('child_process').spawn;
 const EventEmitter = require('events').EventEmitter;
 
-exports.addon = require('./addon');
-
 exports.fixturesDir = path.join(__dirname, 'fixtures');
 exports.buildDir = path.join(__dirname, '..', 'out', 'Release');
 
@@ -27,12 +25,12 @@ function Session(scenario) {
   this.lldb = spawn(process.env.TEST_LLDB_BINARY || 'lldb', [
     '--',
     process.execPath,
+    '--abort_on_uncaught_exception',
     path.join(exports.fixturesDir, scenario)
   ], {
     stdio: [ 'pipe', 'pipe', 'inherit' ]
   });
 
-  this.lldb.stdin.write('b llnode_test_addon::Method\n');
   this.lldb.stdin.write(`plugin load "${exports.llnodePath}"\n`);
   this.lldb.stdin.write('run\n');
 

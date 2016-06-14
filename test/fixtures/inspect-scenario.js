@@ -14,7 +14,7 @@ function closure() {
   }
 
   Class.prototype.method = function method() {
-    return common.addon.method();
+    throw new Error('Uncaught');
   };
 
   const c = new Class();
