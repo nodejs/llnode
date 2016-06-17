@@ -549,6 +549,20 @@ std::string Value::Inspect(InspectOptions* options, Error& err) {
 }
 
 
+std::string Value::GetTypeName(InspectOptions* options, Error& err) {
+  Smi smi(this);
+  if (smi.Check()) return "(Smi)";
+
+  HeapObject obj(this);
+  if (!obj.Check()) {
+    err = Error::Failure("Not object and not smi");
+    return std::string();
+  }
+
+  return obj.GetTypeName(options, err);
+}
+
+
 std::string Value::ToString(Error& err) {
   Smi smi(this);
   if (smi.Check()) return smi.ToString(err);
@@ -669,6 +683,88 @@ std::string Smi::ToString(Error& err) {
   snprintf(buf, sizeof(buf), "%d", static_cast<int>(GetValue()));
   err = Error::Ok();
   return buf;
+}
+
+
+/* Utility function to generate short type names for objects.
+ */
+std::string HeapObject::GetTypeName(InspectOptions* options, Error& err) {
+  int64_t type = GetType(err);
+  if (type == v8()->types()->kGlobalObjectType) return "(Global)";
+  if (type == v8()->types()->kCodeType) return "(Code)";
+  if (type == v8()->types()->kMapType) {
+    return "(Map)";
+  }
+
+  if (type == v8()->types()->kJSObjectType) {
+    v8::HeapObject map_obj = GetMap(err);
+    if (err.Fail()) {
+      return std::string();
+    }
+
+    v8::Map map(map_obj);
+    v8::HeapObject constructor_obj = map.Constructor(err);
+    if (err.Fail()) {
+      return std::string();
+    }
+
+    int64_t constructor_type = constructor_obj.GetType(err);
+    if (err.Fail()) {
+      return std::string();
+    }
+
+    if (constructor_type != v8()->types()->kJSFunctionType) {
+      return "(Object)";
+    }
+
+    v8::JSFunction constructor(constructor_obj);
+
+    return constructor.Name(err);
+  }
+
+  if (type == v8()->types()->kHeapNumberType) {
+    return "(HeapNumber)";
+  }
+
+  if (type == v8()->types()->kJSArrayType) {
+    return "(Array)";
+  }
+
+  if (type == v8()->types()->kOddballType) {
+    return "(Oddball)";
+  }
+
+  if (type == v8()->types()->kJSFunctionType) {
+    return "(Function)";
+  }
+
+  if (type == v8()->types()->kJSRegExpType) {
+    return "(RegExp)";
+  }
+
+  if (type < v8()->types()->kFirstNonstringType) {
+    return "(String)";
+  }
+
+  if (type == v8()->types()->kFixedArrayType) {
+    return "(FixedArray)";
+  }
+
+  if (type == v8()->types()->kJSArrayBufferType) {
+    return "(ArrayBuffer)";
+  }
+
+  if (type == v8()->types()->kJSTypedArrayType) {
+    return "(ArrayBufferView)";
+  }
+
+  if (type == v8()->types()->kJSDateType) {
+    return "(Date)";
+  }
+
+  std::string unknown("unknown: ");
+
+  return unknown + std::to_string(type);
 }
 
 
