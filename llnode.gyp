@@ -19,6 +19,7 @@
       "src/llnode.cc",
       "src/llv8.cc",
       "src/llv8-constants.cc",
+      "src/llscan.cc",
     ],
 
     "conditions": [
