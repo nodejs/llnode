@@ -808,8 +808,7 @@ std::string Context::Inspect(Error& err) {
   HeapObject heap_previous = HeapObject(previous);
   if (heap_previous.Check()) {
     char tmp[128];
-    snprintf(tmp, sizeof(tmp), "    (previous)=0x%016" PRIx64,
-             previous.raw());
+    snprintf(tmp, sizeof(tmp), "    (previous)=0x%016" PRIx64, previous.raw());
     res += tmp;
   }
 
@@ -925,11 +924,10 @@ std::string Map::Inspect(InspectOptions* options, Error& err) {
   char tmp[256];
   snprintf(tmp, sizeof(tmp),
            "<Map own_descriptors=%d in_object=%d instance_size=%d "
-               "descriptors=0x%016" PRIx64,
+           "descriptors=0x%016" PRIx64,
            static_cast<int>(own_descriptors_count),
            static_cast<int>(in_object_properties),
-           static_cast<int>(instance_size),
-           descriptors_obj.raw());
+           static_cast<int>(instance_size), descriptors_obj.raw());
   if (!options->detailed) {
     return std::string(tmp) + ">";
   }

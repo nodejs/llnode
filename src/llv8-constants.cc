@@ -269,10 +269,10 @@ void ScopeInfo::Load() {
 
 
 void Context::Load() {
-  kClosureIndex = LoadConstant("class_Context__closure_index__int",
-                               "context_idx_closure");
-  kPreviousIndex = LoadConstant("class_Context__previous_index__int",
-                                "context_idx_prev");
+  kClosureIndex =
+      LoadConstant("class_Context__closure_index__int", "context_idx_closure");
+  kPreviousIndex =
+      LoadConstant("class_Context__previous_index__int", "context_idx_prev");
   kMinContextSlots = LoadConstant("class_Context__min_context_slots__int",
                                   "context_min_slots");
 }
