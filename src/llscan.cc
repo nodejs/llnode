@@ -221,7 +221,7 @@ bool FindJSObjectsVisitor::IsAHistogramType(v8::HeapObject& heap_object,
 
 
 bool LLScan::ScanHeapForObjects(lldb::SBTarget target,
-                                lldb::SBCommandReturnObject result) {
+                                lldb::SBCommandReturnObject &result) {
   /* TODO(hhellyer) - Check whether we have the SBGetMemoryRegionInfoList API
    * available
    * and implemented.
@@ -279,12 +279,6 @@ bool LLScan::ScanHeapForObjects(lldb::SBTarget target,
     FindJSObjectsVisitor v(target, GetMapsToInstances());
 
     ScanMemoryRanges(v);
-
-    result.Printf("Did search of memory - found %d pointers)\n",
-                  v.FoundCount());
-
-  } else {
-    result.Printf("Re-using cached map\n");
   }
 
   return true;

@@ -84,7 +84,7 @@ class LLScan {
   std::string GetTypeName(v8::HeapObject& heap_object,
                           v8::Value::InspectOptions& options, v8::Error err);
   bool ScanHeapForObjects(lldb::SBTarget target,
-                          lldb::SBCommandReturnObject result);
+                          lldb::SBCommandReturnObject &result);
   bool GenerateMemoryRanges(lldb::SBTarget target,
                             const char* segmentsfilename);
 
