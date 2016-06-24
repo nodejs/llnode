@@ -283,20 +283,20 @@ bool PluginInitialize(SBDebugger d) {
   interpreter.AddCommand("jssource", new llnode::ListCmd(),
                          "Alias for `v8 source list`");
 
-  v8.AddCommand("listobjects", new llnode::ListObjectsCmd(),
+  v8.AddCommand("findjsobjects", new llnode::FindObjectsCmd(),
                 "List all object types and instance counts grouped by map and "
                 "sorted by instance count.\n"
                 "Requires RANGESFILE to be set to a file containing memory "
                 "ranges for the core file being debugged.");
 
-  interpreter.AddCommand("listobjects", new llnode::ListObjectsCmd(),
-                         "Alias for `v8 listobjects`");
+  interpreter.AddCommand("findjsobjects", new llnode::FindObjectsCmd(),
+                         "Alias for `v8 findjsobjects`");
 
-  v8.AddCommand("listinstances", new llnode::ListInstancesCmd(),
+  v8.AddCommand("findjsinstances", new llnode::FindInstancesCmd(),
                 "List all objects which share the specified map.\n"
                 "Accepts the same options as `v8 inspect`");
 
-  interpreter.AddCommand("listinstances", new llnode::ListInstancesCmd(),
+  interpreter.AddCommand("findjsinstances", new llnode::FindInstancesCmd(),
                          "List all objects which share the specified map.\n");
 
 

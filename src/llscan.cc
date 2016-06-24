@@ -24,7 +24,7 @@ LLScan llscan;
 using namespace lldb;
 
 
-bool ListObjectsCmd::DoExecute(SBDebugger d, char** cmd,
+bool FindObjectsCmd::DoExecute(SBDebugger d, char** cmd,
                                SBCommandReturnObject& result) {
   SBTarget target = d.GetSelectedTarget();
   if (!target.IsValid()) {
@@ -41,28 +41,25 @@ bool ListObjectsCmd::DoExecute(SBDebugger d, char** cmd,
    * TODO(hhellyer) - Make sort type an option (by count, size or name)
    */
   std::vector<TypeRecord*> sorted_by_count;
-  std::map<uint64_t, TypeRecord*>::iterator end =
-      llscan.GetMapsToInstances().end();
-  for (std::map<uint64_t, TypeRecord*>::iterator it =
-           llscan.GetMapsToInstances().begin();
+  TypeRecordMap::iterator end = llscan.GetMapsToInstances().end();
+  for (TypeRecordMap::iterator it = llscan.GetMapsToInstances().begin();
        it != end; ++it) {
     sorted_by_count.push_back(it->second);
   }
 
   std::sort(sorted_by_count.begin(), sorted_by_count.end(),
-            TypeRecord::compareInstanceCounts);
+            TypeRecord::CompareInstanceCounts);
 
   uint64_t total_objects = 0;
 
-  result.Printf("Map                Instances  Total Size Name\n");
-  result.Printf("------------------ ---------- ---------- ----\n");
+  result.Printf(" Instances  Total Size Name\n");
+  result.Printf(" ---------- ---------- ----\n");
 
   for (std::vector<TypeRecord*>::iterator it = sorted_by_count.begin();
        it != sorted_by_count.end(); ++it) {
     TypeRecord* t = *it;
-    result.Printf("0x%016" PRIx64 " %10" PRId64 " %10" PRId64 " %s\n", t->map,
-                  t->instance_count, t->total_instance_size,
-                  t->type_name->c_str());
+    result.Printf(" %10" PRId64 " %10" PRId64 " %s\n", t->instance_count,
+                  t->total_instance_size, t->type_name->c_str());
     total_objects += t->instance_count;
   }
 
@@ -70,94 +67,7 @@ bool ListObjectsCmd::DoExecute(SBDebugger d, char** cmd,
 }
 
 
-/* Utility function to generate short type names for objects.
- * Based on the inspection code in llv8.cc
- * TODO(indutny) - Should this merge back in to llv8.cc?
- */
-std::string GetTypeName(v8::HeapObject& heap_object,
-                        v8::Value::InspectOptions& options, v8::Error err) {
-  int64_t type = heap_object.GetType(err);
-  v8::LLV8* v8 = heap_object.v8();
-  if (type == v8->types()->kGlobalObjectType)
-    return heap_object.Inspect(&options, err);
-  if (type == v8->types()->kCodeType) return heap_object.Inspect(&options, err);
-  if (type == v8->types()->kMapType) {
-    return heap_object.Inspect(&options, err);
-  }
-
-  if (type == v8->types()->kJSObjectType) {
-    v8::HeapObject map_obj = heap_object.GetMap(err);
-    if (err.Fail()) {
-      return std::string();
-    }
-
-    v8::Map map(map_obj);
-    v8::HeapObject constructor_obj = map.Constructor(err);
-    if (err.Fail()) {
-      return std::string();
-    }
-
-    int64_t constructor_type = constructor_obj.GetType(err);
-    if (err.Fail()) {
-      return std::string();
-    }
-
-    if (constructor_type != v8->types()->kJSFunctionType) {
-      return "<Object: no constructor>";
-    }
-
-    v8::JSFunction constructor(constructor_obj);
-
-    return constructor.Name(err);
-  }
-
-  if (type == v8->types()->kHeapNumberType) {
-    return "(HeapNumber)";
-  }
-
-  if (type == v8->types()->kJSArrayType) {
-    return "(Array)";
-  }
-
-  if (type == v8->types()->kOddballType) {
-    return "(Oddball)";
-  }
-
-  if (type == v8->types()->kJSFunctionType) {
-    return "(Function)";
-  }
-
-  if (type == v8->types()->kJSRegExpType) {
-    return "(RegExp)";
-  }
-
-  if (type < v8->types()->kFirstNonstringType) {
-    return "(String)";
-  }
-
-  if (type == v8->types()->kFixedArrayType) {
-    return "(FixedArray)";
-  }
-
-  if (type == v8->types()->kJSArrayBufferType) {
-    return "(ArrayBuffer)";
-  }
-
-  if (type == v8->types()->kJSTypedArrayType) {
-    return "(ArrayBufferView)";
-  }
-
-  if (type == v8->types()->kJSDateType) {
-    return "(Date)";
-  }
-
-  std::string unknown("unknown: ");
-
-  return unknown += std::to_string(type);
-}
-
-
-bool ListInstancesCmd::DoExecute(SBDebugger d, char** cmd,
+bool FindInstancesCmd::DoExecute(SBDebugger d, char** cmd,
                                  SBCommandReturnObject& result) {
   SBTarget target = d.GetSelectedTarget();
   if (!target.IsValid()) {
@@ -174,29 +84,13 @@ bool ListInstancesCmd::DoExecute(SBDebugger d, char** cmd,
   std::string full_cmd;
   for (; start != nullptr && *start != nullptr; start++) full_cmd += *start;
 
-  SBExpressionOptions options;
-  SBValue value = target.EvaluateExpression(full_cmd.c_str(), options);
-  if (value.GetError().Fail()) {
-    SBStream desc;
-    if (!value.GetError().GetDescription(desc)) return false;
-    result.SetError(desc.GetData());
-    return false;
-  }
+  std::string type_name = full_cmd;
 
   // Load V8 constants from postmortem data
   llv8.Load(target);
 
-  v8::Value v8_mapaddr(&llv8, value.GetValueAsSigned());
-  v8::Error err;
-
-  if (err.Fail()) {
-    result.SetError("Failed to evaluate expression");
-    return false;
-  }
-
-  uint64_t mapaddr = value.GetValueAsUnsigned();
-  std::map<uint64_t, TypeRecord*>::iterator instance_it =
-      llscan.GetMapsToInstances().find(mapaddr);
+  TypeRecordMap::iterator instance_it =
+      llscan.GetMapsToInstances().find(type_name);
   if (instance_it != llscan.GetMapsToInstances().end()) {
     TypeRecord* t = instance_it->second;
     for (std::set<uint64_t>::iterator it = t->instances->begin();
@@ -208,15 +102,15 @@ bool ListInstancesCmd::DoExecute(SBDebugger d, char** cmd,
     }
 
   } else {
-    result.Printf("No objects found with map %" PRIx64 "\n", mapaddr);
+    result.Printf("No objects found with type name %s\n", type_name.c_str());
   }
 
   return true;
 }
 
 
-FindJSObjectsVisitor::FindJSObjectsVisitor(
-    SBTarget& target, std::map<uint64_t, TypeRecord*>& mapstoinstances)
+FindJSObjectsVisitor::FindJSObjectsVisitor(SBTarget& target,
+                                           TypeRecordMap& mapstoinstances)
     : target_(target), mapstoinstances_(mapstoinstances) {
   found_count_ = 0;
   address_byte_size_ = target_.GetProcess().GetAddressByteSize();
@@ -276,24 +170,21 @@ uint64_t FindJSObjectsVisitor::Visit(uint64_t location, uint64_t available) {
   inspect_options.print_map = false;
   inspect_options.string_length = 0;
 
+  std::string type_name = heap_object.GetTypeName(&inspect_options, err);
+
   /* No entry in the map, create a new one. */
-  if (mapstoinstances_.count(map_object.raw()) == 0) {
+  if (mapstoinstances_.count(type_name) == 0) {
     TypeRecord* t = new TypeRecord();
-    t->map = map_object.raw();
-    t->instance_count++;
-    // TODO(indutny) - Is this correct or is there a better way to find the size
-    // of one instance of an object?
+    t->type_name = new std::string(type_name);
+    t->instances = new std::set<uint64_t>();
+    t->instances->insert(word);
+    t->instance_count = 1;
     t->total_instance_size = map.InstanceSize(err);
 
-    t->type_name =
-        new std::string(GetTypeName(heap_object, inspect_options, err));
-
-    mapstoinstances_.insert(
-        std::pair<uint64_t, TypeRecord*>(map_object.raw(), t));
-    t->instances = new std::set<uint64_t>();
+    mapstoinstances_.insert(std::pair<std::string, TypeRecord*>(type_name, t));
   } else {
-    /* Update an existing instance, if we haven't seen this one before. */
-    TypeRecord* t = mapstoinstances_.at(map_object.raw());
+    /* Update an existing instance, if we haven't seen this instance before. */
+    TypeRecord* t = mapstoinstances_.at(type_name);
     /* Determine if this is a new instance.
      * (We are scanning pointers to objects, we may have seen this location
      * before.)
@@ -301,8 +192,6 @@ uint64_t FindJSObjectsVisitor::Visit(uint64_t location, uint64_t available) {
     if (t->instances->count(word) == 0) {
       t->instances->insert(word);
       t->instance_count++;
-      // TODO(indutny) - Is this correct or is there a better way to find the
-      // size of one instance of an object?
       t->total_instance_size += map.InstanceSize(err);
     }
   }
@@ -417,10 +306,6 @@ void LLScan::ScanMemoryRanges(FindJSObjectsVisitor& v) {
      * how far to move on so we don't read every byte.
      */
     for (auto searchAddress = address; searchAddress < address + len;) {
-      //		  result.Printf("Checking for needle at: 0x%" PRIx64
-      //"\n", searchAddress);
-      //			  printf("Visiting address 0x%" PRIx64 "\n",
-      // searchAddress);
       uint32_t increment =
           v.Visit(searchAddress, (address + len) - searchAddress);
       if (increment == 0) {

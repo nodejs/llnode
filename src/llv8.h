@@ -8,6 +8,9 @@
 #include "src/llv8-constants.h"
 
 namespace llnode {
+
+class FindJSObjectsVisitor;
+
 namespace v8 {
 
 // Forward declarations
@@ -67,6 +70,7 @@ class Value {
   bool IsHole(Error& err);
 
   std::string Inspect(InspectOptions* options, Error& err);
+  std::string GetTypeName(InspectOptions* options, Error& err);
   std::string ToString(Error& err);
 
  protected:
@@ -101,6 +105,7 @@ class HeapObject : public Value {
 
   std::string ToString(Error& err);
   std::string Inspect(InspectOptions* options, Error& err);
+  std::string GetTypeName(InspectOptions* options, Error& err);
 };
 
 class Map : public HeapObject {
@@ -403,8 +408,6 @@ class LLV8 {
 
   void Load(lldb::SBTarget target);
 
-  constants::Types types;
-
  private:
   template <class T>
   inline T LoadValue(int64_t addr, Error& err);
@@ -447,6 +450,7 @@ class LLV8 {
   constants::DescriptorArray descriptor_array;
   constants::NameDictionary name_dictionary;
   constants::Frame frame;
+  constants::Types types;
 
 
   friend class Value;
@@ -478,6 +482,7 @@ class LLV8 {
   friend class JSRegExp;
   friend class JSDate;
   friend class CodeMap;
+  friend class llnode::FindJSObjectsVisitor;
 };
 
 #undef V8_VALUE_DEFAULT_METHODS

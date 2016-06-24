@@ -7,17 +7,17 @@
 
 namespace llnode {
 
-class ListObjectsCmd : public CommandBase {
+class FindObjectsCmd : public CommandBase {
  public:
-  ~ListObjectsCmd() override {}
+  ~FindObjectsCmd() override {}
 
   bool DoExecute(lldb::SBDebugger d, char** cmd,
                  lldb::SBCommandReturnObject& result) override;
 };
 
-class ListInstancesCmd : public CommandBase {
+class FindInstancesCmd : public CommandBase {
  public:
-  ~ListInstancesCmd() override {}
+  ~FindInstancesCmd() override {}
 
   bool DoExecute(lldb::SBDebugger d, char** cmd,
                  lldb::SBCommandReturnObject& result) override;
@@ -35,7 +35,6 @@ class MemoryVisitor {
 
 class TypeRecord {
  public:
-  uint64_t map;
   std::string* type_name;
   uint64_t property_count;
   uint64_t instance_count;
@@ -45,7 +44,7 @@ class TypeRecord {
   /* Sort records by instance count, use the other fields as tie breakers
    * to give consistent ordering.
    */
-  static bool compareInstanceCounts(TypeRecord* a, TypeRecord* b) {
+  static bool CompareInstanceCounts(TypeRecord* a, TypeRecord* b) {
     if (a->instance_count == b->instance_count) {
       if (a->total_instance_size == b->total_instance_size) {
         return a->type_name < b->type_name;
@@ -56,10 +55,11 @@ class TypeRecord {
   }
 };
 
+typedef std::map<std::string, TypeRecord*> TypeRecordMap;
+
 class FindJSObjectsVisitor : MemoryVisitor {
  public:
-  FindJSObjectsVisitor(lldb::SBTarget& target,
-                       std::map<uint64_t, TypeRecord*>& mapstoinstances);
+  FindJSObjectsVisitor(lldb::SBTarget& target, TypeRecordMap& mapstoinstances);
   ~FindJSObjectsVisitor() {}
 
   uint64_t Visit(uint64_t location, uint64_t available);
@@ -73,7 +73,7 @@ class FindJSObjectsVisitor : MemoryVisitor {
   uint32_t address_byte_size_;
   uint32_t found_count_;
 
-  std::map<uint64_t, TypeRecord*>& mapstoinstances_;
+  TypeRecordMap& mapstoinstances_;
 };
 
 
@@ -88,9 +88,7 @@ class LLScan {
   bool GenerateMemoryRanges(lldb::SBTarget target,
                             const char* segmentsfilename);
 
-  std::map<uint64_t, TypeRecord*>& GetMapsToInstances() {
-    return mapstoinstances_;
-  };
+  TypeRecordMap& GetMapsToInstances() { return mapstoinstances_; };
 
  private:
   void ScanMemoryRanges(FindJSObjectsVisitor& v);
@@ -104,7 +102,7 @@ class LLScan {
   lldb::SBTarget target_;
   lldb::SBProcess process_;
   MemoryRange* ranges_ = nullptr;
-  std::map<uint64_t, TypeRecord*> mapstoinstances_;
+  TypeRecordMap mapstoinstances_;
 };
 
 }  // llnode
