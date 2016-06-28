@@ -58,9 +58,9 @@ bool FindObjectsCmd::DoExecute(SBDebugger d, char** cmd,
   for (std::vector<TypeRecord*>::iterator it = sorted_by_count.begin();
        it != sorted_by_count.end(); ++it) {
     TypeRecord* t = *it;
-    result.Printf(" %10" PRId64 " %10" PRId64 " %s\n", t->instance_count,
-                  t->total_instance_size, t->type_name->c_str());
-    total_objects += t->instance_count;
+    result.Printf(" %10" PRId64 " %10" PRId64 " %s\n", t->GetInstanceCount(),
+                  t->GetTotalInstanceSize(), t->GetTypeName().c_str());
+    total_objects += t->GetInstanceCount();
   }
 
   return true;
@@ -93,8 +93,8 @@ bool FindInstancesCmd::DoExecute(SBDebugger d, char** cmd,
       llscan.GetMapsToInstances().find(type_name);
   if (instance_it != llscan.GetMapsToInstances().end()) {
     TypeRecord* t = instance_it->second;
-    for (std::set<uint64_t>::iterator it = t->instances->begin();
-         it != t->instances->end(); ++it) {
+    for (std::set<uint64_t>::iterator it = t->GetInstances().begin();
+         it != t->GetInstances().end(); ++it) {
       v8::Error err;
       v8::Value v8_value(&llv8, *it);
       std::string res = v8_value.Inspect(&inspect_options, err);
@@ -127,7 +127,7 @@ uint64_t FindJSObjectsVisitor::Visit(uint64_t location, uint64_t available) {
   // Try to create an object out of it.
 
   uint64_t word = target_.GetProcess().ReadUnsignedFromMemory(
-      location, target_.GetProcess().GetAddressByteSize(), error);
+      location, address_byte_size_, error);
 
   v8::Value v8_value(&llv8, word);
 
@@ -174,14 +174,11 @@ uint64_t FindJSObjectsVisitor::Visit(uint64_t location, uint64_t available) {
 
   /* No entry in the map, create a new one. */
   if (mapstoinstances_.count(type_name) == 0) {
-    TypeRecord* t = new TypeRecord();
-    t->type_name = new std::string(type_name);
-    t->instances = new std::set<uint64_t>();
-    t->instances->insert(word);
-    t->instance_count = 1;
-    t->total_instance_size = map.InstanceSize(err);
+    TypeRecord* t = new TypeRecord(type_name);
 
+    t->AddInstance(word, map.InstanceSize(err));
     mapstoinstances_.insert(std::pair<std::string, TypeRecord*>(type_name, t));
+
   } else {
     /* Update an existing instance, if we haven't seen this instance before. */
     TypeRecord* t = mapstoinstances_.at(type_name);
@@ -189,10 +186,8 @@ uint64_t FindJSObjectsVisitor::Visit(uint64_t location, uint64_t available) {
      * (We are scanning pointers to objects, we may have seen this location
      * before.)
      */
-    if (t->instances->count(word) == 0) {
-      t->instances->insert(word);
-      t->instance_count++;
-      t->total_instance_size += map.InstanceSize(err);
+    if (t->GetInstances().count(word) == 0) {
+      t->AddInstance(word, map.InstanceSize(err));
     }
   }
 
@@ -221,7 +216,7 @@ bool FindJSObjectsVisitor::IsAHistogramType(v8::HeapObject& heap_object,
 
 
 bool LLScan::ScanHeapForObjects(lldb::SBTarget target,
-                                lldb::SBCommandReturnObject &result) {
+                                lldb::SBCommandReturnObject& result) {
   /* TODO(hhellyer) - Check whether we have the SBGetMemoryRegionInfoList API
    * available
    * and implemented.
@@ -235,26 +230,17 @@ bool LLScan::ScanHeapForObjects(lldb::SBTarget target,
 
   // Need to reload memory ranges (though this does assume the user has also
   // updated
-  // RANGESFILE with data for the new dump or things won't match up).
+  // LLNODE_RANGESFILE with data for the new dump or things won't match up).
   if (target_ != target) {
-    MemoryRange* head = ranges_;
-    while (head != nullptr) {
-      MemoryRange* range = head;
-      head = head->next;
-      delete range;
-    }
-    ranges_ = nullptr;
+    ClearMemoryRanges();
   }
 
   /* Fall back to environment variable containing pre-parsed list of memory
    * ranges. */
   if (nullptr == ranges_) {
-    const char* segmentsfilename = getenv("RANGESFILE");
+    const char* segmentsfilename = getenv("LLNODE_RANGESFILE");
 
-    //
     if (segmentsfilename == nullptr) {
-      //		  result.Printf("No memory ranges file. Plugin commands
-      // that need to scan addressable memory will fail.\n");
       result.SetError(
           "No memory range information available for this process. Cannot scan "
           "for objects.\n");
@@ -291,9 +277,9 @@ void LLScan::ScanMemoryRanges(FindJSObjectsVisitor& v) {
   bool done = false;
 
   while (head != nullptr && !done) {
-    uint64_t address = head->start;
-    uint64_t len = head->length;
-    head = head->next;
+    uint64_t address = head->start_;
+    uint64_t len = head->length_;
+    head = head->next_;
 
     /* Brute force search - query every address - but allow the visitor code to
      * say
@@ -315,12 +301,10 @@ void LLScan::ScanMemoryRanges(FindJSObjectsVisitor& v) {
 /* Read a file of memory ranges parsed from the core dump.
  * This is a work around for the lack of an API to get the memory ranges
  * within lldb.
- * There are scripts for generating this file on mac and linux stored as a
- * snippet on github:
- * https://gist.github.com/hhellyer/6d79009e142d6eef696525afe1ecea43
- * export the name or full path to the ranges file in the RANGESFILE env var
- * before starting
- * lldb and loading the llnode plugin.
+ * There are scripts for generating this file on Mac and Linux stored in
+ * the scripts directory of the llnode repository.
+ * Export the name or full path to the ranges file in the LLNODE_RANGESFILE
+ * env var before starting lldb and loading the llnode plugin.
  */
 bool LLScan::GenerateMemoryRanges(lldb::SBTarget target,
                                   const char* segmentsfilename) {
@@ -330,7 +314,8 @@ bool LLScan::GenerateMemoryRanges(lldb::SBTarget target,
     return false;
   }
 
-  uint64_t address = 0, len = 0;
+  uint64_t address = 0;
+  uint64_t len = 0;
 
   MemoryRange** tailptr = &ranges_;
 
@@ -339,38 +324,42 @@ bool LLScan::GenerateMemoryRanges(lldb::SBTarget target,
   while (input >> std::hex >> address >> std::hex >> len) {
     /* Check if the range is accessible.
      * The structure of a core file means if you check the start and the end of
-     * a range then the
-     * middle will be there, ranges are contiguous in the file, but cores often
-     * get truncated due
-     * to file size limits so ranges can be missing or truncated. Sometimes
-     * shared memory segments
-     * are omitted so it's also possible an entire section could be missing from
-     * the middle.
+     * a range then the middle will be there, ranges are contiguous in the file,
+     * but cores often get truncated due to file size limits so ranges can be
+     * missing or truncated. Sometimes shared memory segments are omitted so
+     * it's also possible an entire section could be missing from the middle.
      */
     lldb::SBError error;
+
     target.GetProcess().ReadPointerFromMemory(address, error);
-    if (error.Success()) {
-      target.GetProcess().ReadPointerFromMemory(
-          (address + len) - address_byte_size, error);
-
-      if (error.Success()) {
-        MemoryRange* newRange = new MemoryRange();
-        if (nullptr == newRange) {
-          return false;
-        }
-        newRange->start = address;
-        newRange->length = len;
-        newRange->next = nullptr;
-        (*tailptr) = newRange;
-        tailptr = &(newRange->next);
-
-      } else {
-        /* Could not access last word, skip. */
-      }
-    } else {
+    if (!error.Success()) {
       /* Could not access first word, skip. */
+      continue;
     }
+
+    target.GetProcess().ReadPointerFromMemory(
+        (address + len) - address_byte_size, error);
+    if (!error.Success()) {
+      /* Could not access last word, skip. */
+      continue;
+    }
+
+    MemoryRange* newRange = new MemoryRange(address, len);
+
+    *tailptr = newRange;
+    tailptr = &(newRange->next_);
   }
   return true;
+}
+
+
+void LLScan::ClearMemoryRanges() {
+  MemoryRange* head = ranges_;
+  while (head != nullptr) {
+    MemoryRange* range = head;
+    head = head->next_;
+    delete range;
+  }
+  ranges_ = nullptr;
 }
 }

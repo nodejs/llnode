@@ -551,7 +551,7 @@ std::string Value::Inspect(InspectOptions* options, Error& err) {
 
 std::string Value::GetTypeName(InspectOptions* options, Error& err) {
   Smi smi(this);
-  if (smi.Check()) return smi.Inspect(err);
+  if (smi.Check()) return "(Smi)";
 
   HeapObject obj(this);
   if (!obj.Check()) {
@@ -690,10 +690,10 @@ std::string Smi::ToString(Error& err) {
  */
 std::string HeapObject::GetTypeName(InspectOptions* options, Error& err) {
   int64_t type = GetType(err);
-  if (type == v8()->types()->kGlobalObjectType) return Inspect(options, err);
-  if (type == v8()->types()->kCodeType) return Inspect(options, err);
+  if (type == v8()->types()->kGlobalObjectType) return "(Global)";
+  if (type == v8()->types()->kCodeType) return "(Code)";
   if (type == v8()->types()->kMapType) {
-    return Inspect(options, err);
+    return "(Map)";
   }
 
   if (type == v8()->types()->kJSObjectType) {
@@ -714,7 +714,7 @@ std::string HeapObject::GetTypeName(InspectOptions* options, Error& err) {
     }
 
     if (constructor_type != v8()->types()->kJSFunctionType) {
-      return "<Object: no constructor>";
+      return "(Object)";
     }
 
     v8::JSFunction constructor(constructor_obj);

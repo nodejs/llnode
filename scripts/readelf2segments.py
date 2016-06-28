@@ -14,10 +14,11 @@ def main():
         sys.exit(1)
     core_file = sys.argv[1]
 
-    readelf_proc = subprocess.Popen(READELF_COMMAND.format(core_file), shell=True, bufsize=1,
-          stdin=subprocess.PIPE, stdout=subprocess.PIPE, close_fds=True)
+    readelf_proc = subprocess.Popen(
+        READELF_COMMAND.format(core_file), shell=True, bufsize=1,
+        stdin=subprocess.PIPE, stdout=subprocess.PIPE, close_fds=True)
     (readelf_stdin, readelf_stdout) = (readelf_proc.stdin, readelf_proc.stdout)
-    
+
     reading_segment = False
     vaddress = ""
 
@@ -26,7 +27,8 @@ def main():
         if not line.startswith("LOAD") and not reading_segment:
             continue
         elif line.startswith("LOAD"):
-            # Might need to filer out segments that have a file offset of 0 (ie aren't in the core!)
+            # Might need to filer out segments that have a file offset of 0
+            # (ie segments that aren't in the core!)
             reading_segment = True
             (type, offset, vaddress, paddr) = line.split()
         elif reading_segment:
@@ -35,9 +37,6 @@ def main():
             # Simple format "address size", both in hex
             print("{0} {1}".format(vaddress, memsize))
             vaddress = ""
-    
-        
-
 
 if __name__ == '__main__':
     main()

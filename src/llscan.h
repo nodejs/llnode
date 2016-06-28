@@ -9,7 +9,7 @@ namespace llnode {
 
 class FindObjectsCmd : public CommandBase {
  public:
-  ~FindObjectsCmd() override {}
+  ~FindObjectsCmd() override{};
 
   bool DoExecute(lldb::SBDebugger d, char** cmd,
                  lldb::SBCommandReturnObject& result) override;
@@ -17,7 +17,7 @@ class FindObjectsCmd : public CommandBase {
 
 class FindInstancesCmd : public CommandBase {
  public:
-  ~FindInstancesCmd() override {}
+  ~FindInstancesCmd() override{};
 
   bool DoExecute(lldb::SBDebugger d, char** cmd,
                  lldb::SBCommandReturnObject& result) override;
@@ -30,29 +30,44 @@ class MemoryVisitor {
  public:
   virtual ~MemoryVisitor(){};
 
-  virtual uint64_t Visit(uint64_t location, uint64_t available) { return 0; };
+  virtual uint64_t Visit(uint64_t location, uint64_t available) = 0;
 };
 
 class TypeRecord {
  public:
-  std::string* type_name;
-  uint64_t property_count;
-  uint64_t instance_count;
-  uint64_t total_instance_size;
-  std::set<uint64_t>* instances;
+  TypeRecord(std::string& type_name)
+      : type_name_(type_name), instance_count_(0), total_instance_size_(0){};
+
+  inline std::string& GetTypeName() { return type_name_; };
+  inline uint64_t GetInstanceCount() { return instance_count_; };
+  inline uint64_t GetTotalInstanceSize() { return total_instance_size_; };
+  inline std::set<uint64_t>& GetInstances() { return instances_; };
+
+  inline void AddInstance(uint64_t address, uint64_t size) {
+    instances_.insert(address);
+    instance_count_++;
+    total_instance_size_ += size;
+  };
 
   /* Sort records by instance count, use the other fields as tie breakers
    * to give consistent ordering.
    */
   static bool CompareInstanceCounts(TypeRecord* a, TypeRecord* b) {
-    if (a->instance_count == b->instance_count) {
-      if (a->total_instance_size == b->total_instance_size) {
-        return a->type_name < b->type_name;
+    if (a->instance_count_ == b->instance_count_) {
+      if (a->total_instance_size_ == b->total_instance_size_) {
+        return a->type_name_ < b->type_name_;
       }
-      return a->total_instance_size < b->total_instance_size;
+      return a->total_instance_size_ < b->total_instance_size_;
     }
-    return a->instance_count < b->instance_count;
+    return a->instance_count_ < b->instance_count_;
   }
+
+
+ private:
+  std::string type_name_;
+  uint64_t instance_count_;
+  uint64_t total_instance_size_;
+  std::set<uint64_t> instances_;
 };
 
 typedef std::map<std::string, TypeRecord*> TypeRecordMap;
@@ -81,22 +96,25 @@ class LLScan {
  public:
   LLScan(){};
 
-  std::string GetTypeName(v8::HeapObject& heap_object,
-                          v8::Value::InspectOptions& options, v8::Error err);
   bool ScanHeapForObjects(lldb::SBTarget target,
-                          lldb::SBCommandReturnObject &result);
+                          lldb::SBCommandReturnObject& result);
   bool GenerateMemoryRanges(lldb::SBTarget target,
                             const char* segmentsfilename);
 
-  TypeRecordMap& GetMapsToInstances() { return mapstoinstances_; };
+  inline TypeRecordMap& GetMapsToInstances() { return mapstoinstances_; };
 
  private:
   void ScanMemoryRanges(FindJSObjectsVisitor& v);
+  void ClearMemoryRanges();
 
-  struct MemoryRange {
-    uint64_t start;
-    uint64_t length;
-    MemoryRange* next;
+  class MemoryRange {
+   public:
+    MemoryRange(uint64_t start, uint64_t length)
+        : start_(start), length_(length), next_(nullptr){};
+
+    uint64_t start_;
+    uint64_t length_;
+    MemoryRange* next_;
   };
 
   lldb::SBTarget target_;

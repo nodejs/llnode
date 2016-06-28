@@ -452,7 +452,6 @@ class LLV8 {
   constants::Frame frame;
   constants::Types types;
 
-
   friend class Value;
   friend class JSFrame;
   friend class Smi;

@@ -14,19 +14,21 @@ def main():
         sys.exit(1)
     core_file = sys.argv[1]
 
-    readelf_proc = subprocess.Popen(OTOOL_COMMAND.format(core_file), shell=True, bufsize=1,
-          stdin=subprocess.PIPE, stdout=subprocess.PIPE, close_fds=True)
-    (readelf_stdin, readelf_stdout) = (readelf_proc.stdin, readelf_proc.stdout)
-    
+    otool_proc = subprocess.Popen(
+        OTOOL_COMMAND.format(core_file), shell=True, bufsize=1,
+        stdin=subprocess.PIPE, stdout=subprocess.PIPE, close_fds=True)
+    (otool_stdin, otool_stdout) = (otool_proc.stdin, otool_proc.stdout)
+
     reading_segment = False
     vaddress = ""
 
-    for line in readelf_stdout:
+    for line in otool_stdout:
         line = line.strip()
         if not line.startswith("vmaddr") and not reading_segment:
             continue
         elif line.startswith("vmaddr"):
-            # Might need to filer out segments that have a file offset of 0 (ie aren't in the core!)
+            # Might need to filer out segments that have a file offset of 0
+            # (ie segments that aren't in the core!)
             reading_segment = True
             (name, vaddress) = line.split()
         elif line.startswith("vmsize") and reading_segment:
@@ -35,9 +37,6 @@ def main():
             # Simple format "address size", both in hex
             print("{0} {1}".format(vaddress, memsize))
             vaddress = ""
-    
-	
-
 
 if __name__ == '__main__':
     main()
