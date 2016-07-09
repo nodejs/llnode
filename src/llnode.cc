@@ -288,7 +288,9 @@ bool PluginInitialize(SBDebugger d) {
                 "sorted by instance count.\n"
                 "Requires `LLNODE_RANGESFILE` environment variable to be set "
                 "to a file containing memory ranges for the core file being "
-                "debugged.");
+                "debugged.\n"
+                "There are scripts for generating this file on Linux and Mac "
+                "in the scripts directory of the llnode repository.");
 
   interpreter.AddCommand("findjsobjects", new llnode::FindObjectsCmd(),
                          "Alias for `v8 findjsobjects`");
