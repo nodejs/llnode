@@ -277,6 +277,7 @@ bool LLScan::ScanHeapForObjects(lldb::SBTarget target,
 
 
 void LLScan::ScanMemoryRanges(FindJSObjectsVisitor& v) {
+  bool done = false;
 
 #if !defined(LLDB_SBMemoryRegionInfoList_h_)
   MemoryRange* head = ranges_;
@@ -303,6 +304,7 @@ void LLScan::ScanMemoryRanges(FindJSObjectsVisitor& v) {
       uint32_t increment =
           v.Visit(searchAddress, (address + len) - searchAddress);
       if (increment == 0) {
+        done = true;
         break;
       }
       searchAddress += increment;
