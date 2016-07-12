@@ -106,6 +106,7 @@ class LLScan {
  private:
   void ScanMemoryRanges(FindJSObjectsVisitor& v);
   void ClearMemoryRanges();
+  void ClearMapsToInstances();
 
   class MemoryRange {
    public:
