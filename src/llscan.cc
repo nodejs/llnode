@@ -222,11 +222,7 @@ bool FindJSObjectsVisitor::IsAHistogramType(v8::HeapObject& heap_object,
 
 bool LLScan::ScanHeapForObjects(lldb::SBTarget target,
                                 lldb::SBCommandReturnObject& result) {
-  /* TODO(hhellyer) - Check whether we have the SBGetMemoryRegionInfoList API
-   * available
-   * and implemented.
-   * (It may be available but not supported on this platform.)
-   * If it is then check the last scan is still valid - the process hasn't moved
+  /* Check the last scan is still valid - the process hasn't moved
    * and we haven't changed target.
    */
 
@@ -238,8 +234,11 @@ bool LLScan::ScanHeapForObjects(lldb::SBTarget target,
   // LLNODE_RANGESFILE with data for the new dump or things won't match up).
   if (target_ != target) {
     ClearMemoryRanges();
+    mapstoinstances_.clear();
+    target_ = target;
   }
 
+#ifndef LLDB_SBMemoryRegionInfoList_h_
   /* Fall back to environment variable containing pre-parsed list of memory
    * ranges. */
   if (nullptr == ranges_) {
@@ -260,10 +259,10 @@ bool LLScan::ScanHeapForObjects(lldb::SBTarget target,
       return false;
     }
   }
+#endif  // LLDB_SBMemoryRegionInfoList_h_
 
   /* If we've reached here we have access to information about the valid memory
-   * ranges in the
-   * process and can scan for objects.
+   * ranges in the process and can scan for objects.
    */
 
   /* Populate the map of objects. */
@@ -278,18 +277,28 @@ bool LLScan::ScanHeapForObjects(lldb::SBTarget target,
 
 
 void LLScan::ScanMemoryRanges(FindJSObjectsVisitor& v) {
-  MemoryRange* head = ranges_;
-
   bool done = false;
+
+#ifndef LLDB_SBMemoryRegionInfoList_h_
+  MemoryRange* head = ranges_;
 
   while (head != nullptr && !done) {
     uint64_t address = head->start_;
     uint64_t len = head->length_;
     head = head->next_;
 
+#else  // LLDB_SBMemoryRegionInfoList_h_
+  SBMemoryRegionInfoList memory_regions = process_.GetMemoryRegions();
+  SBMemoryRegionInfo region_info;
+
+  for (uint32_t i = 0; i < memory_regions.GetSize(); ++i) {
+    memory_regions.GetMemoryRegionAtIndex(i, region_info);
+    uint64_t address = region_info.GetRegionBase();
+    uint64_t len = region_info.GetRegionEnd() - region_info.GetRegionBase();
+
+#endif  // LLDB_SBMemoryRegionInfoList_h_
     /* Brute force search - query every address - but allow the visitor code to
-     * say
-     * how far to move on so we don't read every byte.
+     * say how far to move on so we don't read every byte.
      */
     for (auto searchAddress = address; searchAddress < address + len;) {
       uint32_t increment =
@@ -367,5 +376,16 @@ void LLScan::ClearMemoryRanges() {
     delete range;
   }
   ranges_ = nullptr;
+}
+
+
+void LLScan::ClearMapsToInstances() {
+  TypeRecordMap::iterator end = GetMapsToInstances().end();
+  for (TypeRecordMap::iterator it = GetMapsToInstances().begin(); it != end;
+       ++it) {
+    TypeRecord* t = it->second;
+    delete t;
+  }
+  GetMapsToInstances().clear();
 }
 }
