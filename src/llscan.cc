@@ -238,7 +238,7 @@ bool LLScan::ScanHeapForObjects(lldb::SBTarget target,
     target_ = target;
   }
 
-#if !defined(LLDB_SBMemoryRegionInfoList_h_)
+#ifndef LLDB_SBMemoryRegionInfoList_h_
   /* Fall back to environment variable containing pre-parsed list of memory
    * ranges. */
   if (nullptr == ranges_) {
@@ -279,7 +279,7 @@ bool LLScan::ScanHeapForObjects(lldb::SBTarget target,
 void LLScan::ScanMemoryRanges(FindJSObjectsVisitor& v) {
   bool done = false;
 
-#if !defined(LLDB_SBMemoryRegionInfoList_h_)
+#ifndef LLDB_SBMemoryRegionInfoList_h_
   MemoryRange* head = ranges_;
 
   while (head != nullptr && !done) {
@@ -287,7 +287,7 @@ void LLScan::ScanMemoryRanges(FindJSObjectsVisitor& v) {
     uint64_t len = head->length_;
     head = head->next_;
 
-# else
+# else // LLDB_SBMemoryRegionInfoList_h_
   SBMemoryRegionInfoList memory_regions = process_.GetMemoryRegions();
   SBMemoryRegionInfo region_info;
 
@@ -296,7 +296,7 @@ void LLScan::ScanMemoryRanges(FindJSObjectsVisitor& v) {
     uint64_t address = region_info.GetRegionBase();
     uint64_t len = region_info.GetRegionEnd() - region_info.GetRegionBase();
 
-#endif
+#endif // LLDB_SBMemoryRegionInfoList_h_
     /* Brute force search - query every address - but allow the visitor code to
      * say how far to move on so we don't read every byte.
      */
