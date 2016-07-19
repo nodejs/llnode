@@ -115,6 +115,15 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
 
 bool PrintCmd::DoExecute(SBDebugger d, char** cmd,
                          SBCommandReturnObject& result) {
+  if (*cmd == NULL) {
+    if (detailed_) {
+      result.SetError("USAGE: v8 inspect [flags] expr\n");
+    } else {
+      result.SetError("USAGE: v8 print expr\n");
+    }
+    return false;
+  }
+
   SBTarget target = d.GetSelectedTarget();
   if (!target.IsValid()) {
     result.SetError("No valid process, please start something\n");
