@@ -5,8 +5,8 @@
 
 #include <lldb/API/SBExpressionOptions.h>
 
-#include "src/llv8.h"
 #include "src/llv8-constants.h"
+#include "src/llv8.h"
 
 namespace llnode {
 namespace v8 {

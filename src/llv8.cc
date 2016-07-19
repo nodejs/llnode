@@ -1,8 +1,8 @@
 #include <assert.h>
 #include <inttypes.h>
 
-#include "llv8.h"
 #include "llv8-inl.h"
+#include "llv8.h"
 
 namespace llnode {
 namespace v8 {
