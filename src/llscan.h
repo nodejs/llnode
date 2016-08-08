@@ -26,6 +26,14 @@ class FindInstancesCmd : public CommandBase {
   bool detailed_;
 };
 
+class NodeInfoCmd : public CommandBase {
+ public:
+  ~NodeInfoCmd() override{};
+
+  bool DoExecute(lldb::SBDebugger d, char** cmd,
+                 lldb::SBCommandReturnObject& result) override;
+};
+
 class MemoryVisitor {
  public:
   virtual ~MemoryVisitor(){};
