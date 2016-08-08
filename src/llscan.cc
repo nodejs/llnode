@@ -66,7 +66,6 @@ bool FindObjectsCmd::DoExecute(SBDebugger d, char** cmd,
   return true;
 }
 
-
 bool FindInstancesCmd::DoExecute(SBDebugger d, char** cmd,
                                  SBCommandReturnObject& result) {
   if (*cmd == NULL) {
@@ -108,6 +107,177 @@ bool FindInstancesCmd::DoExecute(SBDebugger d, char** cmd,
 
   } else {
     result.Printf("No objects found with type name %s\n", type_name.c_str());
+  }
+
+  return true;
+}
+
+bool NodeInfoCmd::DoExecute(SBDebugger d, char** cmd,
+                            SBCommandReturnObject& result) {
+  SBTarget target = d.GetSelectedTarget();
+  if (!target.IsValid()) {
+    result.SetError("No valid process, please start something\n");
+    return false;
+  }
+
+  /* Ensure we have a map of objects. */
+  if (!llscan.ScanHeapForObjects(target, result)) {
+    return false;
+  }
+
+  std::string process_type_name("process");
+
+  TypeRecordMap::iterator instance_it =
+      llscan.GetMapsToInstances().find(process_type_name);
+
+  if (instance_it != llscan.GetMapsToInstances().end()) {
+    TypeRecord* t = instance_it->second;
+    for (std::set<uint64_t>::iterator it = t->GetInstances().begin();
+         it != t->GetInstances().end(); ++it) {
+      v8::Error err;
+
+      // The properties object should be a JSObject
+      v8::JSObject process_obj(&llv8, *it);
+
+
+      v8::Value pid_val = process_obj.GetProperty("pid", err);
+
+      if (pid_val.v8() != nullptr) {
+        v8::Smi pid_smi(pid_val);
+        result.Printf("Information for process id %" PRId64
+                      " (process=0x%" PRIx64 ")\n",
+                      pid_smi.GetValue(), process_obj.raw());
+      } else {
+        // This isn't the process object we are looking for.
+        continue;
+      }
+
+      v8::Value platform_val = process_obj.GetProperty("platform", err);
+
+      if (platform_val.v8() != nullptr) {
+        v8::String platform_str(platform_val);
+        result.Printf("Platform = %s, ", platform_str.ToString(err).c_str());
+      }
+
+      v8::Value arch_val = process_obj.GetProperty("arch", err);
+
+      if (arch_val.v8() != nullptr) {
+        v8::String arch_str(arch_val);
+        result.Printf("Architecture = %s, ", arch_str.ToString(err).c_str());
+      }
+
+      v8::Value ver_val = process_obj.GetProperty("version", err);
+
+      if (ver_val.v8() != nullptr) {
+        v8::String ver_str(ver_val);
+        result.Printf("Node Version = %s\n", ver_str.ToString(err).c_str());
+      }
+
+      // Note the extra s on versions!
+      v8::Value versions_val = process_obj.GetProperty("versions", err);
+      if (versions_val.v8() != nullptr) {
+        v8::JSObject versions_obj(versions_val);
+
+        std::vector<std::string> version_keys;
+
+        // Get the list of keys on an object as strings.
+        versions_obj.Keys(version_keys, err);
+
+        std::sort(version_keys.begin(), version_keys.end());
+
+        result.Printf("Component versions (process.versions=0x%" PRIx64 "):\n",
+                      versions_val.raw());
+
+        for (std::vector<std::string>::iterator key = version_keys.begin();
+             key != version_keys.end(); ++key) {
+          v8::Value ver_val = versions_obj.GetProperty(*key, err);
+          if (ver_val.v8() != nullptr) {
+            v8::String ver_str(ver_val);
+            result.Printf("    %s = %s\n", key->c_str(),
+                          ver_str.ToString(err).c_str());
+          }
+        }
+      }
+
+      v8::Value release_val = process_obj.GetProperty("release", err);
+      if (release_val.v8() != nullptr) {
+        v8::JSObject release_obj(release_val);
+
+        std::vector<std::string> release_keys;
+
+        // Get the list of keys on an object as strings.
+        release_obj.Keys(release_keys, err);
+
+        result.Printf("Release Info (process.release=0x%" PRIx64 "):\n",
+                      release_val.raw());
+
+        for (std::vector<std::string>::iterator key = release_keys.begin();
+             key != release_keys.end(); ++key) {
+          v8::Value ver_val = release_obj.GetProperty(*key, err);
+          if (ver_val.v8() != nullptr) {
+            v8::String ver_str(ver_val);
+            result.Printf("    %s = %s\n", key->c_str(),
+                          ver_str.ToString(err).c_str());
+          }
+        }
+      }
+
+      v8::Value execPath_val = process_obj.GetProperty("execPath", err);
+
+      if (execPath_val.v8() != nullptr) {
+        v8::String execPath_str(execPath_val);
+        result.Printf("Executable Path = %s\n",
+                      execPath_str.ToString(err).c_str());
+      }
+
+      v8::Value argv_val = process_obj.GetProperty("argv", err);
+
+      if (argv_val.v8() != nullptr) {
+        v8::JSArray argv_arr(argv_val);
+        result.Printf("Command line arguments (process.argv=0x%" PRIx64 "):\n",
+                      argv_val.raw());
+        // argv is an array, which we can treat as a subtype of object.
+        int64_t length = argv_arr.GetArrayLength(err);
+        for (int64_t i = 0; i < length; ++i) {
+          v8::Value element_val = argv_arr.GetArrayElement(i, err);
+          if (element_val.v8() != nullptr) {
+            v8::String element_str(element_val);
+            result.Printf("    [%" PRId64 "] = '%s'\n", i,
+                          element_str.ToString(err).c_str());
+          }
+        }
+      }
+
+      /* The docs for process.execArgv say "These options are useful in order
+       * to spawn child processes with the same execution environment
+       * as the parent." so being able to check these have been passed in
+       * seems like a good idea.
+       */
+      v8::Value execArgv_val = process_obj.GetProperty("execArgv", err);
+
+      if (argv_val.v8() != nullptr) {
+        // Should possibly just treat this as an object in case anyone has
+        // attached a property.
+        v8::JSArray execArgv_arr(execArgv_val);
+        result.Printf(
+            "Node.js Comamnd line arguments (process.execArgv=0x%" PRIx64
+            "):\n",
+            execArgv_val.raw());
+        // execArgv is an array, which we can treat as a subtype of object.
+        int64_t length = execArgv_arr.GetArrayLength(err);
+        for (int64_t i = 0; i < length; ++i) {
+          v8::Value element_val = execArgv_arr.GetArrayElement(i, err);
+          if (element_val.v8() != nullptr) {
+            v8::String element_str(element_val);
+            result.Printf("    [%" PRId64 "] = '%s'\n", i,
+                          element_str.ToString(err).c_str());
+          }
+        }
+      }
+    }
+
+  } else {
+    result.Printf("No process objects found.\n");
   }
 
   return true;
@@ -293,6 +463,11 @@ void LLScan::ScanMemoryRanges(FindJSObjectsVisitor& v) {
 
   for (uint32_t i = 0; i < memory_regions.GetSize(); ++i) {
     memory_regions.GetMemoryRegionAtIndex(i, region_info);
+
+    if (!region_info.IsWritable()) {
+      continue;
+    }
+
     uint64_t address = region_info.GetRegionBase();
     uint64_t len = region_info.GetRegionEnd() - region_info.GetRegionBase();
 

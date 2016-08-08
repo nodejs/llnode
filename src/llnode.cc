@@ -311,6 +311,11 @@ bool PluginInitialize(SBDebugger d) {
   interpreter.AddCommand("findjsinstances", new llnode::FindInstancesCmd(),
                          "List all objects which share the specified map.\n");
 
+  v8.AddCommand("nodeinfo", new llnode::NodeInfoCmd(),
+                "Print information about Node.js\n");
+
+  interpreter.AddCommand("nodeinfo", new llnode::NodeInfoCmd(),
+                         "Print information about Node.js\n");
 
   return true;
 }

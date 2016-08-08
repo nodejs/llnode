@@ -1279,6 +1279,301 @@ T JSObject::GetInObjectValue(int64_t size, int index, Error& err) {
 }
 
 
+/* Returns the set of keys on an object - similar to Object.keys(obj) in
+ * Javascript. That includes array indices but not special fields like
+ * "length" on an array.
+ */
+void JSObject::Keys(std::vector<std::string>& keys, Error& err) {
+  keys.clear();
+
+  // First handle array indices.
+  ElementKeys(keys, err);
+
+  HeapObject map_obj = GetMap(err);
+
+  Map map(map_obj);
+
+  bool is_dict = map.IsDictionary(err);
+  if (err.Fail()) return;
+
+  if (is_dict) {
+    DictionaryKeys(keys, err);
+  } else {
+    DescriptorKeys(keys, map, err);
+  }
+
+  return;
+}
+
+void JSObject::ElementKeys(std::vector<std::string>& keys, Error& err) {
+  HeapObject elements_obj = Elements(err);
+  if (err.Fail()) return;
+
+  FixedArray elements(elements_obj);
+
+  Smi length_smi = elements.Length(err);
+  if (err.Fail()) return;
+
+  int64_t length = length_smi.GetValue();
+  for (int i = 0; i < length; ++i) {
+    // Add keys for anything that isn't a hole.
+    Value value = elements.Get<Value>(i, err);
+    if (err.Fail()) continue;
+    ;
+
+    bool is_hole = value.IsHole(err);
+    if (err.Fail()) continue;
+    if (!is_hole) {
+      keys.push_back(std::to_string(i));
+    }
+  }
+}
+
+void JSObject::DictionaryKeys(std::vector<std::string>& keys, Error& err) {
+  HeapObject dictionary_obj = Properties(err);
+  if (err.Fail()) return;
+
+  NameDictionary dictionary(dictionary_obj);
+
+  int64_t length = dictionary.Length(err);
+  if (err.Fail()) return;
+
+  Value::InspectOptions options;
+
+  for (int64_t i = 0; i < length; i++) {
+    Value key = dictionary.GetKey(i, err);
+    if (err.Fail()) return;
+
+    // Skip holes
+    bool is_hole = key.IsHoleOrUndefined(err);
+    if (err.Fail()) return;
+    if (is_hole) continue;
+
+    std::string key_name = key.ToString(err);
+    if (err.Fail()) {
+      // TODO - should I continue onto the next key here instead.
+      return;
+    }
+
+    keys.push_back(key_name);
+  }
+}
+
+void JSObject::DescriptorKeys(std::vector<std::string>& keys, Map map,
+                              Error& err) {
+  HeapObject descriptors_obj = map.InstanceDescriptors(err);
+  if (err.Fail()) return;
+
+  DescriptorArray descriptors(descriptors_obj);
+  int64_t own_descriptors_count = map.NumberOfOwnDescriptors(err);
+  if (err.Fail()) return;
+
+  for (int64_t i = 0; i < own_descriptors_count; i++) {
+    Smi details = descriptors.GetDetails(i, err);
+    if (err.Fail()) return;
+
+    Value key = descriptors.GetKey(i, err);
+    if (err.Fail()) return;
+
+    // Skip non-fields for now, Object.keys(obj) does
+    // not seem to return these (for example the "length"
+    // field on an array).
+    if (!descriptors.IsFieldDetails(details)) {
+      continue;
+    }
+
+    std::string key_name = key.ToString(err);
+    if (err.Fail()) {
+      // TODO - should I continue onto the next key here instead.
+      return;
+    }
+
+    keys.push_back(key_name);
+  }
+}
+
+/* Return the v8 value for a property stored using the given key.
+ * (Caller should have some idea of what type of object will be stored
+ * in that key, they will get a v8::Value back that they can cast.)
+ */
+Value JSObject::GetProperty(std::string key_name, Error& err) {
+  HeapObject map_obj = GetMap(err);
+  if (err.Fail()) Value();
+
+  Map map(map_obj);
+
+  bool is_dict = map.IsDictionary(err);
+  if (err.Fail()) return Value();
+
+  if (is_dict) {
+    return GetDictionaryProperty(key_name, err);
+  } else {
+    return GetDescriptorProperty(key_name, map, err);
+  }
+
+  if (err.Fail()) return Value();
+
+  // Nothing's gone wrong, we just didn't find the key.
+  return Value();
+}
+
+Value JSObject::GetDictionaryProperty(std::string key_name, Error& err) {
+  HeapObject dictionary_obj = Properties(err);
+  if (err.Fail()) return Value();
+
+  NameDictionary dictionary(dictionary_obj);
+
+  int64_t length = dictionary.Length(err);
+  if (err.Fail()) return Value();
+
+  for (int64_t i = 0; i < length; i++) {
+    Value key = dictionary.GetKey(i, err);
+    if (err.Fail()) return Value();
+
+    // Skip holes
+    bool is_hole = key.IsHoleOrUndefined(err);
+    if (err.Fail()) return Value();
+    if (is_hole) continue;
+
+    if (key.ToString(err) == key_name) {
+      Value value = dictionary.GetValue(i, err);
+
+      if (err.Fail()) return Value();
+
+      return value;
+    }
+  }
+  return Value();
+}
+
+Value JSObject::GetDescriptorProperty(std::string key_name, Map map,
+                                      Error& err) {
+  HeapObject descriptors_obj = map.InstanceDescriptors(err);
+  if (err.Fail()) return Value();
+
+  DescriptorArray descriptors(descriptors_obj);
+  int64_t own_descriptors_count = map.NumberOfOwnDescriptors(err);
+  if (err.Fail()) return Value();
+
+  int64_t in_object_count = map.InObjectProperties(err);
+  if (err.Fail()) return Value();
+
+  int64_t instance_size = map.InstanceSize(err);
+  if (err.Fail()) return Value();
+
+  HeapObject extra_properties_obj = Properties(err);
+  if (err.Fail()) return Value();
+
+  FixedArray extra_properties(extra_properties_obj);
+
+  for (int64_t i = 0; i < own_descriptors_count; i++) {
+    Smi details = descriptors.GetDetails(i, err);
+    if (err.Fail()) return Value();
+
+    Value key = descriptors.GetKey(i, err);
+    if (err.Fail()) return Value();
+
+    if (key.ToString(err) != key_name) {
+      continue;
+    }
+
+    // Found the right key, get the value.
+    if (err.Fail()) return Value();
+
+    if (descriptors.IsConstFieldDetails(details)) {
+      Value value;
+
+      value = descriptors.GetValue(i, err);
+      if (err.Fail()) return Value();
+
+      continue;
+    }
+
+    // Skip non-fields for now
+    if (!descriptors.IsFieldDetails(details)) {
+      // This path would return the length field for an array,
+      // however Object.keys(arr) doesn't return length as a
+      // field so neither do we.
+      continue;
+    }
+
+    int64_t index = descriptors.FieldIndex(details) - in_object_count;
+
+    if (descriptors.IsDoubleField(details)) {
+      double value;
+      if (index < 0) {
+        value = GetInObjectValue<double>(instance_size, index, err);
+      } else {
+        value = extra_properties.Get<double>(index, err);
+      }
+
+      if (err.Fail()) return Value();
+
+    } else {
+      Value value;
+      if (index < 0) {
+        value = GetInObjectValue<Value>(instance_size, index, err);
+      } else {
+        value = extra_properties.Get<Value>(index, err);
+      }
+
+      if (err.Fail()) {
+        return Value();
+      } else {
+        return value;
+      };
+    }
+    if (err.Fail()) return Value();
+  }
+  return Value();
+}
+
+
+/* An array is also an object so this method is on JSObject
+ * not JSArray.
+ */
+int64_t JSObject::GetArrayLength(Error& err) {
+  HeapObject elements_obj = Elements(err);
+  if (err.Fail()) return 0;
+
+  FixedArray elements(elements_obj);
+  Smi length_smi = elements.Length(err);
+  if (err.Fail()) return 0;
+
+  int64_t length = length_smi.GetValue();
+  return length;
+}
+
+
+/* An array is also an object so this method is on JSObject
+ * not JSArray.
+ * Note that you the user should know what the expect the array to contain
+ * and should check they haven't been returned a hole.
+ */
+v8::Value JSObject::GetArrayElement(int64_t pos, Error& err) {
+  if (pos < 0) {
+    // TODO - Set err.Fail()?
+    return Value();
+  }
+
+  HeapObject elements_obj = Elements(err);
+  if (err.Fail()) return Value();
+
+  FixedArray elements(elements_obj);
+  Smi length_smi = elements.Length(err);
+  if (err.Fail()) return Value();
+
+  int64_t length = length_smi.GetValue();
+  if (pos >= length) {
+    return Value();
+  }
+
+  Value value = elements.Get<v8::Value>(pos, err);
+  if (err.Fail()) return Value();
+
+  return value;
+}
+
 std::string JSArray::Inspect(InspectOptions* options, Error& err) {
   Smi length = Length(err);
   if (err.Fail()) return std::string();

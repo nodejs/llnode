@@ -232,13 +232,23 @@ class JSObject : public HeapObject {
   std::string Inspect(InspectOptions* options, Error& err);
   std::string InspectProperties(Error& err);
 
- protected:
-  template <class T>
-  T GetInObjectValue(int64_t size, int index, Error& err);
-
   std::string InspectElements(Error& err);
   std::string InspectDictionary(Error& err);
   std::string InspectDescriptors(Map map, Error& err);
+  void Keys(std::vector<std::string>& keys, Error& err);
+  Value GetProperty(std::string key_name, Error& err);
+  int64_t GetArrayLength(Error& err);
+  Value GetArrayElement(int64_t pos, Error& err);
+
+
+ protected:
+  template <class T>
+  T GetInObjectValue(int64_t size, int index, Error& err);
+  void ElementKeys(std::vector<std::string>& keys, Error& err);
+  void DictionaryKeys(std::vector<std::string>& keys, Error& err);
+  void DescriptorKeys(std::vector<std::string>& keys, Map map, Error& err);
+  Value GetDictionaryProperty(std::string key_name, Error& err);
+  Value GetDescriptorProperty(std::string key_name, Map map, Error& err);
 };
 
 class JSArray : public JSObject {
