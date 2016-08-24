@@ -110,7 +110,18 @@ to address, apply your changes in a separate commit and push that to your
 feature branch. Post a comment in the pull request afterwards; GitHub does
 not send out notifications when you add commits.
 
-<a id="developers-certificate-of-origin"></a>
+## Code of Conduct
+
+The [Node.js Code of Conduct][] applies to this repo.
+
+[Node.js Code of Conduct]: https://github.com/nodejs/node/blob/master/CODE_OF_CONDUCT.md
+
+## Code Contributions
+
+The llnode project falls under the governance of the post-mortem
+working group which is documented in:
+https://github.com/nodejs/post-mortem/blob/master/GOVERNANCE.md
+
 ## Developer's Certificate of Origin 1.1
 
 By making a contribution to this project, I certify that:
