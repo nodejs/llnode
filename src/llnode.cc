@@ -314,9 +314,6 @@ bool PluginInitialize(SBDebugger d) {
   v8.AddCommand("nodeinfo", new llnode::NodeInfoCmd(),
                 "Print information about Node.js\n");
 
-  interpreter.AddCommand("nodeinfo", new llnode::NodeInfoCmd(),
-                         "Print information about Node.js\n");
-
   return true;
 }
 
