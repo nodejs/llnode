@@ -109,6 +109,7 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
                   res.c_str());
   }
 
+  result.SetStatus(eReturnStatusSuccessFinishResult);
   return true;
 }
 
@@ -143,8 +144,10 @@ bool PrintCmd::DoExecute(SBDebugger d, char** cmd,
   SBValue value = target.EvaluateExpression(full_cmd.c_str(), options);
   if (value.GetError().Fail()) {
     SBStream desc;
-    if (!value.GetError().GetDescription(desc)) return false;
-    result.SetError(desc.GetData());
+    if (value.GetError().GetDescription(desc)) {
+      result.SetError(desc.GetData());
+    }
+    result.SetStatus(eReturnStatusFailed);
     return false;
   }
 
@@ -160,7 +163,7 @@ bool PrintCmd::DoExecute(SBDebugger d, char** cmd,
   }
 
   result.Printf("%s\n", res.c_str());
-
+  result.SetStatus(eReturnStatusSuccessFinishResult);
   return true;
 }
 
@@ -245,7 +248,7 @@ bool ListCmd::DoExecute(SBDebugger d, char** cmd,
     result.Printf("  %d %s\n", line_cursor - lines_found + i + 1,
                   lines[i].c_str());
   }
-
+  result.SetStatus(eReturnStatusSuccessFinishResult);
   return true;
 }
 

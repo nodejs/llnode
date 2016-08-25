@@ -34,6 +34,7 @@ bool FindObjectsCmd::DoExecute(SBDebugger d, char** cmd,
 
   /* Ensure we have a map of objects. */
   if (!llscan.ScanHeapForObjects(target, result)) {
+    result.SetStatus(eReturnStatusFailed);
     return false;
   }
 
@@ -63,6 +64,7 @@ bool FindObjectsCmd::DoExecute(SBDebugger d, char** cmd,
     total_objects += t->GetInstanceCount();
   }
 
+  result.SetStatus(eReturnStatusSuccessFinishResult);
   return true;
 }
 
@@ -107,8 +109,11 @@ bool FindInstancesCmd::DoExecute(SBDebugger d, char** cmd,
 
   } else {
     result.Printf("No objects found with type name %s\n", type_name.c_str());
+    result.SetStatus(eReturnStatusFailed);
+    return false;
   }
 
+  result.SetStatus(eReturnStatusSuccessFinishResult);
   return true;
 }
 
