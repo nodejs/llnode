@@ -1,5 +1,6 @@
 #include <assert.h>
-#include <inttypes.h>
+
+#include <cinttypes>
 
 #include "llv8-inl.h"
 #include "llv8.h"

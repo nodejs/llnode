@@ -1,9 +1,9 @@
 #include <errno.h>
-#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <algorithm>
+#include <cinttypes>
 #include <fstream>
 #include <vector>
 
