@@ -359,9 +359,10 @@ void JSArrayBuffer::Load() {
     common_->Load();
 
     kBackingStoreOffset = kByteLengthOffset + common_->kPointerSize;
-    kBitFieldOffset = kBackingStoreOffset + common_->kPointerSize;
-    if (common_->kPointerSize == 8) kBitFieldOffset += 4;
   }
+
+  kBitFieldOffset = kBackingStoreOffset + common_->kPointerSize;
+  if (common_->kPointerSize == 8) kBitFieldOffset += 4;
 
   kWasNeuteredMask = LoadConstant("jsarray_buffer_was_neutered_mask");
   kWasNeuteredShift = LoadConstant("jsarray_buffer_was_neutered_shift");
