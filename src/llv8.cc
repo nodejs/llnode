@@ -396,6 +396,11 @@ std::string SharedFunctionInfo::GetPostfix(Error& err) {
   Script script = GetScript(err);
   if (err.Fail()) return std::string();
 
+  // There is no `Script` for functions created in C++ (and possibly others)
+  int64_t type = script.GetType(err);
+  if (err.Fail() || type != v8()->types()->kScriptType)
+    return std::string("(no script)");
+
   String name = script.Name(err);
   if (err.Fail()) return std::string();
 

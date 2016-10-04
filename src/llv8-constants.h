@@ -442,6 +442,7 @@ class Types : public Module {
   int64_t kJSRegExpType;
   int64_t kJSDateType;
   int64_t kSharedFunctionInfoType;
+  int64_t kScriptType;
 
  protected:
   void Load();
