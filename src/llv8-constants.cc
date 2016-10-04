@@ -229,7 +229,8 @@ void JSDate::Load() {
 void SharedInfo::Load() {
   kNameOffset = LoadConstant("class_SharedFunctionInfo__name__Object");
   kInferredNameOffset =
-      LoadConstant("class_SharedFunctionInfo__inferred_name__String");
+      LoadConstant("class_SharedFunctionInfo__inferred_name__String",
+                   "class_SharedFunctionInfo__function_identifier__Object");
   kScriptOffset = LoadConstant("class_SharedFunctionInfo__script__Object");
   kCodeOffset = LoadConstant("class_SharedFunctionInfo__code__Code");
   kStartPositionOffset =
