@@ -479,6 +479,7 @@ void Types::Load() {
   kJSDateType = LoadConstant("type_JSDate__JS_DATE_TYPE");
   kSharedFunctionInfoType =
       LoadConstant("type_SharedFunctionInfo__SHARED_FUNCTION_INFO_TYPE");
+  kScriptType = LoadConstant("type_Script__SCRIPT_TYPE");
 }
 
 }  // namespace constants
