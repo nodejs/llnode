@@ -10,6 +10,7 @@
 namespace llnode {
 
 class FindJSObjectsVisitor;
+class FindReferencesCmd;
 
 namespace v8 {
 
@@ -236,6 +237,13 @@ class JSObject : public HeapObject {
   std::string InspectDictionary(Error& err);
   std::string InspectDescriptors(Map map, Error& err);
   void Keys(std::vector<std::string>& keys, Error& err);
+
+  /** Return all the key/value pairs for properties on a JSObject
+   * This allows keys to be inflated to JSStrings later once we know if
+   * they are needed.
+   */
+  void Entries(std::vector<std::pair<Value, Value>>& entries, Error& err);
+
   Value GetProperty(std::string key_name, Error& err);
   int64_t GetArrayLength(Error& err);
   Value GetArrayElement(int64_t pos, Error& err);
@@ -247,6 +255,10 @@ class JSObject : public HeapObject {
   void ElementKeys(std::vector<std::string>& keys, Error& err);
   void DictionaryKeys(std::vector<std::string>& keys, Error& err);
   void DescriptorKeys(std::vector<std::string>& keys, Map map, Error& err);
+  void DictionaryEntries(std::vector<std::pair<Value, Value>>& entries,
+                         Error& err);
+  void DescriptorEntries(std::vector<std::pair<Value, Value>>& entries, Map map,
+                         Error& err);
   Value GetDictionaryProperty(std::string key_name, Error& err);
   Value GetDescriptorProperty(std::string key_name, Map map, Error& err);
 };
@@ -492,6 +504,7 @@ class LLV8 {
   friend class JSDate;
   friend class CodeMap;
   friend class llnode::FindJSObjectsVisitor;
+  friend class llnode::FindReferencesCmd;
 };
 
 #undef V8_VALUE_DEFAULT_METHODS

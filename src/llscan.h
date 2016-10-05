@@ -34,6 +34,22 @@ class NodeInfoCmd : public CommandBase {
                  lldb::SBCommandReturnObject& result) override;
 };
 
+class FindReferencesCmd : public CommandBase {
+ public:
+  ~FindReferencesCmd() override{};
+
+  bool DoExecute(lldb::SBDebugger d, char** cmd,
+                 lldb::SBCommandReturnObject& result) override;
+
+ private:
+  bool detailed_;
+
+  void PrintRefs(lldb::SBCommandReturnObject& result, v8::JSObject& js_obj,
+                 v8::Value& search_value, v8::Error& err);
+  void PrintRefs(lldb::SBCommandReturnObject& result, v8::String& str,
+                 v8::Value& search_value, v8::Error& err);
+};
+
 class MemoryVisitor {
  public:
   virtual ~MemoryVisitor(){};

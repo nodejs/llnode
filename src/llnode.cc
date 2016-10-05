@@ -317,6 +317,9 @@ bool PluginInitialize(SBDebugger d) {
   v8.AddCommand("nodeinfo", new llnode::NodeInfoCmd(),
                 "Print information about Node.js\n");
 
+  v8.AddCommand("findrefs", new llnode::FindReferencesCmd(),
+                "Find all the objects that refer to the specified object.\n");
+
   return true;
 }
 
