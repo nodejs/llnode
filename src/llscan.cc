@@ -348,6 +348,7 @@ uint64_t FindJSObjectsVisitor::Visit(uint64_t location, uint64_t available) {
   v8::Value::InspectOptions inspect_options;
   inspect_options.detailed = false;
   inspect_options.print_map = false;
+  inspect_options.print_source = false;
   inspect_options.string_length = 0;
 
   std::string type_name = heap_object.GetTypeName(&inspect_options, err);

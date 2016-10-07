@@ -235,6 +235,8 @@ void SharedInfo::Load() {
   kCodeOffset = LoadConstant("class_SharedFunctionInfo__code__Code");
   kStartPositionOffset =
       LoadConstant("class_SharedFunctionInfo__start_position_and_type__SMI");
+  kEndPositionOffset =
+      LoadConstant("class_SharedFunctionInfo__end_position__SMI");
   kParameterCountOffset = LoadConstant(
       "class_SharedFunctionInfo__internal_formal_parameter_count__SMI",
       "class_SharedFunctionInfo__formal_parameter_count__SMI");

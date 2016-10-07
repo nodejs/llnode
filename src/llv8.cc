@@ -313,9 +313,92 @@ std::string JSFunction::Inspect(InspectOptions* options, Error& err) {
     if (err.Fail()) return std::string();
 
     if (!context_str.empty()) res += "{\n" + context_str + "}";
+
+    if (options->print_source) {
+      std::string source = GetSource(err);
+      if (!err.Fail()) {
+        res += "\n  source:\n";
+        res += source;
+      }
+    }
   }
 
   return res + ">";
+}
+
+
+std::string JSFunction::GetSource(Error& err) {
+  v8::SharedFunctionInfo info = Info(err);
+  if (err.Fail()) {
+    return std::string();
+  }
+
+  v8::Script script = info.GetScript(err);
+  if (err.Fail()) {
+    return std::string();
+  }
+
+  // There is no `Script` for functions created in C++ (and possibly others)
+  int64_t type = script.GetType(err);
+  if (err.Fail()) {
+    return std::string();
+  }
+
+  if (type != v8()->types()->kScriptType) {
+    return std::string("(no source available)");
+  }
+
+  int64_t start_pos = info.StartPosition(err);
+  int64_t start_line;
+  int64_t start_column;
+
+  if (err.Fail()) {
+    return std::string();
+  }
+
+  script.GetLineColumnFromPos(start_pos, start_line, start_column, err);
+  if (err.Fail()) {
+    return std::string();
+  }
+
+  int64_t end_pos = info.EndPosition(err);
+  int64_t end_line;
+  int64_t end_column;
+
+  if (err.Fail()) {
+    return std::string();
+  }
+
+  script.GetLineColumnFromPos(end_pos, end_line, end_column, err);
+  if (err.Fail()) {
+    return std::string();
+  }
+
+  uint64_t line_limit = (end_line - start_line) + 1;
+  uint32_t lines_found = 0;
+
+  std::string* lines = new std::string[line_limit];
+
+  script.GetLines(start_line, lines, line_limit, lines_found, err);
+
+  if (err.Fail()) {
+    const char* msg = err.GetMessage();
+    if (msg == nullptr) {
+      err = Error(true, "Failed to get Function Source");
+    }
+    delete[] lines;
+    return std::string();
+  }
+
+  std::string res;
+
+  for (uint32_t i = 0; i < lines_found; i++) {
+    res += lines[i] + "\n";
+  }
+
+  delete[] lines;
+
+  return res;
 }
 
 
