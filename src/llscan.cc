@@ -68,6 +68,7 @@ bool FindObjectsCmd::DoExecute(SBDebugger d, char** cmd,
   return true;
 }
 
+
 bool FindInstancesCmd::DoExecute(SBDebugger d, char** cmd,
                                  SBCommandReturnObject& result) {
   if (*cmd == NULL) {
@@ -122,6 +123,7 @@ bool FindInstancesCmd::DoExecute(SBDebugger d, char** cmd,
   result.SetStatus(eReturnStatusSuccessFinishResult);
   return true;
 }
+
 
 bool NodeInfoCmd::DoExecute(SBDebugger d, char** cmd,
                             SBCommandReturnObject& result) {
@@ -349,6 +351,16 @@ bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
     return false;
   }
 
+  /* We can add options to the command and further sub-classes of
+   * object scanner to do other searches, e.g.:
+   * - Objects that refer to a particular string literal.
+   *   (lldb) findreferences -s "Hello World!"
+   * - Objects that contain a property with a particular name
+   *   instead of a value:
+   *   (lldb) findreferences -p "version"
+   */
+  ReferenceScanner scanner(search_value);
+
   // Walk all the object instances and handle them according to their type.
   TypeRecordMap mapstoinstances = llscan.GetMapsToInstances();
   for (auto const entry : mapstoinstances) {
@@ -369,11 +381,11 @@ bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
         // Basically we need to access objects and arrays as both objects and
         // arrays.
         v8::JSObject js_obj(heap_object);
-        PrintRefs(result, js_obj, search_value, err);
+        scanner.PrintRefs(result, js_obj, err);
 
       } else if (type < v8->types()->kFirstNonstringType) {
         v8::String str(heap_object);
-        PrintRefs(result, str, search_value, err);
+        scanner.PrintRefs(result, str, err);
 
       } else if (type < v8->types()->kJSTypedArrayType) {
         // These should only point to off heap memory,
@@ -389,18 +401,18 @@ bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
   return true;
 }
 
-void FindReferencesCmd::PrintRefs(SBCommandReturnObject& result,
-                                  v8::JSObject& js_obj, v8::Value& search_value,
-                                  v8::Error& err) {
+
+void FindReferencesCmd::ReferenceScanner::PrintRefs(
+    SBCommandReturnObject& result, v8::JSObject& js_obj, v8::Error& err) {
   v8::Value::InspectOptions inspect_options;
   inspect_options.detailed = false;
   int64_t length = js_obj.GetArrayLength(err);
   for (int64_t i = 0; i < length; ++i) {
     v8::Value v = js_obj.GetArrayElement(i, err);
-    if (err.Success() && v.raw() == search_value.raw()) {
+    if (err.Success() && v.raw() == search_value_.raw()) {
       std::string type_name = js_obj.GetTypeName(&inspect_options, err);
       result.Printf("0x%" PRIx64 ": %s[%" PRId64 "]=0x%" PRIx64 "\n",
-                    js_obj.raw(), type_name.c_str(), i, search_value.raw());
+                    js_obj.raw(), type_name.c_str(), i, search_value_.raw());
     }
   }
 
@@ -412,19 +424,19 @@ void FindReferencesCmd::PrintRefs(SBCommandReturnObject& result,
   if (err.Success()) {
     for (auto entry : entries) {
       v8::Value v = entry.second;
-      if (v.raw() == search_value.raw()) {
+      if (v.raw() == search_value_.raw()) {
         std::string key = entry.first.ToString(err);
         std::string type_name = js_obj.GetTypeName(&inspect_options, err);
         result.Printf("0x%" PRIx64 ": %s.%s=0x%" PRIx64 "\n", js_obj.raw(),
-                      type_name.c_str(), key.c_str(), search_value.raw());
+                      type_name.c_str(), key.c_str(), search_value_.raw());
       }
     }
   }
 }
 
-void FindReferencesCmd::PrintRefs(SBCommandReturnObject& result,
-                                  v8::String& str, v8::Value& search_value,
-                                  v8::Error& err) {
+
+void FindReferencesCmd::ReferenceScanner::PrintRefs(
+    SBCommandReturnObject& result, v8::String& str, v8::Error& err) {
   v8::Value::InspectOptions inspect_options;
   inspect_options.detailed = false;
   v8::LLV8* v8 = str.v8();
@@ -437,30 +449,31 @@ void FindReferencesCmd::PrintRefs(SBCommandReturnObject& result,
   if (repr == v8->string()->kSlicedStringTag) {
     v8::SlicedString sliced_str(str);
     v8::String parent = sliced_str.Parent(err);
-    if (err.Success() && parent.raw() == search_value.raw()) {
+    if (err.Success() && parent.raw() == search_value_.raw()) {
       std::string type_name = sliced_str.GetTypeName(&inspect_options, err);
       result.Printf("0x%" PRIx64 ": %s.%s=0x%" PRIx64 "\n", str.raw(),
-                    type_name.c_str(), "<Parent>", search_value.raw());
+                    type_name.c_str(), "<Parent>", search_value_.raw());
     }
   } else if (repr == v8->string()->kConsStringTag) {
     v8::ConsString cons_str(str);
 
     v8::String first = cons_str.First(err);
-    if (err.Success() && first.raw() == search_value.raw()) {
+    if (err.Success() && first.raw() == search_value_.raw()) {
       std::string type_name = cons_str.GetTypeName(&inspect_options, err);
       result.Printf("0x%" PRIx64 ": %s.%s=0x%" PRIx64 "\n", str.raw(),
-                    type_name.c_str(), "<First>", search_value.raw());
+                    type_name.c_str(), "<First>", search_value_.raw());
     }
 
     v8::String second = cons_str.Second(err);
-    if (err.Success() && second.raw() == search_value.raw()) {
+    if (err.Success() && second.raw() == search_value_.raw()) {
       std::string type_name = cons_str.GetTypeName(&inspect_options, err);
       result.Printf("0x%" PRIx64 ": %s.%s=0x%" PRIx64 "\n", str.raw(),
-                    type_name.c_str(), "<Second>", search_value.raw());
+                    type_name.c_str(), "<Second>", search_value_.raw());
     }
   }
   // Nothing to do for other kinds of string.
 }
+
 
 FindJSObjectsVisitor::FindJSObjectsVisitor(SBTarget& target,
                                            TypeRecordMap& mapstoinstances)

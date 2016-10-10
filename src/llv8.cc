@@ -1328,9 +1328,8 @@ void JSObject::Entries(std::vector<std::pair<Value, Value>>& entries,
   } else {
     DescriptorEntries(entries, map, err);
   }
-
-  return;
 }
+
 
 void JSObject::DictionaryEntries(std::vector<std::pair<Value, Value>>& entries,
                                  Error& err) {
@@ -1341,8 +1340,6 @@ void JSObject::DictionaryEntries(std::vector<std::pair<Value, Value>>& entries,
 
   int64_t length = dictionary.Length(err);
   if (err.Fail()) return;
-
-  Value::InspectOptions options;
 
   for (int64_t i = 0; i < length; i++) {
     Value key = dictionary.GetKey(i, err);
@@ -1356,10 +1353,10 @@ void JSObject::DictionaryEntries(std::vector<std::pair<Value, Value>>& entries,
 
     Value value = dictionary.GetValue(i, err);
 
-
     entries.push_back(std::pair<Value, Value>(key, value));
   }
 }
+
 
 void JSObject::DescriptorEntries(std::vector<std::pair<Value, Value>>& entries,
                                  Map map, Error& err) {
@@ -1423,8 +1420,6 @@ void JSObject::DictionaryKeys(std::vector<std::string>& keys, Error& err) {
 
   int64_t length = dictionary.Length(err);
   if (err.Fail()) return;
-
-  Value::InspectOptions options;
 
   for (int64_t i = 0; i < length; i++) {
     Value key = dictionary.GetKey(i, err);

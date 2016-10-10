@@ -44,10 +44,27 @@ class FindReferencesCmd : public CommandBase {
  private:
   bool detailed_;
 
-  void PrintRefs(lldb::SBCommandReturnObject& result, v8::JSObject& js_obj,
-                 v8::Value& search_value, v8::Error& err);
-  void PrintRefs(lldb::SBCommandReturnObject& result, v8::String& str,
-                 v8::Value& search_value, v8::Error& err);
+  class ObjectScanner {
+   public:
+    ~ObjectScanner(){};
+    virtual void PrintRefs(lldb::SBCommandReturnObject& result,
+                           v8::JSObject& js_obj, v8::Error& err){};
+    virtual void PrintRefs(lldb::SBCommandReturnObject& result, v8::String& str,
+                           v8::Error& err){};
+  };
+
+  class ReferenceScanner : public ObjectScanner {
+   public:
+    ReferenceScanner(v8::Value& search_value) : search_value_(search_value){};
+
+    void PrintRefs(lldb::SBCommandReturnObject& result, v8::JSObject& js_obj,
+                   v8::Error& err) override;
+    void PrintRefs(lldb::SBCommandReturnObject& result, v8::String& str,
+                   v8::Error& err) override;
+
+   private:
+    v8::Value& search_value_;
+  };
 };
 
 class MemoryVisitor {
