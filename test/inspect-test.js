@@ -90,24 +90,39 @@ tape('v8 inspect', (t) => {
         -1,
         'cons string content');
 
-    if (process.version >= 'v5.0.0')
-      return sess.send(`v8 inspect ${fn}`);
-
-    // No Context debugging for older node.js
-    sess.quit();
-    t.end();
+    sess.send(`v8 inspect -s ${fn}`);
   });
 
-  sess.linesUntil(/}>/, (lines) => {
+  sess.linesUntil(/^>/, (lines) => {
     lines = lines.join('\n');
-    t.ok(/\(previous\)/.test(lines), 'method.previous');
-    t.ok(/scopedVar[^\n]+"scoped value"/.test(lines), 'method.scopedValue');
 
-    let match = lines.match(
-        /\(closure\)=(0x[0-9a-f]+)[^\n]+function: closure/i);
-    t.ok(match, '`method` should have `closure`');
+    // Include 'source:' and '>' to act as boundaries. (Avoid
+    // passing if the whole file it displayed instead of just
+    // the function we want.)
+    const methodSource = "  source:\n" +
+    "  Class.prototype.method = function method() {\n" +
+    "    throw new Error('Uncaught');\n" +
+    "  };\n" +
+    ">"
 
-    sess.send(`v8 inspect ${match[1]}`);
+    t.ok(lines.includes(
+        methodSource),
+        "method source found");
+
+    if (process.version < 'v5.0.0') {
+      sess.quit();
+      t.end();
+    } else {
+      // No Context debugging for older node.js
+      t.ok(/\(previous\)/.test(lines), 'method.previous');
+      t.ok(/scopedVar[^\n]+"scoped value"/.test(lines), 'method.scopedValue');
+
+      let match = lines.match(
+          /\(closure\)=(0x[0-9a-f]+)[^\n]+function: closure/i);
+      t.ok(match, '`method` should have `closure`');
+
+      sess.send(`v8 inspect ${match[1]}`);
+    }
   });
 
   sess.linesUntil(/}>/, (lines) => {
