@@ -242,7 +242,7 @@ class JSObject : public HeapObject {
    * This allows keys to be inflated to JSStrings later once we know if
    * they are needed.
    */
-  void Entries(std::vector<std::pair<Value, Value>>& entries, Error& err);
+  std::vector<std::pair<Value, Value>> Entries(Error& err);
 
   Value GetProperty(std::string key_name, Error& err);
   int64_t GetArrayLength(Error& err);
@@ -255,10 +255,8 @@ class JSObject : public HeapObject {
   void ElementKeys(std::vector<std::string>& keys, Error& err);
   void DictionaryKeys(std::vector<std::string>& keys, Error& err);
   void DescriptorKeys(std::vector<std::string>& keys, Map map, Error& err);
-  void DictionaryEntries(std::vector<std::pair<Value, Value>>& entries,
-                         Error& err);
-  void DescriptorEntries(std::vector<std::pair<Value, Value>>& entries, Map map,
-                         Error& err);
+  std::vector<std::pair<Value, Value>> DictionaryEntries(Error& err);
+  std::vector<std::pair<Value, Value>> DescriptorEntries(Map map, Error& err);
   Value GetDictionaryProperty(std::string key_name, Error& err);
   Value GetDescriptorProperty(std::string key_name, Map map, Error& err);
 };

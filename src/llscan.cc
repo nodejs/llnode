@@ -419,8 +419,7 @@ void FindReferencesCmd::ReferenceScanner::PrintRefs(
   // Walk all the properties in this object.
   // We only create strings for the field names that match the search
   // value.
-  std::vector<std::pair<v8::Value, v8::Value>> entries;
-  js_obj.Entries(entries, err);
+  std::vector<std::pair<v8::Value, v8::Value>> entries = js_obj.Entries(err);
   if (err.Success()) {
     for (auto entry : entries) {
       v8::Value v = entry.second;

@@ -1312,67 +1312,66 @@ void JSObject::Keys(std::vector<std::string>& keys, Error& err) {
 }
 
 
-void JSObject::Entries(std::vector<std::pair<Value, Value>>& entries,
-                       Error& err) {
-  entries.clear();
-
+std::vector<std::pair<Value, Value>> JSObject::Entries(Error& err) {
   HeapObject map_obj = GetMap(err);
 
   Map map(map_obj);
 
   bool is_dict = map.IsDictionary(err);
-  if (err.Fail()) return;
+  if (err.Fail()) return {};
 
   if (is_dict) {
-    DictionaryEntries(entries, err);
+    return DictionaryEntries(err);
   } else {
-    DescriptorEntries(entries, map, err);
+    return DescriptorEntries(map, err);
   }
 }
 
 
-void JSObject::DictionaryEntries(std::vector<std::pair<Value, Value>>& entries,
-                                 Error& err) {
+std::vector<std::pair<Value, Value>> JSObject::DictionaryEntries(Error& err) {
   HeapObject dictionary_obj = Properties(err);
-  if (err.Fail()) return;
+  if (err.Fail()) return {};
 
   NameDictionary dictionary(dictionary_obj);
 
   int64_t length = dictionary.Length(err);
-  if (err.Fail()) return;
+  if (err.Fail()) return {};
 
+  std::vector<std::pair<Value, Value>> entries;
   for (int64_t i = 0; i < length; i++) {
     Value key = dictionary.GetKey(i, err);
 
-    if (err.Fail()) return;
+    if (err.Fail()) return entries;
 
     // Skip holes
     bool is_hole = key.IsHoleOrUndefined(err);
-    if (err.Fail()) return;
+    if (err.Fail()) return entries;
     if (is_hole) continue;
 
     Value value = dictionary.GetValue(i, err);
 
     entries.push_back(std::pair<Value, Value>(key, value));
   }
+  return entries;
 }
 
 
-void JSObject::DescriptorEntries(std::vector<std::pair<Value, Value>>& entries,
-                                 Map map, Error& err) {
+std::vector<std::pair<Value, Value>> JSObject::DescriptorEntries(Map map, Error& err) {
   HeapObject descriptors_obj = map.InstanceDescriptors(err);
-  if (err.Fail()) return;
+  if (err.Fail()) return {};
 
   DescriptorArray descriptors(descriptors_obj);
-  int64_t own_descriptors_count = map.NumberOfOwnDescriptors(err);
-  if (err.Fail()) return;
 
+  int64_t own_descriptors_count = map.NumberOfOwnDescriptors(err);
+  if (err.Fail()) return {};
+
+  std::vector<std::pair<Value, Value>> entries;
   for (int64_t i = 0; i < own_descriptors_count; i++) {
     Smi details = descriptors.GetDetails(i, err);
-    if (err.Fail()) return;
+    if (err.Fail()) return entries;
 
     Value key = descriptors.GetKey(i, err);
-    if (err.Fail()) return;
+    if (err.Fail()) return entries;
 
     // Skip non-fields for now, Object.keys(obj) does
     // not seem to return these (for example the "length"
@@ -1385,6 +1384,8 @@ void JSObject::DescriptorEntries(std::vector<std::pair<Value, Value>>& entries,
 
     entries.push_back(std::pair<Value, Value>(key, value));
   }
+
+  return entries;
 }
 
 
