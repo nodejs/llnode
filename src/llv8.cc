@@ -1311,6 +1311,84 @@ void JSObject::Keys(std::vector<std::string>& keys, Error& err) {
   return;
 }
 
+
+std::vector<std::pair<Value, Value>> JSObject::Entries(Error& err) {
+  HeapObject map_obj = GetMap(err);
+
+  Map map(map_obj);
+
+  bool is_dict = map.IsDictionary(err);
+  if (err.Fail()) return {};
+
+  if (is_dict) {
+    return DictionaryEntries(err);
+  } else {
+    return DescriptorEntries(map, err);
+  }
+}
+
+
+std::vector<std::pair<Value, Value>> JSObject::DictionaryEntries(Error& err) {
+  HeapObject dictionary_obj = Properties(err);
+  if (err.Fail()) return {};
+
+  NameDictionary dictionary(dictionary_obj);
+
+  int64_t length = dictionary.Length(err);
+  if (err.Fail()) return {};
+
+  std::vector<std::pair<Value, Value>> entries;
+  for (int64_t i = 0; i < length; i++) {
+    Value key = dictionary.GetKey(i, err);
+
+    if (err.Fail()) return entries;
+
+    // Skip holes
+    bool is_hole = key.IsHoleOrUndefined(err);
+    if (err.Fail()) return entries;
+    if (is_hole) continue;
+
+    Value value = dictionary.GetValue(i, err);
+
+    entries.push_back(std::pair<Value, Value>(key, value));
+  }
+  return entries;
+}
+
+
+std::vector<std::pair<Value, Value>> JSObject::DescriptorEntries(Map map, Error& err) {
+  HeapObject descriptors_obj = map.InstanceDescriptors(err);
+  if (err.Fail()) return {};
+
+  DescriptorArray descriptors(descriptors_obj);
+
+  int64_t own_descriptors_count = map.NumberOfOwnDescriptors(err);
+  if (err.Fail()) return {};
+
+  std::vector<std::pair<Value, Value>> entries;
+  for (int64_t i = 0; i < own_descriptors_count; i++) {
+    Smi details = descriptors.GetDetails(i, err);
+    if (err.Fail()) return entries;
+
+    Value key = descriptors.GetKey(i, err);
+    if (err.Fail()) return entries;
+
+    // Skip non-fields for now, Object.keys(obj) does
+    // not seem to return these (for example the "length"
+    // field on an array).
+    if (!descriptors.IsFieldDetails(details)) {
+      continue;
+    }
+
+    Value value = descriptors.GetValue(i, err);
+
+    entries.push_back(std::pair<Value, Value>(key, value));
+  }
+
+  return entries;
+}
+
+
 void JSObject::ElementKeys(std::vector<std::string>& keys, Error& err) {
   HeapObject elements_obj = Elements(err);
   if (err.Fail()) return;
@@ -1343,8 +1421,6 @@ void JSObject::DictionaryKeys(std::vector<std::string>& keys, Error& err) {
 
   int64_t length = dictionary.Length(err);
   if (err.Fail()) return;
-
-  Value::InspectOptions options;
 
   for (int64_t i = 0; i < length; i++) {
     Value key = dictionary.GetKey(i, err);
