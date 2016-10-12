@@ -100,9 +100,9 @@ tape('v8 inspect', (t) => {
     // passing if the whole file it displayed instead of just
     // the function we want.)
     const methodSource = "  source:\n" +
-    "  Class.prototype.method = function method() {\n" +
+    "function method() {\n" +
     "    throw new Error('Uncaught');\n" +
-    "  };\n" +
+    "  }\n" +
     ">"
 
     t.ok(lines.includes(

@@ -315,10 +315,28 @@ std::string JSFunction::Inspect(InspectOptions* options, Error& err) {
     if (!context_str.empty()) res += "{\n" + context_str + "}";
 
     if (options->print_source) {
+      SharedFunctionInfo info = Info(err);
+      if (err.Fail()) return res;
+
+      String name = info.Name(err);
+      if (err.Fail()) return res;
+      std::string name_str = name.ToString(err);
+
+      if (err.Fail() || name_str.empty()) {
+        String inferred_name = info.InferredName(err);
+        if (err.Fail()) return res;
+
+        name_str = inferred_name.ToString(err);
+        if (err.Fail()) return res;
+      }
+
       std::string source = GetSource(err);
       if (!err.Fail()) {
         res += "\n  source:\n";
-        res += source;
+        // name_str may be an empty string but that will match
+        // the syntax for an anonymous function declaration correctly.
+        res += "function " + name_str;
+        res += source + "\n";
       }
     }
   }
@@ -345,58 +363,44 @@ std::string JSFunction::GetSource(Error& err) {
   }
 
   if (type != v8()->types()->kScriptType) {
-    return std::string("(no source available)");
-  }
-
-  int64_t start_pos = info.StartPosition(err);
-  int64_t start_line;
-  int64_t start_column;
-
-  if (err.Fail()) {
     return std::string();
   }
 
-  script.GetLineColumnFromPos(start_pos, start_line, start_column, err);
+  HeapObject source = script.Source(err);
+  if (err.Fail()) return std::string();
+
+  int64_t source_type = source.GetType(err);
+  if (err.Fail()) return std::string();
+
+  // No source
+  if (source_type > v8()->types()->kFirstNonstringType) {
+    err = Error(true, "No source");
+    return std::string();
+  }
+
+  String str(source);
+  std::string source_str = str.ToString(err);
+
+  int64_t start_pos = info.StartPosition(err);
+
   if (err.Fail()) {
     return std::string();
   }
 
   int64_t end_pos = info.EndPosition(err);
-  int64_t end_line;
-  int64_t end_column;
 
   if (err.Fail()) {
     return std::string();
   }
 
-  script.GetLineColumnFromPos(end_pos, end_line, end_column, err);
-  if (err.Fail()) {
-    return std::string();
+  int64_t source_len = source_str.length();
+
+  if (end_pos > source_len) {
+    end_pos = source_len;
   }
+  int64_t len = end_pos - start_pos;
 
-  uint64_t line_limit = (end_line - start_line) + 1;
-  uint32_t lines_found = 0;
-
-  std::string* lines = new std::string[line_limit];
-
-  script.GetLines(start_line, lines, line_limit, lines_found, err);
-
-  if (err.Fail()) {
-    const char* msg = err.GetMessage();
-    if (msg == nullptr) {
-      err = Error(true, "Failed to get Function Source");
-    }
-    delete[] lines;
-    return std::string();
-  }
-
-  std::string res;
-
-  for (uint32_t i = 0; i < lines_found; i++) {
-    res += lines[i] + "\n";
-  }
-
-  delete[] lines;
+  std::string res = source_str.substr(start_pos, len);
 
   return res;
 }
