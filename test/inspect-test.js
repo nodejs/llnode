@@ -47,6 +47,7 @@ tape('v8 inspect', (t) => {
 
   let regexp = null;
   let cons = null;
+  let arrowFunc = null;
 
   sess.wait(/Object/, (line) => {
     t.notEqual(line.indexOf(hashmap), -1, 'addr of `Object` should match');
@@ -61,6 +62,11 @@ tape('v8 inspect', (t) => {
         /\[23\]=(0x[0-9a-f]+):<(?:Object: RegExp|JSRegExp source=\/regexp\/)>/);
     t.ok(reMatch, '[23] RegExp element');
     regexp = reMatch[1];
+
+    const arrowMatch = lines.match(
+    /\[25\]=(0x[0-9a-f]+):<(function: c.hashmap).*>/);
+    t.ok(arrowMatch, '[25] Arrow Function element');
+    arrowFunc = arrowMatch[1];
 
     t.ok(/.some-key=<Smi: 42>/.test(lines), '.some-key property');
     t.ok(/.other-key=[^\n]*<String: "ohai">/.test(lines),
@@ -90,6 +96,22 @@ tape('v8 inspect', (t) => {
         -1,
         'cons string content');
 
+    sess.send(`v8 inspect -s ${arrowFunc}`);
+  });
+
+  sess.linesUntil(/^>/, (lines) => {
+    lines = lines.join('\n');
+    // Include 'source:' and '>' to act as boundaries. (Avoid
+    // passing if the whole file it displayed instead of just
+    // the function we want.)
+    const arrowSource = 'source:\n' +
+        'function c.hashmap.(anonymous function)(a,b)=>{a+b}\n' +
+        '>'
+
+    t.ok(lines.includes(
+        arrowSource),
+        'arrow method source');
+
     sess.send(`v8 inspect -s ${fn}`);
   });
 
@@ -107,7 +129,7 @@ tape('v8 inspect', (t) => {
 
     t.ok(lines.includes(
         methodSource),
-        "method source found");
+        'method source found');
 
     if (process.version < 'v5.0.0') {
       sess.quit();

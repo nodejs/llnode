@@ -27,6 +27,7 @@ function closure() {
   c.hashmap[0] = null;
   c.hashmap[4] = undefined;
   c.hashmap[23] = /regexp/;
+  c.hashmap[25] = (a,b)=>{a+b};
 
   let scopedVar = 'scoped value';
 
