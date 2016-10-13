@@ -313,9 +313,96 @@ std::string JSFunction::Inspect(InspectOptions* options, Error& err) {
     if (err.Fail()) return std::string();
 
     if (!context_str.empty()) res += "{\n" + context_str + "}";
+
+    if (options->print_source) {
+      SharedFunctionInfo info = Info(err);
+      if (err.Fail()) return res;
+
+      String name = info.Name(err);
+      if (err.Fail()) return res;
+      std::string name_str = name.ToString(err);
+
+      if (err.Fail() || name_str.empty()) {
+        String inferred_name = info.InferredName(err);
+        if (err.Fail()) return res;
+
+        name_str = inferred_name.ToString(err);
+        if (err.Fail()) return res;
+      }
+
+      std::string source = GetSource(err);
+      if (!err.Fail()) {
+        res += "\n  source:\n";
+        // name_str may be an empty string but that will match
+        // the syntax for an anonymous function declaration correctly.
+        res += "function " + name_str;
+        res += source + "\n";
+      }
+    }
   }
 
   return res + ">";
+}
+
+
+std::string JSFunction::GetSource(Error& err) {
+  v8::SharedFunctionInfo info = Info(err);
+  if (err.Fail()) {
+    return std::string();
+  }
+
+  v8::Script script = info.GetScript(err);
+  if (err.Fail()) {
+    return std::string();
+  }
+
+  // There is no `Script` for functions created in C++ (and possibly others)
+  int64_t type = script.GetType(err);
+  if (err.Fail()) {
+    return std::string();
+  }
+
+  if (type != v8()->types()->kScriptType) {
+    return std::string();
+  }
+
+  HeapObject source = script.Source(err);
+  if (err.Fail()) return std::string();
+
+  int64_t source_type = source.GetType(err);
+  if (err.Fail()) return std::string();
+
+  // No source
+  if (source_type > v8()->types()->kFirstNonstringType) {
+    err = Error(true, "No source");
+    return std::string();
+  }
+
+  String str(source);
+  std::string source_str = str.ToString(err);
+
+  int64_t start_pos = info.StartPosition(err);
+
+  if (err.Fail()) {
+    return std::string();
+  }
+
+  int64_t end_pos = info.EndPosition(err);
+
+  if (err.Fail()) {
+    return std::string();
+  }
+
+  int64_t source_len = source_str.length();
+
+  if (end_pos > source_len) {
+    end_pos = source_len;
+  }
+  int64_t len = end_pos - start_pos;
+
+  std::string res = source_str.substr(start_pos, len);
+
+  return res;
 }
 
 

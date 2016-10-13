@@ -48,12 +48,16 @@ class Value {
   class InspectOptions {
    public:
     InspectOptions()
-        : detailed(false), print_map(false), string_length(kStringLength) {}
+        : detailed(false),
+          print_map(false),
+          print_source(false),
+          string_length(kStringLength) {}
 
     static const unsigned int kStringLength = 16;
 
     bool detailed;
     bool print_map;
+    bool print_source;
     unsigned int string_length;
   };
 
@@ -173,6 +177,7 @@ class SharedFunctionInfo : public HeapObject {
   inline HeapObject GetScopeInfo(Error& err);
   inline int64_t ParameterCount(Error& err);
   inline int64_t StartPosition(Error& err);
+  inline int64_t EndPosition(Error& err);
 
   std::string ProperName(Error& err);
   std::string GetPostfix(Error& err);
@@ -280,6 +285,7 @@ class JSFunction : public JSObject {
 
   std::string GetDebugLine(std::string args, Error& err);
   std::string Inspect(InspectOptions* options, Error& err);
+  std::string GetSource(Error& err);
 };
 
 class JSRegExp : public JSObject {

@@ -247,6 +247,15 @@ inline int64_t SharedFunctionInfo::StartPosition(Error& err) {
   return field;
 }
 
+// TODO (hhellyer): as above, this field is different on 32bit.
+inline int64_t SharedFunctionInfo::EndPosition(Error& err) {
+  int64_t field = LoadField(v8()->shared_info()->kEndPositionOffset, err);
+  if (err.Fail()) return -1;
+
+  field &= 0xffffffff;
+  return field >> 1;
+}
+
 ACCESSOR(JSFunction, Info, js_function()->kSharedInfoOffset,
          SharedFunctionInfo);
 ACCESSOR(JSFunction, GetContext, js_function()->kContextOffset, HeapObject);

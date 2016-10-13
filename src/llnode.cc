@@ -21,6 +21,7 @@ char** CommandBase::ParseInspectOptions(char** cmd,
       {"full-string", no_argument, nullptr, 'F'},
       {"string-length", required_argument, nullptr, 0x1001},
       {"print-map", no_argument, nullptr, 'm'},
+      {"print-source", no_argument, nullptr, 's'},
       {nullptr, 0, nullptr, 0}};
 
   int argc = 0;
@@ -29,7 +30,7 @@ char** CommandBase::ParseInspectOptions(char** cmd,
   optind = 0;
   opterr = 1;
   do {
-    int arg = getopt_long(argc, cmd - 1, "Fm", opts, nullptr);
+    int arg = getopt_long(argc, cmd - 1, "Fms", opts, nullptr);
     if (arg == -1) break;
 
     switch (arg) {
@@ -41,6 +42,9 @@ char** CommandBase::ParseInspectOptions(char** cmd,
         break;
       case 0x1001:
         options->string_length = strtol(optarg, nullptr, 10);
+        break;
+      case 's':
+        options->print_source = true;
         break;
       default:
         continue;
@@ -281,6 +285,7 @@ bool PluginInitialize(SBDebugger d) {
       "Possible flags (all optional):\n\n"
       " * -F, --full-string    - print whole string without adding ellipsis\n"
       " * -m, --print-map      - print object's map address\n"
+      " * -s, --print-source   - print source code for function objects\n"
       " * --string-length num  - print maximum of `num` characters in string\n"
       "\n"
       "Syntax: v8 inspect [flags] expr\n");
