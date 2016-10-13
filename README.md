@@ -59,28 +59,41 @@ sudo make install-linux
 
 ```
 lldb
-(lldb) help v8
+(lldb) v8 help
+     Node.js helpers
+
+Syntax: v8
+
 The following subcommands are supported:
 
-      bt       -- Show a backtrace with node.js JavaScript functions and their
-                  args. An optional argument is accepted; if that argument is a
-                  number, it specifies the number of frames to display. Otherwise
-                  all frames will be dumped.
-
-                  Syntax: v8 bt [number]
-      inspect  -- Print detailed description and contents of the JavaScript
-                  value.
-
-                  Possible flags (all optional):
-
-                  * -F, --full-string    - print whole string without adding ellipsis
-                  * -m, --print-map      - print object's map address
-                  * --string-length num  - print maximum of `num` characters in string
-
-                  Syntax: v8 inspect [flags] expr
-      print    -- Print short description of the JavaScript value.
-
-                  Syntax: v8 print expr
+      bt              -- Show a backtrace with node.js JavaScript functions and their args. An optional argument is accepted; if
+                         that argument is a number, it specifies the number of frames to display. Otherwise all frames will be
+                         dumped.
+                         
+                         Syntax: v8 bt [number]
+      findjsinstances -- List all objects which share the specified map.
+                         Accepts the same options as `v8 inspect`
+      findjsobjects   -- List all object types and instance counts grouped by map and sorted by instance count.
+                         Requires `LLNODE_RANGESFILE` environment variable to be set to a file containing memory ranges for the
+                         core file being debugged.
+                         There are scripts for generating this file on Linux and Mac in the scripts directory of the llnode
+                         repository.
+      findrefs        -- Find all the objects that refer to the specified object.
+      inspect         -- Print detailed description and contents of the JavaScript value.
+                         
+                         Possible flags (all optional):
+                         
+                          * -F, --full-string    - print whole string without adding ellipsis
+                          * -m, --print-map      - print object's map address
+                          * -s, --print-source   - print source code for function objects
+                          * --string-length num  - print maximum of `num` characters in string
+                         
+                         Syntax: v8 inspect [flags] expr
+      nodeinfo        -- Print information about Node.js
+      print           -- Print short description of the JavaScript value.
+                         
+                         Syntax: v8 print expr
+      source          -- Source code information
 
 For more help on any particular subcommand, type 'help <command> <subcommand>'.
 ```
