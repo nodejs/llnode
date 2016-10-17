@@ -19,6 +19,9 @@ brew install llnode
 
 Harder:
 ```bash
+# Clone this repo
+git clone https://github.com/nodejs/llnode.git && cd llnode
+
 # Check out source code of the LLDB that is compatible with OS X's default
 # lldb
 git clone --depth=1 -b release_38 https://github.com/llvm-mirror/lldb.git lldb
@@ -39,6 +42,9 @@ make install-osx
 ### Linux
 
 ```bash
+# Clone this repo
+git clone https://github.com/nodejs/llnode.git && cd llnode
+
 # Install lldb and headers
 sudo apt-get install lldb-3.8 lldb-3.8-dev
 
@@ -69,7 +75,7 @@ The following subcommands are supported:
       bt              -- Show a backtrace with node.js JavaScript functions and their args. An optional argument is accepted; if
                          that argument is a number, it specifies the number of frames to display. Otherwise all frames will be
                          dumped.
-                         
+
                          Syntax: v8 bt [number]
       findjsinstances -- List all objects which share the specified map.
                          Accepts the same options as `v8 inspect`
@@ -80,18 +86,18 @@ The following subcommands are supported:
                          repository.
       findrefs        -- Find all the objects that refer to the specified object.
       inspect         -- Print detailed description and contents of the JavaScript value.
-                         
+
                          Possible flags (all optional):
-                         
+
                           * -F, --full-string    - print whole string without adding ellipsis
                           * -m, --print-map      - print object's map address
                           * -s, --print-source   - print source code for function objects
                           * --string-length num  - print maximum of `num` characters in string
-                         
+
                          Syntax: v8 inspect [flags] expr
       nodeinfo        -- Print information about Node.js
       print           -- Print short description of the JavaScript value.
-                         
+
                          Syntax: v8 print expr
       source          -- Source code information
 
