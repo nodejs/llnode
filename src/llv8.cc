@@ -84,6 +84,11 @@ double LLV8::LoadDouble(int64_t addr, Error& err) {
 
 
 std::string LLV8::LoadString(int64_t addr, int64_t length, Error& err) {
+  if( length < 0 ) {
+    err = Error::Failure("Failed to load V8 one byte string - Invalid length");
+    return std::string();
+  }
+
   char* buf = new char[length + 1];
   SBError sberr;
   process_.ReadMemory(static_cast<addr_t>(addr), buf,
@@ -105,13 +110,18 @@ std::string LLV8::LoadString(int64_t addr, int64_t length, Error& err) {
 
 
 std::string LLV8::LoadTwoByteString(int64_t addr, int64_t length, Error& err) {
+  if( length < 0 ) {
+    err = Error::Failure("Failed to load V8 two byte string - Invalid length");
+    return std::string();
+  }
+
   char* buf = new char[length * 2 + 1];
   SBError sberr;
   process_.ReadMemory(static_cast<addr_t>(addr), buf,
                       static_cast<size_t>(length * 2), sberr);
   if (sberr.Fail()) {
     // TODO(indutny): add more information
-    err = Error::Failure("Failed to load V8 one byte string");
+    err = Error::Failure("Failed to load V8 two byte string");
     delete[] buf;
     return std::string();
   }
