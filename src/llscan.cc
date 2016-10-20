@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <getopt.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -310,56 +311,74 @@ bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
     return false;
   }
 
-  /* Ensure we have a map of objects. */
-  if (!llscan.ScanHeapForObjects(target, result)) {
+  // Default scan type.
+  ScanType type = ScanType::fieldvalue;
+
+  char** start = ParseScanOptions(cmd, type);
+
+  if (*start == nullptr) {
+    result.SetError("Missing search parameter");
     result.SetStatus(eReturnStatusFailed);
     return false;
   }
-
-  v8::Value::InspectOptions inspect_options;
-
-  inspect_options.detailed = detailed_;
-
-  char** start = ParseInspectOptions(cmd, &inspect_options);
-
-  // Currently the only parameter is the pointer to search for which
-  // should be a valid lldb expression.
-
-  std::string full_cmd;
-  for (; start != nullptr && *start != nullptr; start++) full_cmd += *start;
-
-  SBExpressionOptions options;
-  SBValue value = target.EvaluateExpression(full_cmd.c_str(), options);
 
   // Load V8 constants from postmortem data
   llv8.Load(target);
 
-  if (value.GetError().Fail()) {
-    SBStream desc;
-    if (value.GetError().GetDescription(desc)) {
-      result.SetError(desc.GetData());
+  ObjectScanner* scanner;
+
+  switch (type) {
+    case ScanType::fieldvalue: {
+      std::string full_cmd;
+      for (; start != nullptr && *start != nullptr; start++) full_cmd += *start;
+
+      SBExpressionOptions options;
+      SBValue value = target.EvaluateExpression(full_cmd.c_str(), options);
+      if (value.GetError().Fail()) {
+        SBStream desc;
+        if (value.GetError().GetDescription(desc)) {
+          result.SetError(desc.GetData());
+        }
+        result.SetStatus(eReturnStatusFailed);
+        return false;
+      }
+      // Check the address we've been given at least looks like a valid object.
+      v8::Value search_value(&llv8, value.GetValueAsSigned());
+      v8::Smi smi(search_value);
+      if (smi.Check()) {
+        result.SetError("Search value is an SMI.");
+        result.SetStatus(eReturnStatusFailed);
+        return false;
+      }
+      scanner = new ReferenceScanner(search_value);
+      break;
     }
+    case ScanType::propertyname: {
+      // TODO - Should I need to check that start++ is null?
+      std::string property_name = *start;
+      scanner = new PropertyScanner(property_name);
+      break;
+    }
+      /* We can add options to the command and further sub-classes of
+       * object scanner to do other searches, e.g.:
+       * - Objects that refer to a particular string literal.
+       *   (lldb) findreferences -s "Hello World!"
+       */
+    case ScanType::badoption: {
+      result.SetError("Invalid search type");
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+  }
+
+  /* Ensure we have a map of objects.
+   * (Do this after we've checked the options to avoid
+   * a long pause before reporting an error.)
+   */
+  if (!llscan.ScanHeapForObjects(target, result)) {
     result.SetStatus(eReturnStatusFailed);
     return false;
   }
-
-  // Check the address we've been given at least looks like a valid object.
-  v8::Value search_value(&llv8, value.GetValueAsSigned());
-  v8::Smi smi(search_value);
-  if (smi.Check()) {
-    result.SetError("Search value is an SMI.");
-    return false;
-  }
-
-  /* We can add options to the command and further sub-classes of
-   * object scanner to do other searches, e.g.:
-   * - Objects that refer to a particular string literal.
-   *   (lldb) findreferences -s "Hello World!"
-   * - Objects that contain a property with a particular name
-   *   instead of a value:
-   *   (lldb) findreferences -p "version"
-   */
-  ReferenceScanner scanner(search_value);
 
   // Walk all the object instances and handle them according to their type.
   TypeRecordMap mapstoinstances = llscan.GetMapsToInstances();
@@ -381,13 +400,14 @@ bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
         // Basically we need to access objects and arrays as both objects and
         // arrays.
         v8::JSObject js_obj(heap_object);
-        scanner.PrintRefs(result, js_obj, err);
+        scanner->PrintRefs(result, js_obj, err);
 
       } else if (type < v8->types()->kFirstNonstringType) {
         v8::String str(heap_object);
-        scanner.PrintRefs(result, str, err);
+        scanner->PrintRefs(result, str, err);
 
-      } else if (type < v8->types()->kJSTypedArrayType) {
+        // Should this be < or == ?!
+      } else if (type == v8->types()->kJSTypedArrayType) {
         // These should only point to off heap memory,
         // this case should be a no-op.
       } else {
@@ -397,8 +417,47 @@ bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
     }
   }
 
+  delete scanner;
+
   result.SetStatus(eReturnStatusSuccessFinishResult);
   return true;
+}
+
+
+char** FindReferencesCmd::ParseScanOptions(char** cmd, ScanType& type) {
+  static struct option opts[] = {{"value", no_argument, nullptr, 'v'},
+                                 {"name", no_argument, nullptr, 'n'},
+                                 {nullptr, 0, nullptr, 0}};
+
+  int argc = 0;
+  for (char** p = cmd; p != nullptr && *p != nullptr; p++) argc++;
+
+  optind = 0;
+  opterr = 1;
+
+  bool found_scan_type = false;
+
+  do {
+    int arg = getopt_long(argc, cmd - 1, "vn", opts, nullptr);
+    if (arg == -1) break;
+
+    switch (arg) {
+      case 'v':
+        type = found_scan_type ? ScanType::badoption : ScanType::fieldvalue;
+        found_scan_type = true;
+        break;
+      case 'n':
+        type = found_scan_type ? ScanType::badoption : ScanType::propertyname;
+        found_scan_type = true;
+        break;
+      default:
+        type = ScanType::badoption;
+        // Could put error string in options.param_
+        break;
+    }
+  } while (true);
+
+  return cmd + optind - 1;
 }
 
 
@@ -471,6 +530,34 @@ void FindReferencesCmd::ReferenceScanner::PrintRefs(
     }
   }
   // Nothing to do for other kinds of string.
+}
+
+
+void FindReferencesCmd::PropertyScanner::PrintRefs(
+    SBCommandReturnObject& result, v8::JSObject& js_obj, v8::Error& err) {
+  v8::Value::InspectOptions inspect_options;
+  inspect_options.detailed = false;
+
+  // (Note: We skip array elements as they don't have names.)
+
+  // Walk all the properties in this object.
+  // We only create strings for the field names that match the search
+  // value.
+  std::vector<std::pair<v8::Value, v8::Value>> entries = js_obj.Entries(err);
+  if (err.Success()) {
+    for (auto entry : entries) {
+      v8::HeapObject nameObj(entry.first);
+      std::string key = entry.first.ToString(err);
+      if (err.Fail()) {
+        continue;
+      }
+      if (key == search_value_) {
+        std::string type_name = js_obj.GetTypeName(&inspect_options, err);
+        result.Printf("0x%" PRIx64 ": %s.%s=0x%" PRIx64 "\n", js_obj.raw(),
+                      type_name.c_str(), key.c_str(), entry.second.raw());
+      }
+    }
+  }
 }
 
 

@@ -323,7 +323,12 @@ bool PluginInitialize(SBDebugger d) {
                 "Print information about Node.js\n");
 
   v8.AddCommand("findrefs", new llnode::FindReferencesCmd(),
-                "Find all the objects that refer to the specified object.\n");
+                "Finds all the object properties which meet the search criteria.\n"
+                "The default is to list all the object properties that reference the specified value.\n"
+      "Flags:\n\n"
+      " * -v, --value expr     - all properties that refer to the specified JavaScript object (default)\n"
+      " * -n, --name  name     - all properties with the specified name\n"
+      "\n");
 
   return true;
 }
