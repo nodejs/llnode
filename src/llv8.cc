@@ -1482,7 +1482,6 @@ std::vector<std::pair<Value, Value>> JSObject::DescriptorEntries(Map map,
     Value key = descriptors.GetKey(i, err);
     if (err.Fail()) continue;
 
-
     if (descriptors.IsConstFieldDetails(details)) {
       Value value;
 
@@ -1493,32 +1492,23 @@ std::vector<std::pair<Value, Value>> JSObject::DescriptorEntries(Map map,
       continue;
     }
 
-
     // Skip non-fields for now, Object.keys(obj) does
     // not seem to return these (for example the "length"
     // field on an array).
     if (!descriptors.IsFieldDetails(details)) continue;
 
+    if (descriptors.IsDoubleField(details)) continue;
+
     int64_t index = descriptors.FieldIndex(details) - in_object_count;
 
-    if (descriptors.IsDoubleField(details)) {
-      double value;
-      if (index < 0) {
-        value = GetInObjectValue<double>(instance_size, index, err);
-      } else {
-        value = extra_properties.Get<double>(index, err);
-      }
-      // entries.push_back(std::pair<Value, Value>(key, value));
+    Value value;
+    if (index < 0) {
+      value = GetInObjectValue<Value>(instance_size, index, err);
     } else {
-      Value value;
-      if (index < 0) {
-        value = GetInObjectValue<Value>(instance_size, index, err);
-      } else {
-        value = extra_properties.Get<Value>(index, err);
-      }
-
-      entries.push_back(std::pair<Value, Value>(key, value));
+      value = extra_properties.Get<Value>(index, err);
     }
+
+    entries.push_back(std::pair<Value, Value>(key, value));
   }
 
   return entries;

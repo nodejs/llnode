@@ -9,7 +9,7 @@ namespace llnode {
 
 class FindObjectsCmd : public CommandBase {
  public:
-  ~FindObjectsCmd() override{};
+  ~FindObjectsCmd() override {}
 
   bool DoExecute(lldb::SBDebugger d, char** cmd,
                  lldb::SBCommandReturnObject& result) override;
@@ -17,7 +17,7 @@ class FindObjectsCmd : public CommandBase {
 
 class FindInstancesCmd : public CommandBase {
  public:
-  ~FindInstancesCmd() override{};
+  ~FindInstancesCmd() override {}
 
   bool DoExecute(lldb::SBDebugger d, char** cmd,
                  lldb::SBCommandReturnObject& result) override;
@@ -28,7 +28,7 @@ class FindInstancesCmd : public CommandBase {
 
 class NodeInfoCmd : public CommandBase {
  public:
-  ~NodeInfoCmd() override{};
+  ~NodeInfoCmd() override {}
 
   bool DoExecute(lldb::SBDebugger d, char** cmd,
                  lldb::SBCommandReturnObject& result) override;
@@ -36,27 +36,27 @@ class NodeInfoCmd : public CommandBase {
 
 class FindReferencesCmd : public CommandBase {
  public:
-  ~FindReferencesCmd() override{};
+  ~FindReferencesCmd() override {}
 
   bool DoExecute(lldb::SBDebugger d, char** cmd,
                  lldb::SBCommandReturnObject& result) override;
 
-  enum ScanType { fieldvalue, propertyname, badoption };
+  enum ScanType { kFieldValue, kPropertyName, kBadOption };
 
-  char** ParseScanOptions(char** cmd, ScanType& type);
+  char** ParseScanOptions(char** cmd, ScanType* type);
 
   class ObjectScanner {
    public:
-    virtual ~ObjectScanner(){};
+    virtual ~ObjectScanner() {}
     virtual void PrintRefs(lldb::SBCommandReturnObject& result,
-                           v8::JSObject& js_obj, v8::Error& err){};
+                           v8::JSObject& js_obj, v8::Error& err) {}
     virtual void PrintRefs(lldb::SBCommandReturnObject& result, v8::String& str,
-                           v8::Error& err){};
+                           v8::Error& err) {}
   };
 
   class ReferenceScanner : public ObjectScanner {
    public:
-    ReferenceScanner(v8::Value& search_value) : search_value_(search_value){};
+    ReferenceScanner(v8::Value& search_value) : search_value_(search_value) {}
 
     void PrintRefs(lldb::SBCommandReturnObject& result, v8::JSObject& js_obj,
                    v8::Error& err) override;
@@ -70,7 +70,7 @@ class FindReferencesCmd : public CommandBase {
 
   class PropertyScanner : public ObjectScanner {
    public:
-    PropertyScanner(std::string search_value) : search_value_(search_value){};
+    PropertyScanner(std::string search_value) : search_value_(search_value) {}
 
     // We only scan properties on objects not Strings, use default no-op impl
     // of PrintRefs for Strings.
@@ -84,7 +84,7 @@ class FindReferencesCmd : public CommandBase {
 
 class MemoryVisitor {
  public:
-  virtual ~MemoryVisitor(){};
+  virtual ~MemoryVisitor() {}
 
   virtual uint64_t Visit(uint64_t location, uint64_t available) = 0;
 };
@@ -92,7 +92,7 @@ class MemoryVisitor {
 class TypeRecord {
  public:
   TypeRecord(std::string& type_name)
-      : type_name_(type_name), instance_count_(0), total_instance_size_(0){};
+      : type_name_(type_name), instance_count_(0), total_instance_size_(0) {}
 
   inline std::string& GetTypeName() { return type_name_; };
   inline uint64_t GetInstanceCount() { return instance_count_; };
@@ -150,7 +150,7 @@ class FindJSObjectsVisitor : MemoryVisitor {
 
 class LLScan {
  public:
-  LLScan(){};
+  LLScan() {}
 
   bool ScanHeapForObjects(lldb::SBTarget target,
                           lldb::SBCommandReturnObject& result);
@@ -167,7 +167,7 @@ class LLScan {
   class MemoryRange {
    public:
     MemoryRange(uint64_t start, uint64_t length)
-        : start_(start), length_(length), next_(nullptr){};
+        : start_(start), length_(length), next_(nullptr) {}
 
     uint64_t start_;
     uint64_t length_;

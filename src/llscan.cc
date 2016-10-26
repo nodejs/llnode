@@ -312,9 +312,9 @@ bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
   }
 
   // Default scan type.
-  ScanType type = ScanType::fieldvalue;
+  ScanType type = ScanType::kFieldValue;
 
-  char** start = ParseScanOptions(cmd, type);
+  char** start = ParseScanOptions(cmd, &type);
 
   if (*start == nullptr) {
     result.SetError("Missing search parameter");
@@ -328,7 +328,7 @@ bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
   ObjectScanner* scanner;
 
   switch (type) {
-    case ScanType::fieldvalue: {
+    case ScanType::kFieldValue: {
       std::string full_cmd;
       for (; start != nullptr && *start != nullptr; start++) full_cmd += *start;
 
@@ -353,18 +353,18 @@ bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
       scanner = new ReferenceScanner(search_value);
       break;
     }
-    case ScanType::propertyname: {
+    case ScanType::kPropertyName: {
       // TODO - Should I need to check that start++ is null?
       std::string property_name = *start;
       scanner = new PropertyScanner(property_name);
       break;
     }
-      /* We can add options to the command and further sub-classes of
-       * object scanner to do other searches, e.g.:
-       * - Objects that refer to a particular string literal.
-       *   (lldb) findreferences -s "Hello World!"
-       */
-    case ScanType::badoption: {
+    /* We can add options to the command and further sub-classes of
+     * object scanner to do other searches, e.g.:
+     * - Objects that refer to a particular string literal.
+     *   (lldb) findreferences -s "Hello World!"
+     */
+    case ScanType::kBadOption: {
       result.SetError("Invalid search type");
       result.SetStatus(eReturnStatusFailed);
       return false;
@@ -424,35 +424,47 @@ bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
 }
 
 
-char** FindReferencesCmd::ParseScanOptions(char** cmd, ScanType& type) {
+char** FindReferencesCmd::ParseScanOptions(char** cmd, ScanType* type) {
   static struct option opts[] = {{"value", no_argument, nullptr, 'v'},
                                  {"name", no_argument, nullptr, 'n'},
                                  {nullptr, 0, nullptr, 0}};
 
-  int argc = 0;
+  int argc = 1;
   for (char** p = cmd; p != nullptr && *p != nullptr; p++) argc++;
 
-  optind = 0;
-  opterr = 1;
+  char* args[argc];
+
+  // Make this look like a command line, we need a valid element at index 0
+  // for getopt_long to use in its error messages.
+  char name[] = "llscan";
+  args[0] = name;
+  for (int i = 0; i < argc - 1; i++) args[i + 1] = cmd[i];
 
   bool found_scan_type = false;
 
+  // Reset getopts.
+  optind = 1;
+  opterr = 1;
   do {
-    int arg = getopt_long(argc, cmd - 1, "vn", opts, nullptr);
+    int arg = getopt_long(argc, args, "vn", opts, nullptr);
     if (arg == -1) break;
+
+    if (found_scan_type) {
+      *type = ScanType::kBadOption;
+      break;
+    }
 
     switch (arg) {
       case 'v':
-        type = found_scan_type ? ScanType::badoption : ScanType::fieldvalue;
+        *type = ScanType::kFieldValue;
         found_scan_type = true;
         break;
       case 'n':
-        type = found_scan_type ? ScanType::badoption : ScanType::propertyname;
+        *type = ScanType::kPropertyName;
         found_scan_type = true;
         break;
       default:
-        type = ScanType::badoption;
-        // Could put error string in options.param_
+        *type = ScanType::kBadOption;
         break;
     }
   } while (true);
