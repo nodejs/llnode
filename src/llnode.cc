@@ -33,7 +33,7 @@ char** CommandBase::ParseInspectOptions(char** cmd,
   // for getopt_long to use in its error messages.
   char name[] = "llnode";
   args[0] = name;
-  for (int i = 0; i < argc; i++) args[i+1] = cmd[i];
+  for (int i = 0; i < argc - 1; i++) args[i + 1] = cmd[i];
 
   // Reset getopts.
   optind = 1;
@@ -61,7 +61,7 @@ char** CommandBase::ParseInspectOptions(char** cmd,
   } while (true);
 
   // Use the original cmd array for our return value.
-  return cmd + (optind - 1);
+  return &cmd[optind - 1];
 }
 
 
