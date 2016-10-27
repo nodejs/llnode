@@ -24,13 +24,22 @@ char** CommandBase::ParseInspectOptions(char** cmd,
       {"print-source", no_argument, nullptr, 's'},
       {nullptr, 0, nullptr, 0}};
 
-  int argc = 0;
+  int argc = 1;
   for (char** p = cmd; p != nullptr && *p != nullptr; p++) argc++;
 
-  optind = 0;
+  char* args[argc];
+
+  // Make this look like a command line, we need a valid element at index 0
+  // for getopt_long to use in its error messages.
+  char name[] = "llnode";
+  args[0] = name;
+  for (int i = 0; i < argc - 1; i++) args[i + 1] = cmd[i];
+
+  // Reset getopts.
+  optind = 1;
   opterr = 1;
   do {
-    int arg = getopt_long(argc, cmd - 1, "Fms", opts, nullptr);
+    int arg = getopt_long(argc, args, "Fms", opts, nullptr);
     if (arg == -1) break;
 
     switch (arg) {
@@ -51,7 +60,8 @@ char** CommandBase::ParseInspectOptions(char** cmd,
     }
   } while (true);
 
-  return cmd + optind - 1;
+  // Use the original cmd array for our return value.
+  return &cmd[optind - 1];
 }
 
 
