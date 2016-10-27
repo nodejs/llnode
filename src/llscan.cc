@@ -376,6 +376,7 @@ bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
    * a long pause before reporting an error.)
    */
   if (!llscan.ScanHeapForObjects(target, result)) {
+    delete scanner;
     result.SetStatus(eReturnStatusFailed);
     return false;
   }
@@ -406,7 +407,6 @@ bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
         v8::String str(heap_object);
         scanner->PrintRefs(result, str, err);
 
-        // Should this be < or == ?!
       } else if (type == v8->types()->kJSTypedArrayType) {
         // These should only point to off heap memory,
         // this case should be a no-op.
@@ -491,15 +491,16 @@ void FindReferencesCmd::ReferenceScanner::PrintRefs(
   // We only create strings for the field names that match the search
   // value.
   std::vector<std::pair<v8::Value, v8::Value>> entries = js_obj.Entries(err);
-  if (err.Success()) {
-    for (auto entry : entries) {
-      v8::Value v = entry.second;
-      if (v.raw() == search_value_.raw()) {
-        std::string key = entry.first.ToString(err);
-        std::string type_name = js_obj.GetTypeName(&inspect_options, err);
-        result.Printf("0x%" PRIx64 ": %s.%s=0x%" PRIx64 "\n", js_obj.raw(),
-                      type_name.c_str(), key.c_str(), search_value_.raw());
-      }
+  if (err.Fail()) {
+    return;
+  }
+  for (auto entry : entries) {
+    v8::Value v = entry.second;
+    if (v.raw() == search_value_.raw()) {
+      std::string key = entry.first.ToString(err);
+      std::string type_name = js_obj.GetTypeName(&inspect_options, err);
+      result.Printf("0x%" PRIx64 ": %s.%s=0x%" PRIx64 "\n", js_obj.raw(),
+                    type_name.c_str(), key.c_str(), search_value_.raw());
     }
   }
 }
@@ -556,18 +557,19 @@ void FindReferencesCmd::PropertyScanner::PrintRefs(
   // We only create strings for the field names that match the search
   // value.
   std::vector<std::pair<v8::Value, v8::Value>> entries = js_obj.Entries(err);
-  if (err.Success()) {
-    for (auto entry : entries) {
-      v8::HeapObject nameObj(entry.first);
-      std::string key = entry.first.ToString(err);
-      if (err.Fail()) {
-        continue;
-      }
-      if (key == search_value_) {
-        std::string type_name = js_obj.GetTypeName(&inspect_options, err);
-        result.Printf("0x%" PRIx64 ": %s.%s=0x%" PRIx64 "\n", js_obj.raw(),
-                      type_name.c_str(), key.c_str(), entry.second.raw());
-      }
+  if (err.Fail()) {
+    return;
+  }
+  for (auto entry : entries) {
+    v8::HeapObject nameObj(entry.first);
+    std::string key = entry.first.ToString(err);
+    if (err.Fail()) {
+      continue;
+    }
+    if (key == search_value_) {
+      std::string type_name = js_obj.GetTypeName(&inspect_options, err);
+      result.Printf("0x%" PRIx64 ": %s.%s=0x%" PRIx64 "\n", js_obj.raw(),
+                    type_name.c_str(), key.c_str(), entry.second.raw());
     }
   }
 }
