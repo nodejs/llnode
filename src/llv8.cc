@@ -1453,7 +1453,8 @@ std::vector<std::pair<Value, Value>> JSObject::DictionaryEntries(Error& err) {
 }
 
 
-std::vector<std::pair<Value, Value>> JSObject::DescriptorEntries(Map map, Error& err) {
+std::vector<std::pair<Value, Value>> JSObject::DescriptorEntries(Map map,
+                                                                 Error& err) {
   HeapObject descriptors_obj = map.InstanceDescriptors(err);
   if (err.Fail()) return {};
 
@@ -1462,22 +1463,50 @@ std::vector<std::pair<Value, Value>> JSObject::DescriptorEntries(Map map, Error&
   int64_t own_descriptors_count = map.NumberOfOwnDescriptors(err);
   if (err.Fail()) return {};
 
+  int64_t in_object_count = map.InObjectProperties(err);
+  if (err.Fail()) return {};
+
+  int64_t instance_size = map.InstanceSize(err);
+  if (err.Fail()) return {};
+
+  HeapObject extra_properties_obj = Properties(err);
+  if (err.Fail()) return {};
+
+  FixedArray extra_properties(extra_properties_obj);
+
   std::vector<std::pair<Value, Value>> entries;
   for (int64_t i = 0; i < own_descriptors_count; i++) {
     Smi details = descriptors.GetDetails(i, err);
-    if (err.Fail()) return entries;
+    if (err.Fail()) continue;
 
     Value key = descriptors.GetKey(i, err);
-    if (err.Fail()) return entries;
+    if (err.Fail()) continue;
+
+    if (descriptors.IsConstFieldDetails(details)) {
+      Value value;
+
+      value = descriptors.GetValue(i, err);
+      if (err.Fail()) continue;
+
+      entries.push_back(std::pair<Value, Value>(key, value));
+      continue;
+    }
 
     // Skip non-fields for now, Object.keys(obj) does
     // not seem to return these (for example the "length"
     // field on an array).
-    if (!descriptors.IsFieldDetails(details)) {
-      continue;
-    }
+    if (!descriptors.IsFieldDetails(details)) continue;
 
-    Value value = descriptors.GetValue(i, err);
+    if (descriptors.IsDoubleField(details)) continue;
+
+    int64_t index = descriptors.FieldIndex(details) - in_object_count;
+
+    Value value;
+    if (index < 0) {
+      value = GetInObjectValue<Value>(instance_size, index, err);
+    } else {
+      value = extra_properties.Get<Value>(index, err);
+    }
 
     entries.push_back(std::pair<Value, Value>(key, value));
   }
