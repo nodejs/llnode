@@ -57,7 +57,7 @@ static int64_t LookupConstant(SBTarget target, const char* name, int64_t def,
   SBError sberr;
 
   SBProcess process = target.GetProcess();
-  addr_t addr = start.GetLoadAddress(target);
+  addr_t addr = start.GetFileAddress();
 
   // NOTE: size could be bigger for at the end symbols
   if (size >= 8) {
