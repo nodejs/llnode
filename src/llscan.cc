@@ -501,11 +501,15 @@ void FindReferencesCmd::ReferenceScanner::PrintRefs(
   int64_t length = js_obj.GetArrayLength(err);
   for (int64_t i = 0; i < length; ++i) {
     v8::Value v = js_obj.GetArrayElement(i, err);
-    if (err.Success() && v.raw() == search_value_.raw()) {
-      std::string type_name = js_obj.GetTypeName(&inspect_options, err);
-      result.Printf("0x%" PRIx64 ": %s[%" PRId64 "]=0x%" PRIx64 "\n",
-                    js_obj.raw(), type_name.c_str(), i, search_value_.raw());
-    }
+
+    // Array is borked, or not array at all - skip it
+    if (!err.Success()) break;
+
+    if (v.raw() != search_value_.raw()) continue;
+
+    std::string type_name = js_obj.GetTypeName(&inspect_options, err);
+    result.Printf("0x%" PRIx64 ": %s[%" PRId64 "]=0x%" PRIx64 "\n",
+                  js_obj.raw(), type_name.c_str(), i, search_value_.raw());
   }
 
   // Walk all the properties in this object.
