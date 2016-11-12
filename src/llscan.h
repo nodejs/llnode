@@ -147,7 +147,7 @@ class FindJSObjectsVisitor : MemoryVisitor {
   FindJSObjectsVisitor(lldb::SBTarget& target, TypeRecordMap& mapstoinstances);
   ~FindJSObjectsVisitor() {}
 
-  uint64_t Visit(uint64_t location, uint64_t available);
+  uint64_t Visit(uint64_t location, uint64_t word);
 
   uint32_t FoundCount() { return found_count_; }
 

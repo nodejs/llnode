@@ -747,15 +747,7 @@ FindJSObjectsVisitor::FindJSObjectsVisitor(SBTarget& target,
 
 
 /* Visit every address, a bit brute force but it works. */
-uint64_t FindJSObjectsVisitor::Visit(uint64_t location, uint64_t available) {
-  lldb::SBError error;
-
-  // Test if the map points to a real map.
-  // Try to create an object out of it.
-
-  uint64_t word = target_.GetProcess().ReadUnsignedFromMemory(
-      location, address_byte_size_, error);
-
+uint64_t FindJSObjectsVisitor::Visit(uint64_t location, uint64_t word) {
   v8::Value v8_value(&llv8, word);
 
   v8::Error err;
@@ -903,6 +895,12 @@ bool LLScan::ScanHeapForObjects(lldb::SBTarget target,
 void LLScan::ScanMemoryRanges(FindJSObjectsVisitor& v) {
   bool done = false;
 
+  const uint64_t addr_size = process_.GetAddressByteSize();
+
+  // Pages are usually around 1mb, so this should more than enough
+  const uint64_t block_size = 1024 * 1024 * addr_size;
+  unsigned char* block = new unsigned char[block_size];
+
 #ifndef LLDB_SBMemoryRegionInfoList_h_
   MemoryRange* head = ranges_;
 
@@ -929,16 +927,45 @@ void LLScan::ScanMemoryRanges(FindJSObjectsVisitor& v) {
     /* Brute force search - query every address - but allow the visitor code to
      * say how far to move on so we don't read every byte.
      */
-    for (auto searchAddress = address; searchAddress < address + len;) {
-      uint32_t increment =
-          v.Visit(searchAddress, (address + len) - searchAddress);
+
+    SBError sberr;
+    uint64_t address_end = address + len;
+
+    // Load data in blocks to speed up whole process
+    for (auto searchAddress = address; searchAddress < address_end;
+         searchAddress += block_size) {
+      size_t loaded = std::min(address_end - searchAddress, block_size);
+      process_.ReadMemory(searchAddress, block, loaded, sberr);
+      if (sberr.Fail()) {
+        // TODO(indutny): add error information
+        break;
+      }
+
+      uint32_t increment = 1;
+      for (size_t j = 0; j + addr_size <= loaded;) {
+        uint64_t value;
+
+        if (addr_size == 4)
+          value = *reinterpret_cast<uint32_t*>(&block[j]);
+        else if (addr_size == 8)
+          value = *reinterpret_cast<uint64_t*>(&block[j]);
+        else
+          break;
+
+        increment = v.Visit(j + searchAddress, value);
+        if (increment == 0) break;
+
+        j += static_cast<size_t>(increment);
+      }
+
       if (increment == 0) {
         done = true;
         break;
       }
-      searchAddress += increment;
     }
   }
+
+  delete[] block;
 }
 
 
