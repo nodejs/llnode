@@ -301,7 +301,7 @@ bool NodeInfoCmd::DoExecute(SBDebugger d, char** cmd,
 bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
                                   SBCommandReturnObject& result) {
   if (*cmd == NULL) {
-    result.SetError("USAGE: v8 findreferences expr\n");
+    result.SetError("USAGE: v8 findrefs expr\n");
     return false;
   }
 
