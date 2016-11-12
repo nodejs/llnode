@@ -758,33 +758,19 @@ uint64_t FindJSObjectsVisitor::Visit(uint64_t location, uint64_t word) {
   // Test if this is SMI
   // Skip inspecting things that look like Smi's, they aren't objects.
   v8::Smi smi(v8_value);
-  if (smi.Check()) {
-    return address_byte_size_;
-  }
+  if (smi.Check()) return address_byte_size_;
 
   v8::HeapObject heap_object(v8_value);
-  if (!heap_object.Check()) {
+  if (!heap_object.Check()) return address_byte_size_;
+
+  if (heap_object.IsHoleOrUndefined(err) || err.Fail())
     return address_byte_size_;
-  }
-  if (heap_object.IsHoleOrUndefined(err)) {
+
+  if (!IsAHistogramType(heap_object, err) || err.Fail())
     return address_byte_size_;
-  }
-  if (err.Fail()) {
-    return address_byte_size_;
-  }
 
   v8::HeapObject map_object = heap_object.GetMap(err);
-  if (err.Fail() || !map_object.Check()) {
-    return address_byte_size_;
-  }
-
-  if (!IsAHistogramType(heap_object, err)) {
-    return address_byte_size_;
-  }
-
-  if (err.Fail()) {
-    return address_byte_size_;
-  }
+  if (err.Fail() || !map_object.Check()) return address_byte_size_;
 
   v8::Map map(map_object);
 
@@ -831,6 +817,8 @@ uint64_t FindJSObjectsVisitor::Visit(uint64_t location, uint64_t word) {
 bool FindJSObjectsVisitor::IsAHistogramType(v8::HeapObject& heap_object,
                                             v8::Error err) {
   int64_t type = heap_object.GetType(err);
+  if (err.Fail()) return false;
+
   v8::LLV8* v8 = heap_object.v8();
   if (type == v8->types()->kJSObjectType) return true;
   if (type == v8->types()->kJSArrayType) return true;
