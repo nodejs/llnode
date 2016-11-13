@@ -152,13 +152,19 @@ class FindJSObjectsVisitor : MemoryVisitor {
   uint32_t FoundCount() { return found_count_; }
 
  private:
-  bool IsAHistogramType(v8::HeapObject& heap_object, v8::Error err);
+  struct MapCacheEntry {
+    std::string type_name;
+    bool is_histogram;
+  };
+
+  bool IsAHistogramType(v8::Map& map, v8::Error& err);
 
   lldb::SBTarget& target_;
   uint32_t address_byte_size_;
   uint32_t found_count_;
 
   TypeRecordMap& mapstoinstances_;
+  std::map<int64_t, MapCacheEntry> map_cache_;
 };
 
 

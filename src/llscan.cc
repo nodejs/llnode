@@ -763,35 +763,47 @@ uint64_t FindJSObjectsVisitor::Visit(uint64_t location, uint64_t word) {
   v8::HeapObject heap_object(v8_value);
   if (!heap_object.Check()) return address_byte_size_;
 
-  if (heap_object.IsHoleOrUndefined(err) || err.Fail())
-    return address_byte_size_;
-
-  if (!IsAHistogramType(heap_object, err) || err.Fail())
-    return address_byte_size_;
-
   v8::HeapObject map_object = heap_object.GetMap(err);
   if (err.Fail() || !map_object.Check()) return address_byte_size_;
 
   v8::Map map(map_object);
 
-  v8::Value::InspectOptions inspect_options;
-  inspect_options.detailed = false;
-  inspect_options.print_map = false;
-  inspect_options.print_source = false;
-  inspect_options.string_length = 0;
+  MapCacheEntry map_info;
+  if (map_cache_.count(map.raw()) == 0) {
+    v8::Value::InspectOptions inspect_options;
+    inspect_options.detailed = false;
+    inspect_options.print_map = false;
+    inspect_options.print_source = false;
+    inspect_options.string_length = 0;
 
-  std::string type_name = heap_object.GetTypeName(&inspect_options, err);
+    // Check type first
+    map_info.is_histogram = IsAHistogramType(map, err);
+
+    // On success load type name
+    if (map_info.is_histogram)
+      map_info.type_name = heap_object.GetTypeName(&inspect_options, err);
+
+    // Cache result
+    map_cache_.insert(std::pair<int64_t, MapCacheEntry>(map.raw(), map_info));
+
+    if (err.Fail()) return address_byte_size_;
+  } else {
+    map_info = map_cache_.at(map.raw());
+  }
+
+  if (!map_info.is_histogram) return address_byte_size_;
 
   /* No entry in the map, create a new one. */
-  if (mapstoinstances_.count(type_name) == 0) {
-    TypeRecord* t = new TypeRecord(type_name);
+  if (mapstoinstances_.count(map_info.type_name) == 0) {
+    TypeRecord* t = new TypeRecord(map_info.type_name);
 
     t->AddInstance(word, map.InstanceSize(err));
-    mapstoinstances_.insert(std::pair<std::string, TypeRecord*>(type_name, t));
+    mapstoinstances_.insert(
+        std::pair<std::string, TypeRecord*>(map_info.type_name, t));
 
   } else {
     /* Update an existing instance, if we haven't seen this instance before. */
-    TypeRecord* t = mapstoinstances_.at(type_name);
+    TypeRecord* t = mapstoinstances_.at(map_info.type_name);
     /* Determine if this is a new instance.
      * (We are scanning pointers to objects, we may have seen this location
      * before.)
@@ -814,12 +826,11 @@ uint64_t FindJSObjectsVisitor::Visit(uint64_t location, uint64_t word) {
 }
 
 
-bool FindJSObjectsVisitor::IsAHistogramType(v8::HeapObject& heap_object,
-                                            v8::Error err) {
-  int64_t type = heap_object.GetType(err);
+bool FindJSObjectsVisitor::IsAHistogramType(v8::Map& map, v8::Error& err) {
+  int64_t type = map.GetType(err);
   if (err.Fail()) return false;
 
-  v8::LLV8* v8 = heap_object.v8();
+  v8::LLV8* v8 = map.v8();
   if (type == v8->types()->kJSObjectType) return true;
   if (type == v8->types()->kJSArrayType) return true;
   if (type == v8->types()->kJSTypedArrayType) return true;
