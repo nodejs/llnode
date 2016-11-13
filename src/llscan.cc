@@ -623,7 +623,7 @@ uint64_t FindJSObjectsVisitor::Visit(uint64_t location, uint64_t word) {
       map_info.type_name = heap_object.GetTypeName(&inspect_options, err);
 
     // Cache result
-    map_cache_.insert(std::pair<int64_t, MapCacheEntry>(map.raw(), map_info));
+    map_cache_.emplace(map.raw(), map_info);
 
     if (err.Fail()) return address_byte_size_;
   } else {
@@ -637,8 +637,7 @@ uint64_t FindJSObjectsVisitor::Visit(uint64_t location, uint64_t word) {
     TypeRecord* t = new TypeRecord(map_info.type_name);
 
     t->AddInstance(word, map.InstanceSize(err));
-    mapstoinstances_.insert(
-        std::pair<std::string, TypeRecord*>(map_info.type_name, t));
+    mapstoinstances_.emplace(map_info.type_name, t);
 
   } else {
     /* Update an existing instance, if we haven't seen this instance before. */
