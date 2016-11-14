@@ -41,7 +41,7 @@ class FindReferencesCmd : public CommandBase {
   bool DoExecute(lldb::SBDebugger d, char** cmd,
                  lldb::SBCommandReturnObject& result) override;
 
-  enum ScanType { kFieldValue, kPropertyName, kBadOption };
+  enum ScanType { kFieldValue, kPropertyName, kStringValue, kBadOption };
 
   char** ParseScanOptions(char** cmd, ScanType* type);
 
@@ -75,6 +75,20 @@ class FindReferencesCmd : public CommandBase {
     // We only scan properties on objects not Strings, use default no-op impl
     // of PrintRefs for Strings.
     void PrintRefs(lldb::SBCommandReturnObject& result, v8::JSObject& js_obj,
+                   v8::Error& err) override;
+
+   private:
+    std::string search_value_;
+  };
+
+
+  class StringScanner : public ObjectScanner {
+   public:
+    StringScanner(std::string search_value) : search_value_(search_value) {}
+
+    void PrintRefs(lldb::SBCommandReturnObject& result, v8::JSObject& js_obj,
+                   v8::Error& err) override;
+    void PrintRefs(lldb::SBCommandReturnObject& result, v8::String& str,
                    v8::Error& err) override;
 
    private:

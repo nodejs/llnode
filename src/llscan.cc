@@ -354,9 +354,25 @@ bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
       break;
     }
     case ScanType::kPropertyName: {
-      // TODO - Should I need to check that start++ is null?
-      std::string property_name = *start;
+      // Check for extra parameters or parameters that needed quoting.
+      if (start[1] != nullptr) {
+        result.SetError("Extra search parameter or unquoted string specified.");
+        result.SetStatus(eReturnStatusFailed);
+        return false;
+      }
+      std::string property_name = start[0];
       scanner = new PropertyScanner(property_name);
+      break;
+    }
+    case ScanType::kStringValue: {
+      // Check for extra parameters or parameters that needed quoting.
+      if (start[1] != nullptr) {
+        result.SetError("Extra search parameter or unquoted string specified.");
+        result.SetStatus(eReturnStatusFailed);
+        return false;
+      }
+      std::string string_value = start[0];
+      scanner = new StringScanner(string_value);
       break;
     }
     /* We can add options to the command and further sub-classes of
@@ -427,6 +443,7 @@ bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
 char** FindReferencesCmd::ParseScanOptions(char** cmd, ScanType* type) {
   static struct option opts[] = {{"value", no_argument, nullptr, 'v'},
                                  {"name", no_argument, nullptr, 'n'},
+                                 {"string", no_argument, nullptr, 's'},
                                  {nullptr, 0, nullptr, 0}};
 
   int argc = 1;
@@ -446,7 +463,7 @@ char** FindReferencesCmd::ParseScanOptions(char** cmd, ScanType* type) {
   optind = 1;
   opterr = 1;
   do {
-    int arg = getopt_long(argc, args, "vn", opts, nullptr);
+    int arg = getopt_long(argc, args, "vns", opts, nullptr);
     if (arg == -1) break;
 
     if (found_scan_type) {
@@ -461,6 +478,10 @@ char** FindReferencesCmd::ParseScanOptions(char** cmd, ScanType* type) {
         break;
       case 'n':
         *type = ScanType::kPropertyName;
+        found_scan_type = true;
+        break;
+      case 's':
+        *type = ScanType::kStringValue;
         found_scan_type = true;
         break;
       default:
@@ -572,6 +593,146 @@ void FindReferencesCmd::PropertyScanner::PrintRefs(
                     type_name.c_str(), key.c_str(), entry.second.raw());
     }
   }
+}
+
+
+void FindReferencesCmd::StringScanner::PrintRefs(SBCommandReturnObject& result,
+                                                 v8::JSObject& js_obj,
+                                                 v8::Error& err) {
+  v8::Value::InspectOptions inspect_options;
+  inspect_options.detailed = false;
+  v8::LLV8* v8 = js_obj.v8();
+
+  int64_t length = js_obj.GetArrayLength(err);
+  for (int64_t i = 0; i < length; ++i) {
+    v8::Value v = js_obj.GetArrayElement(i, err);
+    if (err.Fail()) {
+      continue;
+    }
+    v8::HeapObject valueObj(v);
+
+    int64_t type = valueObj.GetType(err);
+    if (err.Fail()) {
+      continue;
+    }
+    if (type < v8->types()->kFirstNonstringType) {
+      v8::String valueString(valueObj);
+      std::string value = valueString.ToString(err);
+      if (err.Fail()) {
+        continue;
+      }
+      if (err.Success() && search_value_ == value) {
+        std::string type_name = js_obj.GetTypeName(&inspect_options, err);
+
+        result.Printf("0x%" PRIx64 ": %s[%" PRId64 "]=0x%" PRIx64 " '%s'\n",
+                      js_obj.raw(), type_name.c_str(), i, v.raw(),
+                      value.c_str());
+      }
+    }
+  }
+
+  // Walk all the properties in this object.
+  // We only create strings for the field names that match the search
+  // value.
+  std::vector<std::pair<v8::Value, v8::Value>> entries = js_obj.Entries(err);
+  if (err.Success()) {
+    for (auto entry : entries) {
+      v8::HeapObject valueObj(entry.second);
+      int64_t type = valueObj.GetType(err);
+      if (err.Fail()) {
+        continue;
+      }
+      if (type < v8->types()->kFirstNonstringType) {
+        v8::String valueString(valueObj);
+        std::string value = valueString.ToString(err);
+        if (err.Fail()) {
+          continue;
+        }
+        if (search_value_ == value) {
+          std::string key = entry.first.ToString(err);
+          if (err.Fail()) {
+            continue;
+          }
+          std::string type_name = js_obj.GetTypeName(&inspect_options, err);
+          result.Printf("0x%" PRIx64 ": %s.%s=0x%" PRIx64 " '%s'\n",
+                        js_obj.raw(), type_name.c_str(), key.c_str(),
+                        entry.second.raw(), value.c_str());
+        }
+      }
+    }
+  }
+}
+
+
+void FindReferencesCmd::StringScanner::PrintRefs(SBCommandReturnObject& result,
+                                                 v8::String& str,
+                                                 v8::Error& err) {
+  v8::Value::InspectOptions inspect_options;
+  inspect_options.detailed = false;
+  v8::LLV8* v8 = str.v8();
+
+  // Concatenated and sliced strings refer to other strings so
+  // we need to check their references.
+
+  int64_t repr = str.Representation(err);
+  if (err.Fail()) return;
+
+  if (repr == v8->string()->kSlicedStringTag) {
+    v8::SlicedString sliced_str(str);
+    v8::String parent_str = sliced_str.Parent(err);
+    if (err.Fail()) return;
+    std::string parent = parent_str.ToString(err);
+    if (err.Success() && search_value_ == parent) {
+      std::string type_name = sliced_str.GetTypeName(&inspect_options, err);
+      result.Printf("0x%" PRIx64 ": %s.%s=0x%" PRIx64 " '%s'\n", str.raw(),
+                    type_name.c_str(), "<Parent>", parent_str.raw(),
+                    parent.c_str());
+    }
+  } else if (repr == v8->string()->kConsStringTag) {
+    v8::ConsString cons_str(str);
+
+    v8::String first_str = cons_str.First(err);
+    if (err.Fail()) return;
+
+    // It looks like sometimes one of the strings can be <null> or another
+    // value,
+    // verify that they are a JavaScript String before calling ToString.
+    int64_t first_type = first_str.GetType(err);
+    if (err.Fail()) return;
+
+    if (first_type < v8->types()->kFirstNonstringType) {
+      std::string first = first_str.ToString(err);
+
+      if (err.Success() && search_value_ == first) {
+        std::string type_name = cons_str.GetTypeName(&inspect_options, err);
+        result.Printf("0x%" PRIx64 ": %s.%s=0x%" PRIx64 " '%s'\n", str.raw(),
+                      type_name.c_str(), "<First>", first_str.raw(),
+                      first.c_str());
+      }
+    }
+
+    v8::String second_str = cons_str.Second(err);
+    if (err.Fail()) return;
+
+    // It looks like sometimes one of the strings can be <null> or another
+    // value,
+    // verify that they are a JavaScript String before calling ToString.
+    int64_t second_type = second_str.GetType(err);
+    if (err.Fail()) return;
+
+    if (second_type < v8->types()->kFirstNonstringType) {
+      std::string second = second_str.ToString(err);
+
+      if (err.Success() && search_value_ == second) {
+        std::string type_name = cons_str.GetTypeName(&inspect_options, err);
+        result.Printf("0x%" PRIx64 ": %s.%s=0x%" PRIx64 " '%s'\n", str.raw(),
+                      type_name.c_str(), "<Second>", second_str.raw(),
+                      second.c_str());
+      }
+    }
+  }
+  // Nothing to do for other kinds of string.
+  // They are strings so we will find references to them.
 }
 
 

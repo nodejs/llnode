@@ -341,6 +341,8 @@ bool PluginInitialize(SBDebugger d) {
       " * -v, --value expr     - all properties that refer to the specified "
       "JavaScript object (default)\n"
       " * -n, --name  name     - all properties with the specified name\n"
+      " * -s, --string string  - all properties that refer to the specified "
+      "JavaScript string value\n"
       "\n");
 
   return true;
