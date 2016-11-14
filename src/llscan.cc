@@ -301,7 +301,7 @@ bool NodeInfoCmd::DoExecute(SBDebugger d, char** cmd,
 bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
                                   SBCommandReturnObject& result) {
   if (*cmd == NULL) {
-    result.SetError("USAGE: v8 findreferences expr\n");
+    result.SetError("USAGE: v8 findrefs expr\n");
     return false;
   }
 
@@ -501,11 +501,15 @@ void FindReferencesCmd::ReferenceScanner::PrintRefs(
   int64_t length = js_obj.GetArrayLength(err);
   for (int64_t i = 0; i < length; ++i) {
     v8::Value v = js_obj.GetArrayElement(i, err);
-    if (err.Success() && v.raw() == search_value_.raw()) {
-      std::string type_name = js_obj.GetTypeName(&inspect_options, err);
-      result.Printf("0x%" PRIx64 ": %s[%" PRId64 "]=0x%" PRIx64 "\n",
-                    js_obj.raw(), type_name.c_str(), i, search_value_.raw());
-    }
+
+    // Array is borked, or not array at all - skip it
+    if (!err.Success()) break;
+
+    if (v.raw() != search_value_.raw()) continue;
+
+    std::string type_name = js_obj.GetTypeName(&inspect_options, err);
+    result.Printf("0x%" PRIx64 ": %s[%" PRId64 "]=0x%" PRIx64 "\n",
+                  js_obj.raw(), type_name.c_str(), i, search_value_.raw());
   }
 
   // Walk all the properties in this object.
@@ -747,69 +751,58 @@ FindJSObjectsVisitor::FindJSObjectsVisitor(SBTarget& target,
 
 
 /* Visit every address, a bit brute force but it works. */
-uint64_t FindJSObjectsVisitor::Visit(uint64_t location, uint64_t available) {
-  lldb::SBError error;
-
-  // Test if the map points to a real map.
-  // Try to create an object out of it.
-
-  uint64_t word = target_.GetProcess().ReadUnsignedFromMemory(
-      location, address_byte_size_, error);
-
+uint64_t FindJSObjectsVisitor::Visit(uint64_t location, uint64_t word) {
   v8::Value v8_value(&llv8, word);
 
   v8::Error err;
   // Test if this is SMI
   // Skip inspecting things that look like Smi's, they aren't objects.
   v8::Smi smi(v8_value);
-  if (smi.Check()) {
-    return address_byte_size_;
-  }
+  if (smi.Check()) return address_byte_size_;
 
   v8::HeapObject heap_object(v8_value);
-  if (!heap_object.Check()) {
-    return address_byte_size_;
-  }
-  if (heap_object.IsHoleOrUndefined(err)) {
-    return address_byte_size_;
-  }
-  if (err.Fail()) {
-    return address_byte_size_;
-  }
+  if (!heap_object.Check()) return address_byte_size_;
 
   v8::HeapObject map_object = heap_object.GetMap(err);
-  if (err.Fail() || !map_object.Check()) {
-    return address_byte_size_;
-  }
-
-  if (!IsAHistogramType(heap_object, err)) {
-    return address_byte_size_;
-  }
-
-  if (err.Fail()) {
-    return address_byte_size_;
-  }
+  if (err.Fail() || !map_object.Check()) return address_byte_size_;
 
   v8::Map map(map_object);
 
-  v8::Value::InspectOptions inspect_options;
-  inspect_options.detailed = false;
-  inspect_options.print_map = false;
-  inspect_options.print_source = false;
-  inspect_options.string_length = 0;
+  MapCacheEntry map_info;
+  if (map_cache_.count(map.raw()) == 0) {
+    v8::Value::InspectOptions inspect_options;
+    inspect_options.detailed = false;
+    inspect_options.print_map = false;
+    inspect_options.print_source = false;
+    inspect_options.string_length = 0;
 
-  std::string type_name = heap_object.GetTypeName(&inspect_options, err);
+    // Check type first
+    map_info.is_histogram = IsAHistogramType(map, err);
+
+    // On success load type name
+    if (map_info.is_histogram)
+      map_info.type_name = heap_object.GetTypeName(&inspect_options, err);
+
+    // Cache result
+    map_cache_.emplace(map.raw(), map_info);
+
+    if (err.Fail()) return address_byte_size_;
+  } else {
+    map_info = map_cache_.at(map.raw());
+  }
+
+  if (!map_info.is_histogram) return address_byte_size_;
 
   /* No entry in the map, create a new one. */
-  if (mapstoinstances_.count(type_name) == 0) {
-    TypeRecord* t = new TypeRecord(type_name);
+  if (mapstoinstances_.count(map_info.type_name) == 0) {
+    TypeRecord* t = new TypeRecord(map_info.type_name);
 
     t->AddInstance(word, map.InstanceSize(err));
-    mapstoinstances_.insert(std::pair<std::string, TypeRecord*>(type_name, t));
+    mapstoinstances_.emplace(map_info.type_name, t);
 
   } else {
     /* Update an existing instance, if we haven't seen this instance before. */
-    TypeRecord* t = mapstoinstances_.at(type_name);
+    TypeRecord* t = mapstoinstances_.at(map_info.type_name);
     /* Determine if this is a new instance.
      * (We are scanning pointers to objects, we may have seen this location
      * before.)
@@ -832,10 +825,11 @@ uint64_t FindJSObjectsVisitor::Visit(uint64_t location, uint64_t available) {
 }
 
 
-bool FindJSObjectsVisitor::IsAHistogramType(v8::HeapObject& heap_object,
-                                            v8::Error err) {
-  int64_t type = heap_object.GetType(err);
-  v8::LLV8* v8 = heap_object.v8();
+bool FindJSObjectsVisitor::IsAHistogramType(v8::Map& map, v8::Error& err) {
+  int64_t type = map.GetType(err);
+  if (err.Fail()) return false;
+
+  v8::LLV8* v8 = map.v8();
   if (type == v8->types()->kJSObjectType) return true;
   if (type == v8->types()->kJSArrayType) return true;
   if (type == v8->types()->kJSTypedArrayType) return true;
@@ -903,6 +897,12 @@ bool LLScan::ScanHeapForObjects(lldb::SBTarget target,
 void LLScan::ScanMemoryRanges(FindJSObjectsVisitor& v) {
   bool done = false;
 
+  const uint64_t addr_size = process_.GetAddressByteSize();
+
+  // Pages are usually around 1mb, so this should more than enough
+  const uint64_t block_size = 1024 * 1024 * addr_size;
+  unsigned char* block = new unsigned char[block_size];
+
 #ifndef LLDB_SBMemoryRegionInfoList_h_
   MemoryRange* head = ranges_;
 
@@ -929,16 +929,45 @@ void LLScan::ScanMemoryRanges(FindJSObjectsVisitor& v) {
     /* Brute force search - query every address - but allow the visitor code to
      * say how far to move on so we don't read every byte.
      */
-    for (auto searchAddress = address; searchAddress < address + len;) {
-      uint32_t increment =
-          v.Visit(searchAddress, (address + len) - searchAddress);
+
+    SBError sberr;
+    uint64_t address_end = address + len;
+
+    // Load data in blocks to speed up whole process
+    for (auto searchAddress = address; searchAddress < address_end;
+         searchAddress += block_size) {
+      size_t loaded = std::min(address_end - searchAddress, block_size);
+      process_.ReadMemory(searchAddress, block, loaded, sberr);
+      if (sberr.Fail()) {
+        // TODO(indutny): add error information
+        break;
+      }
+
+      uint32_t increment = 1;
+      for (size_t j = 0; j + addr_size <= loaded;) {
+        uint64_t value;
+
+        if (addr_size == 4)
+          value = *reinterpret_cast<uint32_t*>(&block[j]);
+        else if (addr_size == 8)
+          value = *reinterpret_cast<uint64_t*>(&block[j]);
+        else
+          break;
+
+        increment = v.Visit(j + searchAddress, value);
+        if (increment == 0) break;
+
+        j += static_cast<size_t>(increment);
+      }
+
       if (increment == 0) {
         done = true;
         break;
       }
-      searchAddress += increment;
     }
   }
+
+  delete[] block;
 }
 
 
