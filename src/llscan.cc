@@ -736,14 +736,14 @@ bool LLScan::ScanHeapForObjects(lldb::SBTarget target,
 void LLScan::ScanMemoryRanges(FindJSObjectsVisitor& v) {
   bool done = false;
 
-#ifndef LLDB_SBMemoryRegionInfoList_h_
-  MemoryRange* head = ranges_;
-
   const uint64_t addr_size = process_.GetAddressByteSize();
 
   // Pages are usually around 1mb, so this should more than enough
   const uint64_t block_size = 1024 * 1024 * addr_size;
   unsigned char* block = new unsigned char[block_size];
+
+#ifndef LLDB_SBMemoryRegionInfoList_h_
+  MemoryRange* head = ranges_;
 
   while (head != nullptr && !done) {
     uint64_t address = head->start_;
