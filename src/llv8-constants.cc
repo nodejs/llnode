@@ -208,6 +208,15 @@ void JSObject::Load() {
   kPropertiesOffset = LoadConstant("class_JSReceiver__properties__FixedArray",
                                    "class_JSObject__properties__FixedArray");
   kElementsOffset = LoadConstant("class_JSObject__elements__Object");
+  kInternalFieldsOffset =
+      LoadConstant("class_JSObject__internal_fields__uintptr_t");
+
+  if (kInternalFieldsOffset == -1) {
+    common_->Load();
+
+    // TODO(indutny): check V8 version?
+    kInternalFieldsOffset = kElementsOffset + common_->kPointerSize;
+  }
 }
 
 

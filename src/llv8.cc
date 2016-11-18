@@ -1179,9 +1179,55 @@ std::string JSObject::Inspect(InspectOptions* options, Error& err) {
   if (options->detailed) {
     res += " " + InspectProperties(err);
     if (err.Fail()) return std::string();
+
+    std::string fields = InspectInternalFields(err);
+    if (err.Fail()) return std::string();
+
+    if (!fields.empty()) res += "\n  internal fields {\n" + fields + "}";
   }
 
   res += ">";
+  return res;
+}
+
+
+std::string JSObject::InspectInternalFields(Error& err) {
+  HeapObject map_obj = GetMap(err);
+  if (err.Fail()) return std::string();
+
+  Map map(map_obj);
+  int64_t type = map.GetType(err);
+  if (err.Fail()) return std::string();
+
+  // Only JSObject for now
+  if (!JSObject::IsObjectType(v8(), type)) return std::string();
+
+  int64_t instance_size = map.InstanceSize(err);
+
+  // kVariableSizeSentinel == 0
+  // TODO(indutny): post-mortem constant for this?
+  if (err.Fail() || instance_size == 0) return std::string();
+
+  int64_t in_object_props = map.InObjectProperties(err);
+  if (err.Fail()) return std::string();
+
+  // in-object properties are appended to the end of the JSObject,
+  // skip them.
+  instance_size -= in_object_props * v8()->common()->kPointerSize;
+
+  std::string res;
+  for (int64_t off = v8()->js_object()->kInternalFieldsOffset;
+       off < instance_size; off += v8()->common()->kPointerSize) {
+    int64_t field = LoadField(off, err);
+    if (err.Fail()) return std::string();
+
+    char tmp[128];
+    snprintf(tmp, sizeof(tmp), "    0x%016" PRIx64, field);
+
+    if (!res.empty()) res += ",\n  ";
+    res += tmp;
+  }
+
   return res;
 }
 
