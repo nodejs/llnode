@@ -124,15 +124,34 @@ void Common::Load() {
   kPointerSize = 1 << LoadConstant("PointerSizeLog2");
   kVersionMajor = LoadRawConstant("v8::internal::Version::major_");
   kVersionMinor = LoadRawConstant("v8::internal::Version::minor_");
+  kVersionPatch = LoadRawConstant("v8::internal::Version::patch_");
 }
 
 
-bool Common::CheckVersion(int64_t major, int64_t minor) {
+bool Common::CheckHighestVersion(int64_t major, int64_t minor, int64_t patch) {
   Load();
 
-  if (major > kVersionMajor) return false;
-  if (minor > kVersionMinor) return false;
+  if (kVersionMajor < major) return true;
+  if (kVersionMajor > major) return false;
 
+  if (kVersionMinor < minor) return true;
+  if (kVersionMinor > minor) return false;
+
+  if (kVersionPatch > patch) return false;
+  return true;
+}
+
+
+bool Common::CheckLowestVersion(int64_t major, int64_t minor, int64_t patch) {
+  Load();
+
+  if (kVersionMajor > major) return true;
+  if (kVersionMajor < major) return false;
+
+  if (kVersionMinor > minor) return true;
+  if (kVersionMinor < minor) return false;
+
+  if (kVersionPatch < patch) return false;
   return true;
 }
 
@@ -472,6 +491,8 @@ void Types::Load() {
       LoadConstant("type_JSGlobalObject__JS_GLOBAL_OBJECT_TYPE");
   kOddballType = LoadConstant("type_Oddball__ODDBALL_TYPE");
   kJSObjectType = LoadConstant("type_JSObject__JS_OBJECT_TYPE");
+  kJSAPIObjectType = LoadConstant("APIObjectType");
+  kJSSpecialAPIObjectType = LoadConstant("APISpecialObjectType");
   kJSArrayType = LoadConstant("type_JSArray__JS_ARRAY_TYPE");
   kCodeType = LoadConstant("type_Code__CODE_TYPE");
   kJSFunctionType = LoadConstant("type_JSFunction__JS_FUNCTION_TYPE");
@@ -483,6 +504,13 @@ void Types::Load() {
   kSharedFunctionInfoType =
       LoadConstant("type_SharedFunctionInfo__SHARED_FUNCTION_INFO_TYPE");
   kScriptType = LoadConstant("type_Script__SCRIPT_TYPE");
+
+  if (kJSAPIObjectType == -1) {
+    common_->Load();
+
+    if (common_->CheckLowestVersion(5, 2, 12))
+      kJSAPIObjectType = kJSObjectType - 1;
+  }
 }
 
 }  // namespace constants

@@ -165,6 +165,12 @@ inline int64_t Map::InstanceSize(Error& err) {
 ACCESSOR(JSObject, Properties, js_object()->kPropertiesOffset, HeapObject)
 ACCESSOR(JSObject, Elements, js_object()->kElementsOffset, HeapObject)
 
+inline bool JSObject::IsObjectType(LLV8* v8, int64_t type) {
+  return type == v8->types()->kJSObjectType ||
+         type == v8->types()->kJSAPIObjectType ||
+         type == v8->types()->kJSSpecialAPIObjectType;
+}
+
 ACCESSOR(HeapNumber, GetValue, heap_number()->kValueOffset, double)
 
 ACCESSOR(JSArray, Length, js_array()->kLengthOffset, Smi)

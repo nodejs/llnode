@@ -45,8 +45,10 @@ class Common : public Module {
   int64_t kPointerSize;
   int64_t kVersionMajor;
   int64_t kVersionMinor;
+  int64_t kVersionPatch;
 
-  bool CheckVersion(int64_t major, int64_t minor);
+  bool CheckLowestVersion(int64_t major, int64_t minor, int64_t patch);
+  bool CheckHighestVersion(int64_t major, int64_t minor, int64_t patch);
 
   // Public, because other modules may use it
   void Load();
@@ -434,6 +436,8 @@ class Types : public Module {
   int64_t kGlobalObjectType;
   int64_t kOddballType;
   int64_t kJSObjectType;
+  int64_t kJSAPIObjectType;
+  int64_t kJSSpecialAPIObjectType;
   int64_t kJSArrayType;
   int64_t kCodeType;
   int64_t kJSFunctionType;
