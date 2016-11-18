@@ -138,14 +138,24 @@ tape('v8 inspect', (t) => {
       // No Context debugging for older node.js
       t.ok(/\(previous\)/.test(lines), 'method.previous');
       t.ok(/scopedVar[^\n]+"scoped value"/.test(lines), 'method.scopedValue');
-      t.ok(/scopedAPI[^\n]+Zlib/.test(lines), 'method.scopedAPI');
 
       let match = lines.match(
+          /scopedAPI=(0x[0-9a-f]+)[^\n]+Zlib/i);
+      t.ok(match, '`method` should have `scopedAPI`');
+
+      sess.send(`v8 inspect ${match[1]}`);
+
+      match = lines.match(
           /\(closure\)=(0x[0-9a-f]+)[^\n]+function: closure/i);
       t.ok(match, '`method` should have `closure`');
 
       sess.send(`v8 inspect ${match[1]}`);
     }
+  });
+
+  sess.linesUntil(/}>/, (lines) => {
+    lines = lines.join('\n');
+    t.ok(/internal fields/.test(lines), 'method.scopedAPI.internalFields');
   });
 
   sess.linesUntil(/}>/, (lines) => {

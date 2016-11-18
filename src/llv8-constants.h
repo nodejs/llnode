@@ -104,6 +104,7 @@ class JSObject : public Module {
 
   int64_t kPropertiesOffset;
   int64_t kElementsOffset;
+  int64_t kInternalFieldsOffset;
 
  protected:
   void Load();

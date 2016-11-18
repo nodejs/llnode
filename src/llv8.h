@@ -236,6 +236,7 @@ class JSObject : public HeapObject {
   inline HeapObject Elements(Error& err);
 
   std::string Inspect(InspectOptions* options, Error& err);
+  std::string InspectInternalFields(Error& err);
   std::string InspectProperties(Error& err);
 
   std::string InspectElements(Error& err);
