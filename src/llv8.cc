@@ -722,7 +722,7 @@ std::string HeapObject::Inspect(InspectOptions* options, Error& err) {
     return pre + m.Inspect(options, err);
   }
 
-  if (type == v8()->types()->kJSObjectType) {
+  if (JSObject::IsObjectType(v8(), type)) {
     JSObject o(this);
     return pre + o.Inspect(options, err);
   }
@@ -799,7 +799,7 @@ std::string HeapObject::GetTypeName(InspectOptions* options, Error& err) {
     return "(Map)";
   }
 
-  if (type == v8()->types()->kJSObjectType) {
+  if (JSObject::IsObjectType(v8(), type)) {
     v8::HeapObject map_obj = GetMap(err);
     if (err.Fail()) {
       return std::string();

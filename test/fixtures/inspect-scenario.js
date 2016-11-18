@@ -2,6 +2,8 @@
 
 const common = require('../common');
 
+const zlib = require('zlib');
+
 let outerVar = 'outer variable';
 
 function closure() {
@@ -30,9 +32,10 @@ function closure() {
   c.hashmap[25] = (a,b)=>{a+b};
 
   let scopedVar = 'scoped value';
+  let scopedAPI = zlib.createDeflate()._handle;
 
   c.hashmap.scoped = function name() {
-    return scopedVar + outerVar;
+    return scopedVar + outerVar + scopedAPI;
   };
 
   c.method();

@@ -253,6 +253,7 @@ class JSObject : public HeapObject {
   int64_t GetArrayLength(Error& err);
   Value GetArrayElement(int64_t pos, Error& err);
 
+  static inline bool IsObjectType(LLV8* v8, int64_t type);
 
  protected:
   template <class T>
