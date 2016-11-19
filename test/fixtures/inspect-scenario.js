@@ -6,6 +6,8 @@ const zlib = require('zlib');
 
 let outerVar = 'outer variable';
 
+exports.holder = {};
+
 function closure() {
 
   function Class() {
@@ -33,6 +35,8 @@ function closure() {
 
   let scopedVar = 'scoped value';
   let scopedAPI = zlib.createDeflate()._handle;
+
+  exports.holder = scopedAPI;
 
   c.hashmap.scoped = function name() {
     return scopedVar + outerVar + scopedAPI;
