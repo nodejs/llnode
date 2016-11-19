@@ -1,5 +1,7 @@
 'use strict';
 
+const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const util = require('util');
 const spawn = require('child_process').spawn;
@@ -7,6 +9,9 @@ const EventEmitter = require('events').EventEmitter;
 
 exports.fixturesDir = path.join(__dirname, 'fixtures');
 exports.buildDir = path.join(__dirname, '..', 'out', 'Release');
+
+exports.core = path.join(os.tmpdir(), 'core');
+exports.ranges = exports.core + '.ranges';
 
 let pluginName;
 if (process.platform === 'darwin')
@@ -28,7 +33,10 @@ function Session(scenario) {
     '--abort_on_uncaught_exception',
     path.join(exports.fixturesDir, scenario)
   ], {
-    stdio: [ 'pipe', 'pipe', 'inherit' ]
+    stdio: [ 'pipe', 'pipe', 'inherit' ],
+    env: util._extend(util._extend({}, process.env), {
+      LLNODE_RANGESFILE: exports.ranges
+    })
   });
 
   this.lldb.stdin.write(`plugin load "${exports.llnodePath}"\n`);
@@ -136,5 +144,23 @@ Session.prototype.linesUntil = function linesUntil(regexp, callback) {
     self._unqueueWait();
 
     callback(lines);
+  });
+};
+
+exports.generateRanges = function generateRanges(cb) {
+  let script;
+  if (process.platform === 'darwin')
+    script = path.join(__dirname, '..', 'scripts', 'otool2segments.py');
+  else
+    script = path.join(__dirname, '..', 'scripts', 'readelf2segments.py');
+
+  const proc = spawn(script, [ exports.core ], {
+    stdio: [ null, 'pipe', 'inherit' ]
+  });
+
+  proc.stdout.pipe(fs.createWriteStream(exports.ranges));
+
+  proc.on('exit', (status) => {
+    cb(status === 0 ? null : new Error('Failed to generate ranges'));
   });
 };
