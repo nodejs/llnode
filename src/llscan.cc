@@ -495,8 +495,6 @@ char** FindReferencesCmd::ParseScanOptions(char** cmd, ScanType* type) {
 
 void FindReferencesCmd::ReferenceScanner::PrintRefs(
     SBCommandReturnObject& result, v8::JSObject& js_obj, v8::Error& err) {
-  v8::Value::InspectOptions inspect_options;
-  inspect_options.detailed = false;
   int64_t length = js_obj.GetArrayLength(err);
   for (int64_t i = 0; i < length; ++i) {
     v8::Value v = js_obj.GetArrayElement(i, err);
@@ -506,7 +504,7 @@ void FindReferencesCmd::ReferenceScanner::PrintRefs(
 
     if (v.raw() != search_value_.raw()) continue;
 
-    std::string type_name = js_obj.GetTypeName(&inspect_options, err);
+    std::string type_name = js_obj.GetTypeName(err);
     result.Printf("0x%" PRIx64 ": %s[%" PRId64 "]=0x%" PRIx64 "\n",
                   js_obj.raw(), type_name.c_str(), i, search_value_.raw());
   }
@@ -522,7 +520,7 @@ void FindReferencesCmd::ReferenceScanner::PrintRefs(
     v8::Value v = entry.second;
     if (v.raw() == search_value_.raw()) {
       std::string key = entry.first.ToString(err);
-      std::string type_name = js_obj.GetTypeName(&inspect_options, err);
+      std::string type_name = js_obj.GetTypeName(err);
       result.Printf("0x%" PRIx64 ": %s.%s=0x%" PRIx64 "\n", js_obj.raw(),
                     type_name.c_str(), key.c_str(), search_value_.raw());
     }
@@ -532,8 +530,6 @@ void FindReferencesCmd::ReferenceScanner::PrintRefs(
 
 void FindReferencesCmd::ReferenceScanner::PrintRefs(
     SBCommandReturnObject& result, v8::String& str, v8::Error& err) {
-  v8::Value::InspectOptions inspect_options;
-  inspect_options.detailed = false;
   v8::LLV8* v8 = str.v8();
 
   int64_t repr = str.Representation(err);
@@ -545,7 +541,7 @@ void FindReferencesCmd::ReferenceScanner::PrintRefs(
     v8::SlicedString sliced_str(str);
     v8::String parent = sliced_str.Parent(err);
     if (err.Success() && parent.raw() == search_value_.raw()) {
-      std::string type_name = sliced_str.GetTypeName(&inspect_options, err);
+      std::string type_name = sliced_str.GetTypeName(err);
       result.Printf("0x%" PRIx64 ": %s.%s=0x%" PRIx64 "\n", str.raw(),
                     type_name.c_str(), "<Parent>", search_value_.raw());
     }
@@ -554,14 +550,14 @@ void FindReferencesCmd::ReferenceScanner::PrintRefs(
 
     v8::String first = cons_str.First(err);
     if (err.Success() && first.raw() == search_value_.raw()) {
-      std::string type_name = cons_str.GetTypeName(&inspect_options, err);
+      std::string type_name = cons_str.GetTypeName(err);
       result.Printf("0x%" PRIx64 ": %s.%s=0x%" PRIx64 "\n", str.raw(),
                     type_name.c_str(), "<First>", search_value_.raw());
     }
 
     v8::String second = cons_str.Second(err);
     if (err.Success() && second.raw() == search_value_.raw()) {
-      std::string type_name = cons_str.GetTypeName(&inspect_options, err);
+      std::string type_name = cons_str.GetTypeName(err);
       result.Printf("0x%" PRIx64 ": %s.%s=0x%" PRIx64 "\n", str.raw(),
                     type_name.c_str(), "<Second>", search_value_.raw());
     }
@@ -572,8 +568,6 @@ void FindReferencesCmd::ReferenceScanner::PrintRefs(
 
 void FindReferencesCmd::PropertyScanner::PrintRefs(
     SBCommandReturnObject& result, v8::JSObject& js_obj, v8::Error& err) {
-  v8::Value::InspectOptions inspect_options;
-  inspect_options.detailed = false;
 
   // (Note: We skip array elements as they don't have names.)
 
@@ -591,7 +585,7 @@ void FindReferencesCmd::PropertyScanner::PrintRefs(
       continue;
     }
     if (key == search_value_) {
-      std::string type_name = js_obj.GetTypeName(&inspect_options, err);
+      std::string type_name = js_obj.GetTypeName(err);
       result.Printf("0x%" PRIx64 ": %s.%s=0x%" PRIx64 "\n", js_obj.raw(),
                     type_name.c_str(), key.c_str(), entry.second.raw());
     }
@@ -602,8 +596,6 @@ void FindReferencesCmd::PropertyScanner::PrintRefs(
 void FindReferencesCmd::StringScanner::PrintRefs(SBCommandReturnObject& result,
                                                  v8::JSObject& js_obj,
                                                  v8::Error& err) {
-  v8::Value::InspectOptions inspect_options;
-  inspect_options.detailed = false;
   v8::LLV8* v8 = js_obj.v8();
 
   int64_t length = js_obj.GetArrayLength(err);
@@ -625,7 +617,7 @@ void FindReferencesCmd::StringScanner::PrintRefs(SBCommandReturnObject& result,
         continue;
       }
       if (err.Success() && search_value_ == value) {
-        std::string type_name = js_obj.GetTypeName(&inspect_options, err);
+        std::string type_name = js_obj.GetTypeName(err);
 
         result.Printf("0x%" PRIx64 ": %s[%" PRId64 "]=0x%" PRIx64 " '%s'\n",
                       js_obj.raw(), type_name.c_str(), i, v.raw(),
@@ -656,7 +648,7 @@ void FindReferencesCmd::StringScanner::PrintRefs(SBCommandReturnObject& result,
           if (err.Fail()) {
             continue;
           }
-          std::string type_name = js_obj.GetTypeName(&inspect_options, err);
+          std::string type_name = js_obj.GetTypeName(err);
           result.Printf("0x%" PRIx64 ": %s.%s=0x%" PRIx64 " '%s'\n",
                         js_obj.raw(), type_name.c_str(), key.c_str(),
                         entry.second.raw(), value.c_str());
@@ -670,8 +662,6 @@ void FindReferencesCmd::StringScanner::PrintRefs(SBCommandReturnObject& result,
 void FindReferencesCmd::StringScanner::PrintRefs(SBCommandReturnObject& result,
                                                  v8::String& str,
                                                  v8::Error& err) {
-  v8::Value::InspectOptions inspect_options;
-  inspect_options.detailed = false;
   v8::LLV8* v8 = str.v8();
 
   // Concatenated and sliced strings refer to other strings so
@@ -686,7 +676,7 @@ void FindReferencesCmd::StringScanner::PrintRefs(SBCommandReturnObject& result,
     if (err.Fail()) return;
     std::string parent = parent_str.ToString(err);
     if (err.Success() && search_value_ == parent) {
-      std::string type_name = sliced_str.GetTypeName(&inspect_options, err);
+      std::string type_name = sliced_str.GetTypeName(err);
       result.Printf("0x%" PRIx64 ": %s.%s=0x%" PRIx64 " '%s'\n", str.raw(),
                     type_name.c_str(), "<Parent>", parent_str.raw(),
                     parent.c_str());
@@ -707,7 +697,7 @@ void FindReferencesCmd::StringScanner::PrintRefs(SBCommandReturnObject& result,
       std::string first = first_str.ToString(err);
 
       if (err.Success() && search_value_ == first) {
-        std::string type_name = cons_str.GetTypeName(&inspect_options, err);
+        std::string type_name = cons_str.GetTypeName(err);
         result.Printf("0x%" PRIx64 ": %s.%s=0x%" PRIx64 " '%s'\n", str.raw(),
                       type_name.c_str(), "<First>", first_str.raw(),
                       first.c_str());
@@ -727,7 +717,7 @@ void FindReferencesCmd::StringScanner::PrintRefs(SBCommandReturnObject& result,
       std::string second = second_str.ToString(err);
 
       if (err.Success() && search_value_ == second) {
-        std::string type_name = cons_str.GetTypeName(&inspect_options, err);
+        std::string type_name = cons_str.GetTypeName(err);
         result.Printf("0x%" PRIx64 ": %s.%s=0x%" PRIx64 " '%s'\n", str.raw(),
                       type_name.c_str(), "<Second>", second_str.raw(),
                       second.c_str());
@@ -769,18 +759,13 @@ uint64_t FindJSObjectsVisitor::Visit(uint64_t location, uint64_t word) {
 
   MapCacheEntry map_info;
   if (map_cache_.count(map.raw()) == 0) {
-    v8::Value::InspectOptions inspect_options;
-    inspect_options.detailed = false;
-    inspect_options.print_map = false;
-    inspect_options.print_source = false;
-    inspect_options.string_length = 0;
 
     // Check type first
     map_info.is_histogram = IsAHistogramType(map, err);
 
     // On success load type name
     if (map_info.is_histogram)
-      map_info.type_name = heap_object.GetTypeName(&inspect_options, err);
+      map_info.type_name = heap_object.GetTypeName(err);
 
     // Cache result
     map_cache_.emplace(map.raw(), map_info);
