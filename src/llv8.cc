@@ -328,17 +328,8 @@ std::string JSFunction::Inspect(InspectOptions* options, Error& err) {
       SharedFunctionInfo info = Info(err);
       if (err.Fail()) return res;
 
-      String name = info.Name(err);
+      std::string name_str = info.ProperName(err);
       if (err.Fail()) return res;
-      std::string name_str = name.ToString(err);
-
-      if (err.Fail() || name_str.empty()) {
-        String inferred_name = info.InferredName(err);
-        if (err.Fail()) return res;
-
-        name_str = inferred_name.ToString(err);
-        if (err.Fail()) return res;
-      }
 
       std::string source = GetSource(err);
       if (!err.Fail()) {
@@ -476,10 +467,12 @@ std::string SharedFunctionInfo::ProperName(Error& err) {
 
   std::string res = name.ToString(err);
   if (err.Fail() || res.empty()) {
-    name = InferredName(err);
+    Value inferred = InferredName(err);
     if (err.Fail()) return std::string();
 
-    res = name.ToString(err);
+    // Function may not have inferred name
+    if (!inferred.IsHoleOrUndefined(err) && !err.Fail())
+      res = inferred.ToString(err);
     if (err.Fail()) return std::string();
   }
 

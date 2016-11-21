@@ -171,7 +171,7 @@ class SharedFunctionInfo : public HeapObject {
   V8_VALUE_DEFAULT_METHODS(SharedFunctionInfo, HeapObject)
 
   inline String Name(Error& err);
-  inline String InferredName(Error& err);
+  inline Value InferredName(Error& err);
   inline Script GetScript(Error& err);
   inline Code GetCode(Error& err);
   inline HeapObject GetScopeInfo(Error& err);
