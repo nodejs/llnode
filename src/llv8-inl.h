@@ -201,7 +201,7 @@ ACCESSOR(Script, LineEnds, script()->kLineEndsOffset, HeapObject)
 
 ACCESSOR(SharedFunctionInfo, Name, shared_info()->kNameOffset, String)
 ACCESSOR(SharedFunctionInfo, InferredName, shared_info()->kInferredNameOffset,
-         String)
+         Value)
 ACCESSOR(SharedFunctionInfo, GetScript, shared_info()->kScriptOffset, Script)
 ACCESSOR(SharedFunctionInfo, GetCode, shared_info()->kCodeOffset, Code)
 ACCESSOR(SharedFunctionInfo, GetScopeInfo, shared_info()->kScopeInfoOffset,
