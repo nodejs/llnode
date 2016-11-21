@@ -652,7 +652,7 @@ std::string Value::Inspect(InspectOptions* options, Error& err) {
 }
 
 
-std::string Value::GetTypeName(InspectOptions* options, Error& err) {
+std::string Value::GetTypeName(Error& err) {
   Smi smi(this);
   if (smi.Check()) return "(Smi)";
 
@@ -662,7 +662,7 @@ std::string Value::GetTypeName(InspectOptions* options, Error& err) {
     return std::string();
   }
 
-  return obj.GetTypeName(options, err);
+  return obj.GetTypeName(err);
 }
 
 
@@ -791,7 +791,7 @@ std::string Smi::ToString(Error& err) {
 
 /* Utility function to generate short type names for objects.
  */
-std::string HeapObject::GetTypeName(InspectOptions* options, Error& err) {
+std::string HeapObject::GetTypeName(Error& err) {
   int64_t type = GetType(err);
   if (type == v8()->types()->kGlobalObjectType) return "(Global)";
   if (type == v8()->types()->kCodeType) return "(Code)";

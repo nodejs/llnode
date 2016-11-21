@@ -75,7 +75,7 @@ class Value {
   bool IsHole(Error& err);
 
   std::string Inspect(InspectOptions* options, Error& err);
-  std::string GetTypeName(InspectOptions* options, Error& err);
+  std::string GetTypeName(Error& err);
   std::string ToString(Error& err);
 
  protected:
@@ -110,7 +110,7 @@ class HeapObject : public Value {
 
   std::string ToString(Error& err);
   std::string Inspect(InspectOptions* options, Error& err);
-  std::string GetTypeName(InspectOptions* options, Error& err);
+  std::string GetTypeName(Error& err);
 };
 
 class Map : public HeapObject {
