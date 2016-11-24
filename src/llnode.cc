@@ -36,7 +36,7 @@ char** CommandBase::ParseInspectOptions(char** cmd,
   for (int i = 0; i < argc - 1; i++) args[i + 1] = cmd[i];
 
   // Reset getopts.
-  optind = 1;
+  optind = 0;
   opterr = 1;
   do {
     int arg = getopt_long(argc, args, "Fms", opts, nullptr);
