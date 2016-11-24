@@ -459,7 +459,7 @@ char** FindReferencesCmd::ParseScanOptions(char** cmd, ScanType* type) {
   bool found_scan_type = false;
 
   // Reset getopts.
-  optind = 1;
+  optind = 0;
   opterr = 1;
   do {
     int arg = getopt_long(argc, args, "vns", opts, nullptr);
@@ -489,7 +489,7 @@ char** FindReferencesCmd::ParseScanOptions(char** cmd, ScanType* type) {
     }
   } while (true);
 
-  return cmd + optind - 1;
+  return &cmd[optind - 1];
 }
 
 
