@@ -70,6 +70,7 @@ tape('v8 findrefs and friends', (t) => {
   sess.linesUntil(/lldb\-/, (lines) => {
     t.ok(/Deflate\._handle/.test(lines.join('\n')), 'Should find reference');
     t.ok(/Object\.holder/.test(lines.join('\n')), 'Should find reference #2');
+    t.ok(/\(Array\)\[1\]/.test(lines.join('\n')), 'Should find reference #3');
 
     sess.send('target delete 1');
     sess.quit();
