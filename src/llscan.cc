@@ -569,7 +569,6 @@ void FindReferencesCmd::ReferenceScanner::PrintRefs(
 
 void FindReferencesCmd::PropertyScanner::PrintRefs(
     SBCommandReturnObject& result, v8::JSObject& js_obj, v8::Error& err) {
-
   // (Note: We skip array elements as they don't have names.)
 
   // Walk all the properties in this object.
@@ -760,7 +759,6 @@ uint64_t FindJSObjectsVisitor::Visit(uint64_t location, uint64_t word) {
 
   MapCacheEntry map_info;
   if (map_cache_.count(map.raw()) == 0) {
-
     // Check type first
     map_info.is_histogram = IsAHistogramType(map, err);
 
