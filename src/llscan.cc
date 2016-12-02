@@ -411,7 +411,8 @@ bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
       // We only need to handle the types that are in
       // FindJSObjectsVisitor::IsAHistogramType
       // as those are the only objects that end up in GetMapsToInstances
-      if (v8::JSObject::IsObjectType(v8, type)) {
+      if (v8::JSObject::IsObjectType(v8, type) ||
+          type == v8->types()->kJSArrayType) {
         // Objects can have elements and arrays can have named properties.
         // Basically we need to access objects and arrays as both objects and
         // arrays.

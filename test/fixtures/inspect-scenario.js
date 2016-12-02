@@ -35,11 +35,12 @@ function closure() {
 
   let scopedVar = 'scoped value';
   let scopedAPI = zlib.createDeflate()._handle;
+  let scopedArray = [ 0, scopedAPI ];
 
   exports.holder = scopedAPI;
 
   c.hashmap.scoped = function name() {
-    return scopedVar + outerVar + scopedAPI;
+    return scopedVar + outerVar + scopedAPI + scopedArray;
   };
 
   c.method();
