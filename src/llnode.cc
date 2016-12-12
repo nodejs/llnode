@@ -313,11 +313,14 @@ bool PluginInitialize(SBDebugger d) {
   v8.AddCommand("findjsobjects", new llnode::FindObjectsCmd(),
                 "List all object types and instance counts grouped by map and "
                 "sorted by instance count.\n"
+#ifndef LLDB_SBMemoryRegionInfoList_h_
                 "Requires `LLNODE_RANGESFILE` environment variable to be set "
                 "to a file containing memory ranges for the core file being "
                 "debugged.\n"
                 "There are scripts for generating this file on Linux and Mac "
-                "in the scripts directory of the llnode repository.");
+                "in the scripts directory of the llnode repository."
+#endif // LLDB_SBMemoryRegionInfoList_h_
+                );
 
   interpreter.AddCommand("findjsobjects", new llnode::FindObjectsCmd(),
                          "Alias for `v8 findjsobjects`");
