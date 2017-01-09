@@ -1,6 +1,6 @@
 {
   "name": "llnode",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "llnode test suite",
   "main": "no-entry-sorry.js",
   "directories": {
