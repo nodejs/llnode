@@ -6,13 +6,26 @@
   "directories": {
     "test": "test"
   },
+  "//": "We need to use the install scripts as llnode must be built on the machine it's deployed on.",
+  "//": "(Blame C++)",
   "scripts": {
+    "preinstall" : "node scripts/configure.js",
+    "install" : "./gyp_llnode && make -C out/",
+    "postinstall" : "node scripts/cleanup.js",
     "test": "tape test/*-test.js"
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/indutny/llnode.git"
+    "url": "git+ssh://git@github.com/nodejs/llnode.git"
   },
+  "files" : [
+     "llnode.gyp.json",
+     "gyp_llnode",
+     "common.gypi",
+     "src/",
+     "scripts/",
+     "out/"
+   ],
   "keywords": [
     "llnode",
     "post",
@@ -22,9 +35,9 @@
   "license": "MIT",
   "gypfile": true,
   "bugs": {
-    "url": "https://github.com/indutny/llnode/issues"
+    "url": "https://github.com/nodejs/llnode/issues"
   },
-  "homepage": "https://github.com/indutny/llnode#readme",
+  "homepage": "https://github.com/nodejs/llnode#readme",
   "devDependencies": {
     "tape": "^4.4.0"
   }
