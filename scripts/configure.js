@@ -1,3 +1,5 @@
+'use strict';
+
 const os = require('os');
 const fs = require('fs');
 const child_process = require('child_process');
@@ -31,7 +33,7 @@ if (osName === 'Darwin') {
 
   lldbVersion = getDarwinRelease();
 
-  if(lldbVersion === undefined) {
+  if (lldbVersion === undefined) {
     console.log('Unable to locate lldb binary. llnode installation failed.');
     process.exit(1);
   }
@@ -39,12 +41,12 @@ if (osName === 'Darwin') {
   lldbHeadersBranch = lldbReleases[lldbVersion];
   lldbIncludeDir = 'lldb-' + lldbVersion;
 
-} else if ( osName === 'Linux') {
+} else if (osName === 'Linux') {
 
   lldbExe = getLldbExecutable();
   lldbVersion = getLinuxVersion(lldbExe);
 
-  if(lldbVersion === undefined) {
+  if (lldbVersion === undefined) {
     console.log('Unable to locate lldb binary. llnode installation failed.');
     process.exit(1);
   }
@@ -61,21 +63,22 @@ if (osName === 'Darwin') {
   }
 }
 
-console.log('Installing llnode for ' + lldbExe + ', lldb version ' + lldbVersion);
+console.log(`Installing llnode for ${lldbExe}, lldb version ${lldbVersion}`);
 
 // Check out source code of the LLDB that is compatible with OS X's default lldb
 // TODO: The llvm project is probably moving to github soon at that point we
 // should stop using the mirror.
 if (lldbHeadersBranch != undefined) {
   console.log('Cloning lldb from ' + lldbHeadersBranch);
-  child_process.execFileSync('git', ['clone', '--depth=1', '-b', lldbHeadersBranch, 'https://github.com/llvm-mirror/lldb.git', lldbIncludeDir],
-      {cwd: buildDir});
+  child_process.execFileSync('git',
+    ['clone', '--depth=1', '-b', lldbHeadersBranch,
+      'https://github.com/llvm-mirror/lldb.git', lldbIncludeDir],
+    {cwd: buildDir});
 }
 
 // Link to the headers file so we can run gyp_llnode directly and don't need to
-// setup
-// parameters to pass it.
-console.log('Linking lldb to include directory ' + lldbIncludeDir);
+// setup parameters to pass it.
+console.log(`Linking lldb to include directory ${lldbIncludeDir}`);
 fs.symlinkSync(lldbIncludeDir, 'lldb');
 
 // Initialize GYP
@@ -83,10 +86,12 @@ fs.symlinkSync(lldbIncludeDir, 'lldb');
 // We can locate it with npm -g explore npm npm explore node-gyp pwd
 // It might have been neater to make node-gyp one of our dependencies
 // *but* they don't get installed until after the install step has run.
-var gypDir = child_process.execFileSync('npm', ['-g', 'explore', 'npm', 'npm', 'explore', 'node-gyp', 'pwd'],  {cwd: buildDir}).toString().trim();
+var gypDir = child_process.execFileSync('npm',
+  ['-g', 'explore', 'npm', 'npm', 'explore', 'node-gyp', 'pwd'],
+  {cwd: buildDir}).toString().trim();
 fs.mkdirSync('tools');
-console.log('Linking tools/gyp to ' + gypDir+'/gyp');
-fs.symlinkSync(gypDir + '/gyp', 'tools/gyp');
+console.log(`Linking tools/gyp to ${gypDir}/gyp`);
+fs.symlinkSync(`${gypDir}/gyp`, 'tools/gyp');
 
 // Exit with success.
 process.exit(0);
@@ -95,18 +100,19 @@ process.exit(0);
 function getDarwinRelease() {
   var xcodeStr;
   try {
-    xcodeStr = child_process.execFileSync('xcodebuild', ['-version']).toString();
-  } catch(err) {
+    xcodeStr = child_process.execFileSync('xcodebuild', ['-version'])
+    .toString();
+  } catch (err) {
     return undefined;
   }
   var versionStr = '';
-    var splitStr = xcodeStr.split(os.EOL);
-    for( var str of splitStr) {
-      if (str.indexOf('Xcode') != -1) {
-        versionStr = str.split(' ')[1];
-        break;
-      }
+  var splitStr = xcodeStr.split(os.EOL);
+  for (var str of splitStr) {
+    if (str.indexOf('Xcode') != -1) {
+      versionStr = str.split(' ')[1];
+      break;
     }
+  }
   // console.log('Xcode version is ' + version_str)
 
   var version = parseFloat(versionStr);
@@ -124,15 +130,17 @@ function getDarwinRelease() {
 function getLldbExecutable() {
   var lldbExe = process.env.npm_config_lldb_exe;
   if (lldbExe === undefined) {
-    var lldbExeNames = ['lldb', 'lldb-4.0', 'lldb-3.9', 'lldb-3.8', 'lldb-3.7', 'lldb-3.6']
-    for (lldbExeVersion of lldbExeNames) {
+    var lldbExeNames = ['lldb', 'lldb-4.0', 'lldb-3.9',
+      'lldb-3.8', 'lldb-3.7', 'lldb-3.6'];
+    for (var lldbExeVersion of lldbExeNames) {
       try {
-        lldbExe = child_process.execSync('which ' + lldbExeVersion).toString().trim();
+        lldbExe = child_process.execSync('which ' +
+          lldbExeVersion).toString().trim();
         // If the result starts with '/' `which` found a path.
         if (lldbExe.startsWith('/')) {
           break;
         }
-      } catch(err) {
+      } catch (err) {
         // Do nothing - we expect not to find some of these.
       }
     }
@@ -147,7 +155,7 @@ function getLinuxVersion(lldbExe) {
   var lldbStr;
   try {
     lldbStr = child_process.execFileSync(lldbExe, ['-v']).toString();
-  } catch(err) {
+  } catch (err) {
     return undefined;
   }
   // Ignore minor revisions like 3.8.1
@@ -173,7 +181,8 @@ function getLinuxHeadersDir(version) {
   // (Using the installed headers will ensure we have the correct ones.)
   console.log('Checking for headers, version is ' + version);
   try {
-    var includeDir = child_process.execFileSync('llvm-config-' + version, ['--prefix']).toString().trim();
+    var includeDir = child_process.execFileSync('llvm-config-' + version,
+      ['--prefix']).toString().trim();
     // console.log('Checking for directory ' + include_dir);
     // Include directory doesn't need include/lldb on the end but the llvm
     // headers can be installed without the lldb headers so check for them.
@@ -181,7 +190,7 @@ function getLinuxHeadersDir(version) {
       // console.log('Found ' + include_dir);
       return includeDir;
     }
-  } catch(err) {
+  } catch (err) {
     // Return undefined, we will download the headers.
   }
   // On Redhat the headers are just installed in /usr/include
