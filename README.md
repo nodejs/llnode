@@ -8,16 +8,30 @@ Node.js v4.x-v6.x C++ plugin for [LLDB](http://lldb.llvm.org) - a next generatio
 
 https://asciinema.org/a/29589
 
-## Build instructions
+## Install Instructions
 
-### OS X
+### Install with npm
 
-Easy:
+```bash
+npm install llnode
+```
+
+To use a particular build of lldb, use the `--lldb_exe` option:
+
+```bash
+npm install --lldb_exe=`which lldb-3.9` llnode
+```
+
+### Install with Homebrew (OS X)
+
 ```bash
 brew install llnode
 ```
 
-Harder:
+## Build Instructions
+
+### OS X
+
 ```bash
 # Clone this repo
 git clone https://github.com/nodejs/llnode.git && cd llnode
@@ -84,7 +98,14 @@ The following subcommands are supported:
                          core file being debugged.
                          There are scripts for generating this file on Linux and Mac in the scripts directory of the llnode
                          repository.
-      findrefs        -- Find all the objects that refer to the specified object.
+      findrefs        -- Finds all the object properties which meet the search criteria.
+                         The default is to list all the object properties that reference the specified value.
+                         Flags:
+
+                          * -v, --value expr     - all properties that refer to the specified JavaScript object (default)
+                          * -n, --name  name     - all properties with the specified name
+                          * -s, --string string  - all properties that refer to the specified JavaScript string value
+
       inspect         -- Print detailed description and contents of the JavaScript value.
 
                          Possible flags (all optional):
