@@ -1,7 +1,7 @@
 {
   "name": "llnode",
   "version": "1.4.1",
-  "description": "llnode test suite",
+  "description": "Node.js plugin for LLDB",
   "main": "no-entry-sorry.js",
   "directories": {
     "test": "test"
