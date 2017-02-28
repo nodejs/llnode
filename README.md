@@ -44,7 +44,7 @@ git clone --depth=1 -b release_38 https://github.com/llvm-mirror/lldb.git lldb
 git clone https://chromium.googlesource.com/external/gyp.git tools/gyp
 
 # Configure
-./gyp_lldb
+./gyp_llnode
 
 # Build
 make -C out/ -j9
