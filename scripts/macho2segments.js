@@ -29,7 +29,7 @@ function read(start, end) {
   const data = Buffer.alloc(end - start);
   const bytesRead = fs.readSync(fd, data, 0, data.length, start);
 
-  assert.equal(data.length, bytesRead, 'Read less than expected');
+  assert.strictEqual(data.length, bytesRead, 'Read less than expected');
 
   return data;
 }
@@ -49,7 +49,7 @@ function parseUInt64LE(buf, off) {
 
 /* header = { magic, cpu, cpu_sub, filetype, ncmds, sizeofcmds, flags } */
 const header = read(0, HEADER_SIZE);
-assert.equal(header.readUInt32LE(0), MAGIC_LE_64, 'Invalid magic value');
+assert.strictEqual(header.readUInt32LE(0), MAGIC_LE_64, 'Invalid magic value');
 
 const ncmds = header.readUInt32LE(4 * 4);
 const sizeofcmds = header.readUInt32LE(4 * 5);
@@ -65,7 +65,7 @@ for (let off = BODY_OFF_64, i = 0; i < ncmds; i++) {
   if (type !== LC_SEGMENT_64)
     continue;
 
-  assert.equal(size, LC_SEGMENT_64_SIZE, 'Invalid LC_SEGMENT_64 size');
+  assert.strictEqual(size, LC_SEGMENT_64_SIZE, 'Invalid LC_SEGMENT_64 size');
 
   const body = read(off - size + 4 * 2, off);
   const vmaddr = parseUInt64LE(body, 16);
