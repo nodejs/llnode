@@ -34,17 +34,17 @@ function read(start, end) {
   return data;
 }
 
-function parseUInt64LE(buf, off) {
-  const low = buf.readUInt32LE(off);
-  const high = buf.readUInt32LE(off + 4);
-
-  let r = high.toString(16);
+function pad8(s) {
+  let r = s;
   while (r.length < 8)
     r = '0' + r;
-  r += low.toString(16);
-  while (r.length < 16)
-    r = '0' + r;
   return r;
+}
+
+function parseUInt64LE(buf, off) {
+  const low = pad8(buf.readUInt32LE(off).toString(16));
+  const high = pad8(buf.readUInt32LE(off + 4).toString(16));
+  return '0x' + high + low;
 }
 
 /* header = { magic, cpu, cpu_sub, filetype, ncmds, sizeofcmds, flags } */
