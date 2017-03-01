@@ -56,7 +56,7 @@ class FindReferencesCmd : public CommandBase {
 
   class ReferenceScanner : public ObjectScanner {
    public:
-    ReferenceScanner(v8::Value& search_value) : search_value_(search_value) {}
+    ReferenceScanner(v8::Value search_value) : search_value_(search_value) {}
 
     void PrintRefs(lldb::SBCommandReturnObject& result, v8::JSObject& js_obj,
                    v8::Error& err) override;
@@ -64,7 +64,7 @@ class FindReferencesCmd : public CommandBase {
                    v8::Error& err) override;
 
    private:
-    v8::Value& search_value_;
+    v8::Value search_value_;
   };
 
 
