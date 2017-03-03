@@ -77,9 +77,9 @@ sudo make install-linux
 
 ## Usage
 
-The plugin call be loaded in LLDB using the `plugin load` command, or
-installed in the LLDB system plugin directory. LLDB will then load the
-plugin automatically on start-up. 
+The llnode plugin can be loaded into LLDB using the `plugin load` command.
+Alternatively it can be installed in the LLDB system plugin directory, in
+which case LLDB will load the plugin automatically on start-up. 
 
 ### OS X
 
@@ -103,7 +103,7 @@ lldb
 ```
 To install the plugin in the LLDB system plugin directory, use the
 `make install-linux` build step above, or if installing with
-npm by copying `node_modules/llnode/llnode.so` to
+npm copy `node_modules/llnode/llnode.so` to
 `/usr/lib/lldb/plugins`.
 
 ```
