@@ -10,11 +10,11 @@ uninstall-osx:
 	rm ~/Library/Application\ Support/LLDB/PlugIns/llnode.dylib
 
 install-linux:
-	mkdir -p /usr/lib/lldb
-	cp -rf ./out/Release/lib.target/llnode.so /usr/lib/lldb/
+	mkdir -p /usr/lib/lldb/plugins
+	cp -rf ./out/Release/lib.target/llnode.so /usr/lib/lldb/plugins
 
 uninstall-linux:
-	rm /usr/lib/lldb/llnode.so
+	rm /usr/lib/lldb/plugins/llnode.so
 
 format:
 	clang-format -i src/*

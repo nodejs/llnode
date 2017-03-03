@@ -75,10 +75,38 @@ make -C out/ -j9
 sudo make install-linux
 ```
 
-### Usage
+## Usage
+
+The plugin call be loaded in LLDB using the `plugin load` command, or
+installed in the LLDB system plugin directory. LLDB will then load the
+plugin automatically on start-up. 
+
+### OS X
 
 ```
 lldb
+
+(lldb) plugin load ./node-modules/llnode/llnode.dylib
+```
+
+To install the plugin in the LLDB system plugin directory, use the
+`make install-osx` build step above, or if installing
+with npm copy `node_modules/llnode/llnode.dylib` to
+` ~/Library/Application\ Support/LLDB/PlugIns/`.
+
+### Linux
+
+```
+lldb
+
+(lldb) plugin load ./node-modules/llnode/llnode.so
+```
+To install the plugin in the LLDB system plugin directory, use the
+`make install-linux` build step above, or if installing with
+npm by copying `node_modules/llnode/llnode.so` to
+`/usr/lib/lldb/plugins`.
+
+```
 (lldb) v8 help
      Node.js helpers
 
