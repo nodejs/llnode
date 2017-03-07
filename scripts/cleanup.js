@@ -19,4 +19,4 @@ child_process.execSync(`mv ${cwd}/out/Release/${llnodeLib} ${cwd}/${llnodeLib}`)
 
 console.log(`${os.EOL}llnode plugin installed, load in lldb with:`);
 console.log(`(lldb) plugin load ${cwd}/${llnodeLib}`);
-console.log(`or copy plugin to lldb system plugin directory${os.EOL}`);
+console.log(`or copy plugin to lldb system plugin directory, see www.npmjs.org/llnode${os.EOL}`);
