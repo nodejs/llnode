@@ -37,6 +37,8 @@ def compiler_version():
   is_clang = 'clang' in proc.communicate()[0].split('\n')[0]
   proc = subprocess.Popen(CC.split() + ['-dumpversion'], stdout=subprocess.PIPE)
   version = proc.communicate()[0].split('.')
+  # Allow for (e.g.) gcc version 7 (not 7.0)
+  version.append("0")
   version = map(int, version[:2])
   version = tuple(version)
   return (version, is_clang)
