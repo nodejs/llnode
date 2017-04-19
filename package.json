@@ -1,31 +1,30 @@
 {
   "name": "llnode",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "Node.js plugin for LLDB",
   "main": "no-entry-sorry.js",
   "directories": {
     "test": "test"
   },
-  "//": "We need to use the install scripts as llnode must be built on the machine it's deployed on.",
   "//": "(Blame C++)",
   "scripts": {
-    "preinstall" : "node scripts/configure.js",
-    "install" : "./gyp_llnode && make -C out/",
-    "postinstall" : "node scripts/cleanup.js",
+    "preinstall": "node scripts/configure.js",
+    "install": "./gyp_llnode && make -C out/",
+    "postinstall": "node scripts/cleanup.js",
     "test": "tape test/*-test.js"
   },
   "repository": {
     "type": "git",
     "url": "git+ssh://git@github.com/nodejs/llnode.git"
   },
-  "files" : [
-     "llnode.gyp.json",
-     "gyp_llnode",
-     "common.gypi",
-     "src/",
-     "scripts/",
-     "out/"
-   ],
+  "files": [
+    "llnode.gyp.json",
+    "gyp_llnode",
+    "common.gypi",
+    "src/",
+    "scripts/",
+    "out/"
+  ],
   "keywords": [
     "llnode",
     "post",
