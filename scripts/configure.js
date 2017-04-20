@@ -5,7 +5,7 @@ const fs = require('fs');
 const child_process = require('child_process');
 
 const lldbReleases = {
-  '4.0': 'master',
+  '4.0': 'release_40',
   '3.9': 'release_39',
   '3.8': 'release_38',
   '3.7': 'release_37',
@@ -116,7 +116,9 @@ function getDarwinRelease() {
   // console.log('Xcode version is ' + version_str)
 
   var version = parseFloat(versionStr);
-  if (version > 8.0) {
+  if (version >= 8.3) {
+    return '3.9';
+  } else if (version > 8.0) {
     return '3.8';
   } else {
     return '3.4';
