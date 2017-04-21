@@ -200,7 +200,7 @@ class LLScan {
   TypeRecordMap mapstoinstances_;
 };
 
-}  // llnode
+}  // namespace llnode
 
 
 #endif  // SRC_LLSCAN_H_

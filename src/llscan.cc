@@ -1029,4 +1029,4 @@ void LLScan::ClearMapsToInstances() {
   }
   GetMapsToInstances().clear();
 }
-}
+}  // namespace llnode
