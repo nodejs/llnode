@@ -352,13 +352,31 @@ inline Value DescriptorArray::GetValue(int index, Error& err) {
 }
 
 inline bool DescriptorArray::IsFieldDetails(Smi details) {
-  return (details.GetValue() & v8()->descriptor_array()->kPropertyTypeMask) ==
-         v8()->descriptor_array()->kFieldType;
+  // node.js <= 7
+  if (v8()->descriptor_array()->kPropertyTypeMask != -1) {
+    return (details.GetValue() & v8()->descriptor_array()->kPropertyTypeMask) ==
+           v8()->descriptor_array()->kFieldType;
+  }
+
+  // node.js >= 8
+  return (details.GetValue() &
+          v8()->descriptor_array()->kPropertyLocationMask) ==
+         (v8()->descriptor_array()->kPropertyLocationEnum_kField
+          << v8()->descriptor_array()->kPropertyLocationShift);
 }
 
 inline bool DescriptorArray::IsConstFieldDetails(Smi details) {
-  return (details.GetValue() & v8()->descriptor_array()->kPropertyTypeMask) ==
-         v8()->descriptor_array()->kConstFieldType;
+  // node.js <= 7
+  if (v8()->descriptor_array()->kPropertyTypeMask != -1) {
+    return (details.GetValue() & v8()->descriptor_array()->kPropertyTypeMask) ==
+           v8()->descriptor_array()->kConstFieldType;
+  }
+
+  // node.js >= 8
+  return (details.GetValue() &
+          v8()->descriptor_array()->kPropertyAttributesMask) ==
+         (v8()->descriptor_array()->kPropertyAttributesEnum_READ_ONLY
+          << v8()->descriptor_array()->kPropertyAttributesShift);
 }
 
 inline bool DescriptorArray::IsDoubleField(Smi details) {

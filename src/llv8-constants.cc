@@ -423,6 +423,36 @@ void DescriptorArray::Load() {
   kPropertyIndexShift = LoadConstant("prop_index_shift");
   kPropertyTypeMask = LoadConstant("prop_type_mask");
 
+  if (kPropertyTypeMask == -1) {  // node.js >= 8
+    kPropertyAttributesMask = LoadConstant("prop_attributes_mask");
+    kPropertyAttributesShift = LoadConstant("prop_attributes_shift");
+    kPropertyAttributesEnum_NONE = LoadConstant("prop_attributes_NONE");
+    kPropertyAttributesEnum_READ_ONLY =
+        LoadConstant("prop_attributes_READ_ONLY");
+    kPropertyAttributesEnum_DONT_ENUM =
+        LoadConstant("prop_attributes_DONT_ENUM");
+    kPropertyAttributesEnum_DONT_DELETE =
+        LoadConstant("prop_attributes_DONT_ENUM");
+
+    kPropertyKindMask = LoadConstant("prop_kind_mask");
+    kPropertyKindShift = LoadConstant("prop_kind_shift", int64_t(0));
+    kPropertyKindEnum_kAccessor = LoadConstant("prop_kind_Accessor");
+    kPropertyKindEnum_kData = LoadConstant("prop_kind_Data");
+
+    kPropertyLocationMask = LoadConstant("prop_location_mask");
+    kPropertyLocationShift = LoadConstant("prop_location_shift");
+    kPropertyLocationEnum_kDescriptor =
+        LoadConstant("prop_location_Descriptor");
+    kPropertyLocationEnum_kField = LoadConstant("prop_location_Field");
+  } else {  // node.js <= 7
+    kFieldType = LoadConstant("prop_type_field");
+    kConstFieldType = LoadConstant("prop_type_const_field");
+    if (kConstFieldType == -1) {
+      // TODO(indutny): check V8 version?
+      kConstFieldType = kFieldType | 0x2;
+    }
+  }
+
   kRepresentationShift = LoadConstant("prop_representation_shift");
   kRepresentationMask = LoadConstant("prop_representation_mask");
 
@@ -430,13 +460,6 @@ void DescriptorArray::Load() {
     // TODO(indutny): check V8 version?
     kRepresentationShift = 5;
     kRepresentationMask = ((1 << 4) - 1) << kRepresentationShift;
-  }
-
-  kFieldType = LoadConstant("prop_type_field");
-  kConstFieldType = LoadConstant("prop_type_const_field");
-  if (kConstFieldType == -1) {
-    // TODO(indutny): check V8 version?
-    kConstFieldType = kFieldType | 0x2;
   }
 
   kRepresentationDouble = LoadConstant("prop_representation_double");

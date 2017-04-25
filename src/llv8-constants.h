@@ -374,16 +374,36 @@ class DescriptorArray : public Module {
 
   int64_t kPropertyIndexMask;
   int64_t kPropertyIndexShift;
-  int64_t kPropertyTypeMask;
   int64_t kRepresentationMask;
   int64_t kRepresentationShift;
 
-  int64_t kFieldType;
-  int64_t kConstFieldType;
   int64_t kRepresentationDouble;
 
   int64_t kFirstIndex;
   int64_t kSize;
+
+  // node.js <= 7
+  int64_t kPropertyTypeMask = -1;
+  int64_t kConstFieldType = -1;
+  int64_t kFieldType = -1;
+
+  // node.js >= 8
+  int64_t kPropertyAttributesMask = -1;
+  int64_t kPropertyAttributesShift = -1;
+  int64_t kPropertyAttributesEnum_NONE = -1;
+  int64_t kPropertyAttributesEnum_READ_ONLY = -1;
+  int64_t kPropertyAttributesEnum_DONT_ENUM = -1;
+  int64_t kPropertyAttributesEnum_DONT_DELETE = -1;
+
+  int64_t kPropertyKindMask = -1;
+  int64_t kPropertyKindShift = -1;
+  int64_t kPropertyKindEnum_kAccessor = -1;
+  int64_t kPropertyKindEnum_kData = -1;
+
+  int64_t kPropertyLocationMask = -1;
+  int64_t kPropertyLocationShift = -1;
+  int64_t kPropertyLocationEnum_kDescriptor = -1;
+  int64_t kPropertyLocationEnum_kField = -1;
 
  protected:
   void Load();
