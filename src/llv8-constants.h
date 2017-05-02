@@ -455,6 +455,7 @@ class Types : public Module {
   int64_t kHeapNumberType;
   int64_t kMapType;
   int64_t kGlobalObjectType;
+  int64_t kGlobalProxyType;
   int64_t kOddballType;
   int64_t kJSObjectType;
   int64_t kJSAPIObjectType;

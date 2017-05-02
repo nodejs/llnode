@@ -709,6 +709,7 @@ std::string HeapObject::Inspect(InspectOptions* options, Error& err) {
   std::string pre = buf;
 
   if (type == v8()->types()->kGlobalObjectType) return pre + "<Global>";
+  if (type == v8()->types()->kGlobalProxyType) return pre + "<Global proxy>";
   if (type == v8()->types()->kCodeType) return pre + "<Code>";
   if (type == v8()->types()->kMapType) {
     Map m(this);
@@ -787,6 +788,7 @@ std::string Smi::ToString(Error& err) {
 std::string HeapObject::GetTypeName(Error& err) {
   int64_t type = GetType(err);
   if (type == v8()->types()->kGlobalObjectType) return "(Global)";
+  if (type == v8()->types()->kGlobalProxyType) return "(Global proxy)";
   if (type == v8()->types()->kCodeType) return "(Code)";
   if (type == v8()->types()->kMapType) {
     return "(Map)";

@@ -521,6 +521,7 @@ void Types::Load() {
   kMapType = LoadConstant("type_Map__MAP_TYPE");
   kGlobalObjectType =
       LoadConstant("type_JSGlobalObject__JS_GLOBAL_OBJECT_TYPE");
+  kGlobalProxyType = LoadConstant("type_JSGlobalProxy__JS_GLOBAL_PROXY_TYPE");
   kOddballType = LoadConstant("type_Oddball__ODDBALL_TYPE");
   kJSObjectType = LoadConstant("type_JSObject__JS_OBJECT_TYPE");
   kJSAPIObjectType = LoadConstant("APIObjectType");

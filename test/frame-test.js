@@ -35,9 +35,7 @@ tape('v8 stack', (t) => {
     // Interestingly, V8 4.5 has a quirk where the |this| value is |undefined|
     // in both strict and sloppy mode unless the function actually uses |this|.
     // The test adds unreachable `return this` statements as a workaround.
-    //
-    // TODO(bnoordhuis) Report the global object / global proxy correctly.
-    t.ok(/this=(0x[0-9a-f]+):<unknown>/.test(eyecatcher), 'global this');
+    t.ok(/this=(0x[0-9a-f]+):<Global proxy>/.test(eyecatcher), 'global this');
     t.ok(/this=(0x[0-9a-f]+):<undefined>/.test(crasher), 'undefined this');
     sess.quit();
     t.end();
