@@ -428,6 +428,9 @@ class JSFrame : public Value {
                                uint32_t& lines_found, Error& err);
   std::string Inspect(bool with_args, Error& err);
   std::string InspectArgs(JSFunction fn, Error& err);
+
+ private:
+  Smi FromFrameMarker(Value value) const;
 };
 
 class LLV8 {

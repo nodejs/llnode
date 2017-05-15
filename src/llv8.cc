@@ -201,12 +201,26 @@ uint32_t JSFrame::GetSourceForDisplay(bool reset_line, uint32_t line_start,
   return line_start + lines_found;
 }
 
+
+// On 64 bits systems, V8 stores SMIs (small ints) in the top 32 bits of
+// a 64 bits word.  Frame markers used to obey this convention but as of
+// V8 5.8, they are stored as 32 bits SMIs with the top half set to zero.
+// Shift the raw value up to make it a normal SMI again.
+Smi JSFrame::FromFrameMarker(Value value) const {
+  if (v8()->smi()->kShiftSize == 31 && Smi(value).Check() &&
+      value.raw() < 1LL << 31) {
+    value = Value(v8(), value.raw() << 31);
+  }
+  return Smi(value);
+}
+
+
 std::string JSFrame::Inspect(bool with_args, Error& err) {
   Value context =
       v8()->LoadValue<Value>(raw() + v8()->frame()->kContextOffset, err);
   if (err.Fail()) return std::string();
 
-  Smi smi_context = Smi(context);
+  Smi smi_context = FromFrameMarker(context);
   if (smi_context.Check() &&
       smi_context.GetValue() == v8()->frame()->kAdaptorFrame) {
     return "<adaptor>";
@@ -216,7 +230,7 @@ std::string JSFrame::Inspect(bool with_args, Error& err) {
       v8()->LoadValue<Value>(raw() + v8()->frame()->kMarkerOffset, err);
   if (err.Fail()) return std::string();
 
-  Smi smi_marker(marker);
+  Smi smi_marker = FromFrameMarker(marker);
   if (smi_marker.Check()) {
     int64_t value = smi_marker.GetValue();
     if (value == v8()->frame()->kEntryFrame) {
