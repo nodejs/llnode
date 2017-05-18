@@ -79,14 +79,14 @@ sudo make install-linux
 
 The llnode plugin can be loaded into LLDB using the `plugin load` command.
 Alternatively it can be installed in the LLDB system plugin directory, in
-which case LLDB will load the plugin automatically on start-up. 
+which case LLDB will load the plugin automatically on start-up.
 
 ### OS X
 
 ```
 lldb
 
-(lldb) plugin load ./node-modules/llnode/llnode.dylib
+(lldb) plugin load ./node_modules/llnode/llnode.dylib
 ```
 
 To install the plugin in the LLDB system plugin directory, use the
@@ -99,7 +99,7 @@ with npm copy `node_modules/llnode/llnode.dylib` to
 ```
 lldb
 
-(lldb) plugin load ./node-modules/llnode/llnode.so
+(lldb) plugin load ./node_modules/llnode/llnode.so
 ```
 To install the plugin in the LLDB system plugin directory, use the
 `make install-linux` build step above, or if installing with
