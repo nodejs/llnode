@@ -17,12 +17,22 @@
 
 namespace llnode {
 
+using lldb::SBCommandReturnObject;
+using lldb::SBDebugger;
+using lldb::SBError;
+using lldb::SBExpressionOptions;
+using lldb::SBMemoryRegionInfo;
+using lldb::SBMemoryRegionInfoList;
+using lldb::SBStream;
+using lldb::SBTarget;
+using lldb::SBValue;
+using lldb::eReturnStatusFailed;
+using lldb::eReturnStatusSuccessFinishResult;
+
 // Defined in llnode.cc
 extern v8::LLV8 llv8;
 
 LLScan llscan;
-
-using namespace lldb;
 
 
 bool FindObjectsCmd::DoExecute(SBDebugger d, char** cmd,

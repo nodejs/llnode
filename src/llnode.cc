@@ -11,7 +11,19 @@
 
 namespace llnode {
 
-using namespace lldb;
+using lldb::SBCommandInterpreter;
+using lldb::SBCommandReturnObject;
+using lldb::SBDebugger;
+using lldb::SBError;
+using lldb::SBExpressionOptions;
+using lldb::SBFrame;
+using lldb::SBStream;
+using lldb::SBSymbol;
+using lldb::SBTarget;
+using lldb::SBThread;
+using lldb::SBValue;
+using lldb::eReturnStatusFailed;
+using lldb::eReturnStatusSuccessFinishResult;
 
 v8::LLV8 llv8;
 
