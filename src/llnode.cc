@@ -117,8 +117,8 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
     if (err.Fail()) continue;
 
     // V8 symbol
-    result.Printf(frame == selected_frame ? "  * frame #%u: 0x%016llx %s\n"
-                                          : "    frame #%u: 0x%016llx %s\n",
+    result.Printf(frame == selected_frame ? "\033[0;92m  * frame #%u:\033[0;90m 0x%016llx \033[0;32m%s\033[0m\n"
+                                          : "\033[0;92m    frame #%u:\033[0;90m 0x%016llx \033[0;32m%s\033[0m\n",
                   i, static_cast<unsigned long long int>(frame.GetPC()),
                   res.c_str());
   }
