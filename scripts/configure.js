@@ -81,13 +81,20 @@ if (lldbHeadersBranch != undefined) {
 console.log(`Linking lldb to include directory ${lldbIncludeDir}`);
 fs.symlinkSync(lldbIncludeDir, 'lldb');
 
+// npm explore has a different root folder when using -g 
+// So we are tacking on the extra the additional subfolders
+var gypSubDir = 'node-gyp';
+if(process.env.npm_config_global) {
+    gypSubDir = 'npm/node_modules/node-gyp';
+}
+
 // Initialize GYP
 // We can use the node-gyp that comes with npm.
 // We can locate it with npm -g explore npm npm explore node-gyp pwd
 // It might have been neater to make node-gyp one of our dependencies
 // *but* they don't get installed until after the install step has run.
 var gypDir = child_process.execFileSync('npm',
-  ['-g', 'explore', 'npm', 'npm', 'explore', 'node-gyp', 'pwd'],
+  ['-g', 'explore', 'npm', 'npm', 'explore', gypSubDir, 'pwd'],
   {cwd: buildDir}).toString().trim();
 fs.mkdirSync('tools');
 console.log(`Linking tools/gyp to ${gypDir}/gyp`);
