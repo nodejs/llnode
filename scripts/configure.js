@@ -84,8 +84,8 @@ fs.symlinkSync(lldbIncludeDir, 'lldb');
 // npm explore has a different root folder when using -g 
 // So we are tacking on the extra the additional subfolders
 var gypSubDir = 'node-gyp';
-if(process.env.npm_config_global) {
-    gypSubDir = 'npm/node_modules/node-gyp';
+if (process.env.npm_config_global) {
+  gypSubDir = 'npm/node_modules/node-gyp';
 }
 
 // Initialize GYP
