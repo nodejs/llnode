@@ -62,6 +62,7 @@ if (osName === 'Darwin') {
     lldbIncludeDir = installedHeadersDir;
   }
 } else if (osName === 'FreeBSD') {
+  
   lldbExe = getLldbExecutable();	
   lldbVersion = getFreeBSDVersion(lldbExe);
 
@@ -69,6 +70,7 @@ if (osName === 'Darwin') {
     console.log('Unable to locate lldb binary. llnode installation failed.');
     process.exit(1);  
   }
+  
   var installedHeadersDir = getFreeBSDHeadersDir(lldbVersion);
   if (installedHeadersDir === undefined) {
     // As this is a BSD we know this system is in an improper state
@@ -216,15 +218,13 @@ function getFreeBSDHeadersDir(version) {
   try {
     var includeDir = child_process.execFileSync('llvm-config' + version,
       ['--prefix']).toString().trim();
-    // console.log('Checking for directory ' + include_dir);
-    // Include directory doesn't need include/lldb on the end but the llvm
-    // headers can be installed without the lldb headers so check for them.
     if (fs.existsSync(includeDir + '/include/lldb')) {
-      // console.log('Found ' + include_dir);
       return includeDir;
     }
   } catch (err) {
-    // Return undefined, we will download the headers.
+    console.log(includeDir + '/include/lldb doesn\'nt exist Please see install instructions');	   
+    console.log(err);	  
+    process.exit(1);
   }
   return undefined;
 }
