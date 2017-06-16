@@ -75,6 +75,31 @@ make -C out/ -j9
 sudo make install-linux
 ```
 
+### FreeBSD
+
+```bash
+# Clone this repo
+git clone https://github.com/nodejs/llnode.git && cd llnode
+
+# Install llvm with lldb and headers 
+pkg install llvm39
+rm -f /usr/bin/lldb
+ln -s /usr/local/bin/lldb39 /usr/bin/lldb
+
+# Initialize GYP
+git clone https://chromium.googlesource.com/external/gyp.git tools/gyp
+
+# Configure
+./gyp_llnode -Dlldb_dir=/usr/local/llvm39/
+
+# Build
+gmake -C out/ -j9
+
+# Install
+ComputeSystemPluginsDirectory is not implemented in FreeBSD
+The llnode.so will have to be loaded manually 
+```
+
 ## Usage
 
 The llnode plugin can be loaded into LLDB using the `plugin load` command.
@@ -107,6 +132,13 @@ npm copy `node_modules/llnode/llnode.so` to
 `/usr/lib/lldb/plugins`.
 
 ```
+
+### FreeBSD
+
+```
+lldb -O plugin load ./node_modules/llnode/llnode.so
+```
+
 (lldb) v8 help
      Node.js helpers
 

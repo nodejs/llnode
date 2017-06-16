@@ -9,7 +9,7 @@
   "//": "(Blame C++)",
   "scripts": {
     "preinstall": "node scripts/configure.js",
-    "install": "./gyp_llnode && make -C out/",
+    "install": "./gyp_llnode && if [ `uname` == 'FreeBSD' ]; then gmake -C out/; else make -C out/; fi",
     "postinstall": "node scripts/cleanup.js",
     "test": "tape test/*-test.js"
   },

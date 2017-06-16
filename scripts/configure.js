@@ -61,6 +61,25 @@ if (osName === 'Darwin') {
   } else {
     lldbIncludeDir = installedHeadersDir;
   }
+} else if (osName === 'FreeBSD') {
+  lldbExe = getLldbExecutable();	
+  lldbVersion = getFreeBSDVersion(lldbExe);
+
+  if (lldbVersion === undefined) {
+    console.log('Unable to locate lldb binary. llnode installation failed.');
+    process.exit(1);  
+  }
+  var installedHeadersDir = getFreeBSDHeadersDir(lldbVersion);
+  if (installedHeadersDir === undefined) {
+    // As this is a BSD we know this system is in an improper state
+    // So we can exit with an error
+    console.log('The system isn\'t set up correcly.'); 
+    console.log('Try `pkg install llvm39` and `ln -s /usr/local/bin/lldb39 /usr/bin/lldb`');
+    process.exit(1);	  
+  } else {
+    lldbIncludeDir = installedHeadersDir;
+  }
+
 }
 
 console.log(`Installing llnode for ${lldbExe}, lldb version ${lldbVersion}`);
@@ -184,6 +203,31 @@ function getLinuxVersion(lldbExe) {
   return undefined;
 }
 
+// Shim this for consistancy in OS naming
+function getFreeBSDVersion(lldbExe) {
+   //Strip the dots for BSD
+   return getLinuxVersion(lldbExe).replace('.','');
+}
+
+function getFreeBSDHeadersDir(version) {
+  
+  console.log('Checking for headers, version is ' + version);
+  
+  try {
+    var includeDir = child_process.execFileSync('llvm-config' + version,
+      ['--prefix']).toString().trim();
+    // console.log('Checking for directory ' + include_dir);
+    // Include directory doesn't need include/lldb on the end but the llvm
+    // headers can be installed without the lldb headers so check for them.
+    if (fs.existsSync(includeDir + '/include/lldb')) {
+      // console.log('Found ' + include_dir);
+      return includeDir;
+    }
+  } catch (err) {
+    // Return undefined, we will download the headers.
+  }
+  return undefined;
+}
 function getLinuxHeadersDir(version) {
   // Get the directory which should contain the headers and
   // check if they are present.
