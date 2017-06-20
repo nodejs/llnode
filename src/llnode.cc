@@ -17,6 +17,7 @@ using lldb::SBDebugger;
 using lldb::SBError;
 using lldb::SBExpressionOptions;
 using lldb::SBFrame;
+using lldb::SBMemoryRegionInfo;
 using lldb::SBStream;
 using lldb::SBSymbol;
 using lldb::SBTarget;
@@ -109,30 +110,37 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
   if (number != -1) num_frames = number;
   for (uint32_t i = 0; i < num_frames; i++) {
     SBFrame frame = thread.GetFrameAtIndex(i);
-    SBSymbol symbol = frame.GetSymbol();
+    const char star = (frame == selected_frame ? '*' : ' ');
+    const uint64_t pc = frame.GetPC();
 
-    // C++ symbol
-    if (symbol.IsValid()) {
-      SBStream desc;
-      if (!frame.GetDescription(desc)) continue;
-      result.Printf(frame == selected_frame ? "  * %s" : "    %s",
-                    desc.GetData());
-      continue;
+    if (!frame.GetSymbol().IsValid()) {
+      v8::Error err;
+      v8::JSFrame v8_frame(&llv8, static_cast<int64_t>(frame.GetFP()));
+      std::string res = v8_frame.Inspect(true, err);
+      if (err.Success()) {
+        result.Printf("  %c frame #%u: 0x%016llx %s\n", star, i, pc,
+                      res.c_str());
+        continue;
+      }
     }
 
-    // V8 frame
-    v8::Error err;
-    v8::JSFrame v8_frame(&llv8, static_cast<int64_t>(frame.GetFP()));
-    std::string res = v8_frame.Inspect(true, err);
+#ifdef LLDB_SBMemoryRegionInfoList_h_
+    // Heuristic: a PC in WX memory is almost certainly a V8 builtin.
+    // TODO(bnoordhuis) Find a way to map the PC to the builtin's name.
+    {
+      SBMemoryRegionInfo info;
+      if (target.GetProcess().GetMemoryRegionInfo(pc, info).Success() &&
+          info.IsExecutable() && info.IsWritable()) {
+        result.Printf("  %c frame #%u: 0x%016llx <builtin>\n", star, i, pc);
+        continue;
+      }
+    }
+#endif  // LLDB_SBMemoryRegionInfoList_h_
 
-    // Skip invalid frames
-    if (err.Fail()) continue;
-
-    // V8 symbol
-    result.Printf(frame == selected_frame ? "  * frame #%u: 0x%016llx %s\n"
-                                          : "    frame #%u: 0x%016llx %s\n",
-                  i, static_cast<unsigned long long int>(frame.GetPC()),
-                  res.c_str());
+    // C++ stack frame.
+    SBStream desc;
+    if (frame.GetDescription(desc))
+      result.Printf("  %c %s", star, desc.GetData());
   }
 
   result.SetStatus(eReturnStatusSuccessFinishResult);
