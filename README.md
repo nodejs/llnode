@@ -106,6 +106,25 @@ To install the plugin in the LLDB system plugin directory, use the
 npm copy `node_modules/llnode/llnode.so` to
 `/usr/lib/lldb/plugins`.
 
+To use llnode with a core dump the core dump needs to be loaded into lldb
+along with the exact executable that created the core dump. The executable
+contains information that lldb and llnode need to make sense of the data in
+the core dump.
+
+To load the core dump when starting lldb use:
+```
+lldb /path/to/bin/node -c /path/to/core
+```
+or to load the core dump after starting lldb:
+```
+(lldb) target create /path/to/bin/node -c /path/to/core
+```
+
+It does not matter whether the `plugin load` command is issued before or after
+loading a core dump.
+
+### Commands
+
 ```
 (lldb) v8 help
      Node.js helpers
