@@ -1838,10 +1838,10 @@ v8::Value JSObject::GetArrayElement(int64_t pos, Error& err) {
 }
 
 std::string JSArray::Inspect(InspectOptions* options, Error& err) {
-  Smi length = Length(err);
+  int64_t length = GetArrayLength(err);
   if (err.Fail()) return std::string();
 
-  std::string res = "<Array: length=" + length.ToString(err);
+  std::string res = "<Array: length=" + std::to_string(length);
   if (options->detailed) {
     std::string elems = InspectElements(err);
     if (err.Fail()) return std::string();
