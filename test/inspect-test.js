@@ -49,6 +49,7 @@ tape('v8 inspect', (t) => {
   let cons = null;
   let arrowFunc = null;
   let array = null;
+  let longArray = null;
 
   sess.wait(/Object/, (line) => {
     t.notEqual(line.indexOf(hashmap), -1, 'addr of `Object` should match');
@@ -77,6 +78,11 @@ tape('v8 inspect', (t) => {
         lines.match(/.array=(0x[0-9a-f]+):<Array: length=6>/);
     t.ok(arrayMatch, '.array JSArray property');
     array = arrayMatch[1];
+
+    const longArrayMatch = 
+        lines.match(/.long-array=(0x[0-9a-f]+):<Array: length=20>/);
+    t.ok(longArrayMatch, '.array JSArray property');
+    longArray = longArrayMatch[1];
 
     const consMatch = lines.match(
         /.cons-string=(0x[0-9a-f]+):<String: "this could be a ...">/);
@@ -124,6 +130,18 @@ tape('v8 inspect', (t) => {
     t.ok(
         lines.match(/\[5\]=0x[0-9a-f]+:<function: Class at .+\.js:\d+:\d+>}>$/),
         'array content');
+    sess.send(`v8 inspect --array-length 10 ${longArray}`);
+  });
+
+  sess.linesUntil(/}>/, (lines) => {
+    lines = lines.join('\n');
+    t.notEqual(
+        lines.indexOf('<Array: length=20'),
+        -1,
+        'long array length');
+    t.ok(
+        lines.match(/\[9\]=<Smi: 5>}>$/),
+        'long array content');
     sess.send(`v8 inspect -s ${arrowFunc}`);
   });
 

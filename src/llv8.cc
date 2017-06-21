@@ -1,5 +1,6 @@
 #include <assert.h>
 
+#include <algorithm>
 #include <cinttypes>
 
 #include "llv8-inl.h"
@@ -1283,9 +1284,18 @@ std::string JSObject::InspectElements(Error& err) {
   Smi length_smi = elements.Length(err);
   if (err.Fail()) return std::string();
 
+  int64_t length = length_smi.GetValue();
+  return InspectElements(length, err);
+}
+
+
+std::string JSObject::InspectElements(int64_t length, Error& err) {
+  HeapObject elements_obj = Elements(err);
+  if (err.Fail()) return std::string();
+  FixedArray elements(elements_obj);
+
   InspectOptions options;
 
-  int64_t length = length_smi.GetValue();
   std::string res;
   for (int64_t i = 0; i < length; i++) {
     Value value = elements.Get<Value>(i, err);
@@ -1843,7 +1853,8 @@ std::string JSArray::Inspect(InspectOptions* options, Error& err) {
 
   std::string res = "<Array: length=" + std::to_string(length);
   if (options->detailed) {
-    std::string elems = InspectElements(err);
+    int64_t display_length = std::min<int64_t>(length, options->array_length);
+    std::string elems = InspectElements(display_length, err);
     if (err.Fail()) return std::string();
 
     if (!elems.empty()) res += " {\n" + elems + "}";
