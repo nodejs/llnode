@@ -96,6 +96,16 @@ tape('v8 inspect', (t) => {
         -1,
         'cons string content');
 
+    sess.send(`v8 inspect --string-length 20 ${cons}`);
+  });
+
+  sess.linesUntil(/">/, (lines) => {
+    lines = lines.join('\n');
+    t.notEqual(
+        lines.indexOf('this could be a bit ...'),
+        -1,
+        '--string-length truncates the string');
+
     sess.send(`v8 inspect -s ${arrowFunc}`);
   });
 
