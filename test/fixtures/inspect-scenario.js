@@ -30,6 +30,9 @@ function closure() {
   c.hashmap['cons-string'] += c.hashmap['cons-string'];
   c.hashmap['array'] = [true, 1, undefined, null, 'test', Class];
   c.hashmap['long-array'] = new Array(20).fill(5);
+  c.hashmap['array-buffer'] = new Uint8Array([1, 2, 3, 4, 5]).buffer;
+  c.hashmap['uint8-array'] = new Uint8Array([1, 8, 32, 64, 128, 255]);
+  c.hashmap['buffer'] = Buffer.from([255, 128, 64, 32, 8, 1]);
 
   c.hashmap[0] = null;
   c.hashmap[4] = undefined;
