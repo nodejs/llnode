@@ -72,7 +72,7 @@ bool FindObjectsCmd::DoExecute(SBDebugger d, char** cmd,
 
 bool FindInstancesCmd::DoExecute(SBDebugger d, char** cmd,
                                  SBCommandReturnObject& result) {
-  if (*cmd == nullptr) {
+  if (cmd == nullptr || *cmd == nullptr) {
     result.SetError("USAGE: v8 findjsinstances [-Fm] instance_name\n");
     return false;
   }
@@ -300,7 +300,7 @@ bool NodeInfoCmd::DoExecute(SBDebugger d, char** cmd,
 
 bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
                                   SBCommandReturnObject& result) {
-  if (*cmd == nullptr) {
+  if (cmd == nullptr || *cmd == nullptr) {
     result.SetError("USAGE: v8 findrefs expr\n");
     return false;
   }

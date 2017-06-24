@@ -130,7 +130,7 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
 
 bool PrintCmd::DoExecute(SBDebugger d, char** cmd,
                          SBCommandReturnObject& result) {
-  if (*cmd == nullptr) {
+  if (cmd == nullptr || *cmd == nullptr) {
     if (detailed_) {
       result.SetError("USAGE: v8 inspect [flags] expr\n");
     } else {
@@ -184,6 +184,11 @@ bool PrintCmd::DoExecute(SBDebugger d, char** cmd,
 
 bool ListCmd::DoExecute(SBDebugger d, char** cmd,
                         SBCommandReturnObject& result) {
+  if (cmd == nullptr || *cmd == nullptr) {
+    result.SetError("USAGE: v8 source list\n");
+    return false;
+  }
+
   static SBFrame last_frame;
   static uint64_t last_line = 0;
   SBTarget target = d.GetSelectedTarget();
