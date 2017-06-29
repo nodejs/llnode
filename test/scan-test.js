@@ -69,12 +69,12 @@ tape('v8 findrefs and friends', (t) => {
 
   sess.linesUntil(/lldb\-/, (lines) => {
     // `class Deflate extends Zlib` makes instances show up as
-    // Transform objects (which Zlib inherits from) in node.js >= 8.
-    // Note that the version check will have to be redone for node.js >= 10
-    // but that is still a year out and by then llnode probably needs more
-    // fixups anyway.
+    // Transform objects (which Zlib inherits from) in node.js 8.0.0.
+    // That change was reverted in https://github.com/nodejs/node/pull/13374
+    // and released in 8.1.0.
     const re =
-        (process.version >= 'v8.' ? /Transform\._handle/ : /Deflate\._handle/);
+        (process.version === 'v8.0.0' ?
+            /Transform\._handle/ : /Deflate\._handle/);
     t.ok(re.test(lines.join('\n')), 'Should find reference');
     t.ok(/Object\.holder/.test(lines.join('\n')), 'Should find reference #2');
     t.ok(/\(Array\)\[1\]/.test(lines.join('\n')), 'Should find reference #3');

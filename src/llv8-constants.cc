@@ -12,7 +12,14 @@ namespace llnode {
 namespace v8 {
 namespace constants {
 
-using namespace lldb;
+using lldb::SBAddress;
+using lldb::SBError;
+using lldb::SBProcess;
+using lldb::SBSymbol;
+using lldb::SBSymbolContext;
+using lldb::SBSymbolContextList;
+using lldb::SBTarget;
+using lldb::addr_t;
 
 static std::string kConstantPrefix = "v8dbg_";
 
