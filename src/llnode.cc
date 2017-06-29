@@ -17,7 +17,6 @@ using lldb::SBDebugger;
 using lldb::SBError;
 using lldb::SBExpressionOptions;
 using lldb::SBFrame;
-using lldb::SBMemoryRegionInfo;
 using lldb::SBStream;
 using lldb::SBSymbol;
 using lldb::SBTarget;
@@ -128,7 +127,7 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
     // Heuristic: a PC in WX memory is almost certainly a V8 builtin.
     // TODO(bnoordhuis) Find a way to map the PC to the builtin's name.
     {
-      SBMemoryRegionInfo info;
+      lldb::SBMemoryRegionInfo info;
       if (target.GetProcess().GetMemoryRegionInfo(pc, info).Success() &&
           info.IsExecutable() && info.IsWritable()) {
         result.Printf("  %c frame #%u: 0x%016llx <builtin>\n", star, i, pc);
