@@ -21,8 +21,6 @@ using lldb::SBCommandReturnObject;
 using lldb::SBDebugger;
 using lldb::SBError;
 using lldb::SBExpressionOptions;
-using lldb::SBMemoryRegionInfo;
-using lldb::SBMemoryRegionInfoList;
 using lldb::SBStream;
 using lldb::SBTarget;
 using lldb::SBValue;
@@ -905,8 +903,8 @@ void LLScan::ScanMemoryRanges(FindJSObjectsVisitor& v) {
     head = head->next_;
 
 #else  // LLDB_SBMemoryRegionInfoList_h_
-  SBMemoryRegionInfoList memory_regions = process_.GetMemoryRegions();
-  SBMemoryRegionInfo region_info;
+  lldb::SBMemoryRegionInfoList memory_regions = process_.GetMemoryRegions();
+  lldb::SBMemoryRegionInfo region_info;
 
   for (uint32_t i = 0; i < memory_regions.GetSize(); ++i) {
     memory_regions.GetMemoryRegionAtIndex(i, region_info);
