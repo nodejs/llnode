@@ -28,6 +28,9 @@ function closure() {
   c.hashmap['cons-string'] =
       'this could be a bit smaller, but v8 wants big str.';
   c.hashmap['cons-string'] += c.hashmap['cons-string'];
+  c.hashmap['array'] = [true, 1, undefined, null, 'test', Class];
+  c.hashmap['long-array'] = new Array(20).fill(5);
+
   c.hashmap[0] = null;
   c.hashmap[4] = undefined;
   c.hashmap[23] = /regexp/;

@@ -20,6 +20,7 @@ char** CommandBase::ParseInspectOptions(char** cmd,
   static struct option opts[] = {
       {"full-string", no_argument, nullptr, 'F'},
       {"string-length", required_argument, nullptr, 0x1001},
+      {"array-length", required_argument, nullptr, 0x1002},
       {"print-map", no_argument, nullptr, 'm'},
       {"print-source", no_argument, nullptr, 's'},
       {nullptr, 0, nullptr, 0}};
@@ -51,6 +52,9 @@ char** CommandBase::ParseInspectOptions(char** cmd,
         break;
       case 0x1001:
         options->string_length = strtol(optarg, nullptr, 10);
+        break;
+      case 0x1002:
+        options->array_length = strtol(optarg, nullptr, 10);
         break;
       case 's':
         options->print_source = true;
@@ -302,6 +306,7 @@ bool PluginInitialize(SBDebugger d) {
       " * -m, --print-map      - print object's map address\n"
       " * -s, --print-source   - print source code for function objects\n"
       " * --string-length num  - print maximum of `num` characters in string\n"
+      " * --array-length num   - print maximum of `num` elements in array\n"
       "\n"
       "Syntax: v8 inspect [flags] expr\n");
   interpreter.AddCommand("jsprint", new llnode::PrintCmd(true),
