@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <cinttypes>
+
 #include <lldb/API/SBExpressionOptions.h>
 
 #include "src/llnode.h"
@@ -121,7 +123,7 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
       v8::JSFrame v8_frame(&llv8, static_cast<int64_t>(frame.GetFP()));
       std::string res = v8_frame.Inspect(true, err);
       if (err.Success()) {
-        result.Printf("  %c frame #%u: 0x%016llx %s\n", star, i, pc,
+        result.Printf("  %c frame #%u: 0x%016" PRIx64 " %s\n", star, i, pc,
                       res.c_str());
         continue;
       }
@@ -134,7 +136,7 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
       lldb::SBMemoryRegionInfo info;
       if (target.GetProcess().GetMemoryRegionInfo(pc, info).Success() &&
           info.IsExecutable() && info.IsWritable()) {
-        result.Printf("  %c frame #%u: 0x%016llx <builtin>\n", star, i, pc);
+        result.Printf("  %c frame #%u: 0x%016" PRIx64 " <builtin>\n", star, i, pc);
         continue;
       }
     }
