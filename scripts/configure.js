@@ -70,6 +70,7 @@ console.log(`Installing llnode for ${lldbExe}, lldb version ${lldbVersion}`);
 // should stop using the mirror.
 if (lldbHeadersBranch != undefined) {
   console.log('Cloning lldb from ' + lldbHeadersBranch);
+  child_process.execSync(`rm -rf ${lldbIncludeDir}`);
   child_process.execFileSync('git',
     ['clone', '--depth=1', '-b', lldbHeadersBranch,
       'https://github.com/llvm-mirror/lldb.git', lldbIncludeDir],
@@ -79,6 +80,11 @@ if (lldbHeadersBranch != undefined) {
 // Link to the headers file so we can run gyp_llnode directly and don't need to
 // setup parameters to pass it.
 console.log(`Linking lldb to include directory ${lldbIncludeDir}`);
+try {
+  fs.unlinkSync('lldb');
+} catch (error) {
+  // File does not exist, no need to handle.
+}
 fs.symlinkSync(lldbIncludeDir, 'lldb');
 
 // npm explore has a different root folder when using -g
@@ -96,6 +102,7 @@ if (process.env.npm_config_global) {
 var gypDir = child_process.execFileSync('npm',
   ['-g', 'explore', 'npm', 'npm', 'explore', gypSubDir, 'pwd'],
   {cwd: buildDir}).toString().trim();
+child_process.execSync('rm -rf tools');
 fs.mkdirSync('tools');
 console.log(`Linking tools/gyp to ${gypDir}/gyp`);
 fs.symlinkSync(`${gypDir}/gyp`, 'tools/gyp');
