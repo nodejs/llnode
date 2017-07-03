@@ -19,9 +19,9 @@ if (process.platform === 'darwin')
 else if (process.platform === 'windows')
   pluginName = 'llnode.dll';
 else
-  pluginName = path.join('lib.target', 'llnode.so');
+  pluginName = 'llnode.so';
 
-exports.llnodePath = path.join(exports.buildDir, pluginName);
+exports.llnodePath = pluginName;
 
 function SessionOutput(session, stream) {
   EventEmitter.call(this);
