@@ -14,14 +14,36 @@ exports.core = path.join(os.tmpdir(), 'core');
 exports.ranges = exports.core + '.ranges';
 
 let pluginName;
-if (process.platform === 'darwin')
+if (process.platform === 'darwin') {
   pluginName = 'llnode.dylib';
-else if (process.platform === 'windows')
+} else if (process.platform === 'windows') {
   pluginName = 'llnode.dll';
-else
+} else {
   pluginName = 'llnode.so';
+}
 
-exports.llnodePath = pluginName;
+// Check we have a plugin library and whether llnode was build with
+// npm install or ./gyp_llnode.
+// If we have both versions or neither that's an error.
+const npm_path = pluginName;
+const gyp_path = path.join(exports.buildDir, pluginName);
+const npm_exists = fs.existsSync(npm_path);
+const gyp_exists = fs.existsSync(gyp_path);
+
+if (npm_exists && gyp_exists) {
+  console.error(`${pluginName} has been built with both npm install and` +
+    ' gyp_llnode.');
+  console.error('Please remove one version before running npm test.');
+  process.exit(1);
+}
+
+if (!npm_exists && !gyp_exists) {
+  console.error(`${pluginName} has not been built.`);
+  console.error('Please run `npm install` or `../gyp_llnode && make -C out/`');
+  process.exit(1);
+}
+
+exports.llnodePath = npm_exists ? npm_path : gyp_path;
 
 function SessionOutput(session, stream) {
   EventEmitter.call(this);
