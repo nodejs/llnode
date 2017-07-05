@@ -107,6 +107,8 @@ fs.mkdirSync('tools');
 console.log(`Linking tools/gyp to ${gypDir}/gyp`);
 fs.symlinkSync(`${gypDir}/gyp`, 'tools/gyp');
 
+fs.writeFileSync(`${buildDir}/scripts/llnode.sh`, scriptText(lldbExe));
+
 // Exit with success.
 process.exit(0);
 
@@ -140,7 +142,7 @@ function getDarwinRelease() {
 }
 
 // Find the 'best' lldb to use. Either:
-// - the one specified by the user using npm --llnode_exe=... install llnode
+// - the one specified by the user using npm --lldb_exe=... install llnode
 // - the default lldb executable
 // - the higest known lldb version
 function getLldbExecutable() {
@@ -214,4 +216,30 @@ function getLinuxHeadersDir(version) {
     return '/usr';
   }
   return undefined;
+}
+
+function scriptText(lldbExe) {
+
+  let lib = 'llnode.so';
+  if (osName === 'Darwin') {
+    lib = 'llnode.dylib';
+  }
+
+  return `
+#!/bin/sh
+
+LLNODE_SCRIPT=\`node -p "path.resolve('$0')"\`
+
+SCRIPT_PATH=\`dirname $LLNODE_SCRIPT\`
+if [ \`basename $SCRIPT_PATH\` == ".bin" ]; then
+  # llnode installed locally in node_modules/.bin
+  LLNODE_PLUGIN="$SCRIPT_PATH/../llnode/${lib}"
+else
+  # llnode installed globally in lib/node_modules
+  LLNODE_PLUGIN="$SCRIPT_PATH/../lib/node_modules/llnode/${lib}"
+fi
+
+${lldbExe} --one-line "plugin load $LLNODE_PLUGIN" --one-line "settings set prompt '(llnode) '" $@
+`;
+
 }
