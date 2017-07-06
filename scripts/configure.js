@@ -225,13 +225,12 @@ function scriptText(lldbExe) {
     lib = 'llnode.dylib';
   }
 
-  return `
-#!/bin/sh
+  return `#!/bin/sh
 
 LLNODE_SCRIPT=\`node -p "path.resolve('$0')"\`
 
 SCRIPT_PATH=\`dirname $LLNODE_SCRIPT\`
-if [ \`basename $SCRIPT_PATH\` == ".bin" ]; then
+if [ \`basename $SCRIPT_PATH\` = ".bin" ]; then
   # llnode installed locally in node_modules/.bin
   LLNODE_PLUGIN="$SCRIPT_PATH/../llnode/${lib}"
 else
