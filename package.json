@@ -6,6 +6,7 @@
   "directories": {
     "test": "test"
   },
+  "bin" : { "llnode" : "scripts/llnode.sh"},
   "//": "(Blame C++)",
   "scripts": {
     "preinstall": "node scripts/configure.js",
