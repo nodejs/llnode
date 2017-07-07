@@ -1,3 +1,5 @@
+LLDB_VERSION ?= 3.6
+
 all:
 	@echo "Please take a look at README.md"
 
@@ -19,9 +21,9 @@ uninstall-linux:
 format:
 	clang-format -i src/*
 
-_travis:
-	./gyp_llnode -Dlldb_dir=/usr/lib/llvm-3.6/ -f make
+ci:
+	./gyp_llnode -Dlldb_dir=/usr/lib/llvm-$(LLDB_VERSION)/ -f make
 	make -C out/
-	TEST_LLDB_BINARY=`which lldb-3.6` npm test
+	TEST_LLDB_BINARY=`which lldb-$(LLDB_VERSION)` npm test
 
-.PHONY: all
+.PHONY: all install-osx uninstall-osx install-linux uninstall-linux format ci
