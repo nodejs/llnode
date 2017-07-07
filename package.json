@@ -1,12 +1,14 @@
 {
   "name": "llnode",
-  "version": "1.5.1",
+  "version": "1.6.0",
   "description": "Node.js plugin for LLDB",
   "main": "no-entry-sorry.js",
   "directories": {
     "test": "test"
   },
-  "bin" : { "llnode" : "scripts/llnode.sh"},
+  "bin": {
+    "llnode": "scripts/llnode.sh"
+  },
   "//": "(Blame C++)",
   "scripts": {
     "preinstall": "node scripts/configure.js",
