@@ -4,8 +4,16 @@
 #include <lldb/API/LLDB.h>
 #include <map>
 #include <set>
+#include "src/llnode.h"
 
 namespace llnode {
+
+typedef std::vector<uint64_t> ReferencesVector;
+
+typedef std::map<uint64_t, ReferencesVector*> ReferencesByValueMap;
+typedef std::map<std::string, ReferencesVector*> ReferencesByPropertyMap;
+typedef std::map<std::string, ReferencesVector*> ReferencesByStringMap;
+
 
 class FindObjectsCmd : public CommandBase {
  public:
@@ -48,15 +56,35 @@ class FindReferencesCmd : public CommandBase {
   class ObjectScanner {
    public:
     virtual ~ObjectScanner() {}
+
+    virtual bool AreReferencesLoaded(){};
+
+    virtual ReferencesVector* GetReferences(){};
+
+    virtual void ScanRefs(v8::JSObject& js_obj, v8::Error& err){};
+    virtual void ScanRefs(v8::String& str, v8::Error& err){};
+
     virtual void PrintRefs(lldb::SBCommandReturnObject& result,
                            v8::JSObject& js_obj, v8::Error& err) {}
     virtual void PrintRefs(lldb::SBCommandReturnObject& result, v8::String& str,
                            v8::Error& err) {}
   };
 
+  void PrintReferences(lldb::SBCommandReturnObject& result,
+                       ReferencesVector* references, ObjectScanner* scanner);
+
+  void ScanForReferences(ObjectScanner* scanner);
+
   class ReferenceScanner : public ObjectScanner {
    public:
     ReferenceScanner(v8::Value search_value) : search_value_(search_value) {}
+
+    bool AreReferencesLoaded() override;
+
+    ReferencesVector* GetReferences() override;
+
+    void ScanRefs(v8::JSObject& js_obj, v8::Error& err) override;
+    void ScanRefs(v8::String& str, v8::Error& err) override;
 
     void PrintRefs(lldb::SBCommandReturnObject& result, v8::JSObject& js_obj,
                    v8::Error& err) override;
@@ -67,10 +95,15 @@ class FindReferencesCmd : public CommandBase {
     v8::Value search_value_;
   };
 
-
   class PropertyScanner : public ObjectScanner {
    public:
     PropertyScanner(std::string search_value) : search_value_(search_value) {}
+
+    bool AreReferencesLoaded() override;
+
+    ReferencesVector* GetReferences() override;
+
+    void ScanRefs(v8::JSObject& js_obj, v8::Error& err) override;
 
     // We only scan properties on objects not Strings, use default no-op impl
     // of PrintRefs for Strings.
@@ -85,6 +118,13 @@ class FindReferencesCmd : public CommandBase {
   class StringScanner : public ObjectScanner {
    public:
     StringScanner(std::string search_value) : search_value_(search_value) {}
+
+    bool AreReferencesLoaded() override;
+
+    ReferencesVector* GetReferences() override;
+
+    void ScanRefs(v8::JSObject& js_obj, v8::Error& err) override;
+    void ScanRefs(v8::String& str, v8::Error& err) override;
 
     void PrintRefs(lldb::SBCommandReturnObject& result, v8::JSObject& js_obj,
                    v8::Error& err) override;
@@ -179,6 +219,37 @@ class LLScan {
 
   inline TypeRecordMap& GetMapsToInstances() { return mapstoinstances_; };
 
+  // References By Value
+  inline bool AreReferencesByValueLoaded() {
+    return references_by_value_.size() > 0;
+  };
+  inline ReferencesVector* GetReferencesByValue(uint64_t address) {
+    if (references_by_value_.count(address) == 0) {
+      references_by_value_[address] = new ReferencesVector;
+    }
+    return references_by_value_[address];
+  };
+
+  inline bool AreReferencesByPropertyLoaded() {
+    return references_by_property_.size() > 0;
+  };
+  inline ReferencesVector* GetReferencesByProperty(std::string property) {
+    if (references_by_property_.count(property) == 0) {
+      references_by_property_[property] = new ReferencesVector;
+    }
+    return references_by_property_[property];
+  };
+
+  inline bool AreReferencesByStringLoaded() {
+    return references_by_string_.size() > 0;
+  };
+  inline ReferencesVector* GetReferencesByString(std::string string_value) {
+    if (references_by_string_.count(string_value) == 0) {
+      references_by_string_[string_value] = new ReferencesVector;
+    }
+    return references_by_string_[string_value];
+  };
+
  private:
   void ScanMemoryRanges(FindJSObjectsVisitor& v);
   void ClearMemoryRanges();
@@ -198,6 +269,10 @@ class LLScan {
   lldb::SBProcess process_;
   MemoryRange* ranges_ = nullptr;
   TypeRecordMap mapstoinstances_;
+
+  ReferencesByValueMap references_by_value_;
+  ReferencesByPropertyMap references_by_property_;
+  ReferencesByStringMap references_by_string_;
 };
 
 }  // namespace llnode
