@@ -57,9 +57,9 @@ class FindReferencesCmd : public CommandBase {
    public:
     virtual ~ObjectScanner() {}
 
-    virtual bool AreReferencesLoaded(){};
+    virtual bool AreReferencesLoaded() { return false; };
 
-    virtual ReferencesVector* GetReferences(){};
+    virtual ReferencesVector* GetReferences() { return nullptr; };
 
     virtual void ScanRefs(v8::JSObject& js_obj, v8::Error& err){};
     virtual void ScanRefs(v8::String& str, v8::Error& err){};
