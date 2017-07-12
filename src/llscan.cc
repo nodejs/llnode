@@ -1146,10 +1146,8 @@ bool LLScan::ScanHeapForObjects(lldb::SBTarget target,
   // LLNODE_RANGESFILE with data for the new dump or things won't match up).
   if (target_ != target) {
     ClearMemoryRanges();
-    mapstoinstances_.clear();
-    references_by_value_.clear();
-    references_by_property_.clear();
-    references_by_string_.clear();
+    ClearMapsToInstances();
+    ClearReferences();
     target_ = target;
   }
 
@@ -1335,12 +1333,33 @@ void LLScan::ClearMemoryRanges() {
 
 
 void LLScan::ClearMapsToInstances() {
-  TypeRecordMap::iterator end = GetMapsToInstances().end();
-  for (TypeRecordMap::iterator it = GetMapsToInstances().begin(); it != end;
-       ++it) {
-    TypeRecord* t = it->second;
+  TypeRecord* t;
+  for (auto entry : mapstoinstances_) {
+    t = entry.second;
     delete t;
   }
-  GetMapsToInstances().clear();
+  mapstoinstances_.clear();
+}
+
+void LLScan::ClearReferences() {
+  ReferencesVector* references;
+
+  for (auto entry : references_by_value_) {
+    references = entry.second;
+    delete references;
+  }
+  references_by_value_.clear();
+
+  for (auto entry : references_by_property_) {
+    references = entry.second;
+    delete references;
+  }
+  references_by_property_.clear();
+
+  for (auto entry : references_by_string_) {
+    references = entry.second;
+    delete references;
+  }
+  references_by_string_.clear();
 }
 }  // namespace llnode
