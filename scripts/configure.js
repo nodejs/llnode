@@ -76,7 +76,8 @@ if (osName === 'Darwin') {
     // As this is a BSD we know this system is in an improper state
     // So we can exit with an error
     console.log('The system isn\'t set up correcly.'); 
-    console.log('Try `pkg install llvm39` and `ln -s /usr/local/bin/lldb39 /usr/bin/lldb`');
+    console.log('Try `pkg install llvm39');
+    console.log('And `ln -s /usr/local/bin/lldb39 /usr/bin/lldb`');
     process.exit(1);	  
   } else {
     lldbIncludeDir = installedHeadersDir;
