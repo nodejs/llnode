@@ -131,7 +131,6 @@ To install the plugin in the LLDB system plugin directory, use the
 npm copy `node_modules/llnode/llnode.so` to
 `/usr/lib/lldb/plugins`.
 
-```
 
 ### FreeBSD
 
