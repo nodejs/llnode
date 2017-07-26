@@ -1,8 +1,24 @@
 # llnode
 
-[![Build Status](https://secure.travis-ci.org/indutny/llnode.png)](http://travis-ci.org/indutny/llnode)
+[![Build Status](https://secure.travis-ci.org/nodejs/llnode.png)](http://travis-ci.org/nodejs/llnode)
 
-Node.js v4.x-v6.x C++ plugin for [LLDB](http://lldb.llvm.org) - a next generation, high-performance debugger.
+Node.js v4.x-v8.x C++ plugin for the [LLDB](http://lldb.llvm.org) debugger.
+
+The llnode plugin adds the ability to inspect JavaScript stack frames, objects,
+source code and more to the standard C/C++ debugging facilities when working
+with Node.js processes or core dumps in LLDB.
+
+### Quick start
+
+Start an lldb session with the llnode plugin pre-loaded:
+
+```bash
+npm install -g llnode
+llnode node -c core
+```
+
+- For more details on starting llnode see the [Usage](#usage) section.
+- To get started with the llnode commands see the [Commands](#commands) section.
 
 ## Demo
 
@@ -10,16 +26,21 @@ https://asciinema.org/a/29589
 
 ## Install Instructions
 
-### Install with npm
+To use llnode you need to have the LLDB debugger installed.
+
+- On OS X lldb is installed as part of Xcode. You will need Xcode both to build and run llnode.
+- On Linux install the lldb package using your distributions package manager.
+
+### Global install with npm
 
 ```bash
-npm install llnode
+npm install -g llnode
 ```
 
 To use a particular build of lldb, use the `--lldb_exe` option:
 
 ```bash
-npm install --lldb_exe=`which lldb-3.9` llnode
+npm install --lldb_exe=`which lldb-3.9` -g llnode
 ```
 
 ### Install with Homebrew (OS X)
@@ -81,7 +102,7 @@ sudo make install-linux
 # Clone this repo
 git clone https://github.com/nodejs/llnode.git && cd llnode
 
-# Install llvm with lldb and headers 
+# Install llvm with lldb and headers
 pkg install llvm39
 rm -f /usr/bin/lldb
 ln -s /usr/local/bin/lldb39 /usr/bin/lldb
@@ -94,24 +115,42 @@ git clone https://chromium.googlesource.com/external/gyp.git tools/gyp
 
 # Build
 gmake -C out/ -j9
-
-# Install
-ComputeSystemPluginsDirectory is not implemented in FreeBSD
-The llnode.so will have to be loaded manually 
 ```
 
-## Usage
+(The LLDB function ComputeSystemPluginsDirectory is not implemented on FreeBSD.
+The plugin library must be loaded manually.)
 
-The llnode plugin can be loaded into LLDB using the `plugin load` command.
-Alternatively it can be installed in the LLDB system plugin directory, in
-which case LLDB will load the plugin automatically on start-up. 
+
+## Loading the lldb plugin library.
+
+The simplest method is:
+```bash
+npm install -g llnode
+llnode
+```
+
+If you do a global install (npm install -g llnode) you can use the `llnode`
+shortcut script. This starts `lldb` and automatically issues the `plugin load` command.
+All parameters to the llnode script are passed directly to lldb. If you do not do a
+local install the shortcut will be in `node_modules/.bin/llnode`
+
+If you run either `make install-linux` or `make install-osx` the plugin will installed
+in the LLDB system plugin directory, in which case LLDB will load the plugin
+automatically on start-up. Using this may require additional permissions to be able to
+copy the plugin libary to the system plugin directory.
+
+The llnode plugin can also be manually loaded into LLDB using the
+`plugin load` command within lldb.
+
+It does not matter whether the `plugin load` command is issued before or after
+loading a core dump or attaching to a process.
 
 ### OS X
 
 ```
 lldb
 
-(lldb) plugin load ./node-modules/llnode/llnode.dylib
+(lldb) plugin load ./node_modules/llnode/llnode.dylib
 ```
 
 To install the plugin in the LLDB system plugin directory, use the
@@ -124,7 +163,7 @@ with npm copy `node_modules/llnode/llnode.dylib` to
 ```
 lldb
 
-(lldb) plugin load ./node-modules/llnode/llnode.so
+(lldb) plugin load ./node_modules/llnode/llnode.so
 ```
 To install the plugin in the LLDB system plugin directory, use the
 `make install-linux` build step above, or if installing with
@@ -135,9 +174,45 @@ npm copy `node_modules/llnode/llnode.so` to
 ### FreeBSD
 
 ```
-lldb -O plugin load ./node_modules/llnode/llnode.so
+lldb
+
+(lldb) plugin load ./node_modules/llnode/llnode.so
+```
+LLDB does not support the system plugin directory on FreeBSD.
+
+# Usage
+
+To use llnode with a core dump the core dump needs to be loaded into lldb
+along with the exact executable that created the core dump. The executable
+contains information that lldb and the llnode plugin need to make sense of
+the data in the core dump.
+
+To load a core dump when starting llnode use:
+```
+llnode /path/to/bin/node -c /path/to/core
+```
+or to load the core dump after starting lldb:
+```
+(llnode) target create /path/to/bin/node -c /path/to/core
 ```
 
+To use llnode against a live process:
+```
+llnode -- /path/to/bin/node script.js
+(llnode) run
+```
+This is ideal for debugging an npm package with native code.
+To debug a Node.js crash on uncaught exception:
+```
+llnode -- /path/to/bin/node --abort_on_uncaught_exception script.js
+(llnode) run
+```
+lldb will stop your process when it crashes. To see where it stopped use the
+v8 bt command. See the [Commands](#commands) section below for more commands.
+
+### Commands
+
+```
 (lldb) v8 help
      Node.js helpers
 
@@ -164,6 +239,7 @@ The following subcommands are supported:
                           * -v, --value expr     - all properties that refer to the specified JavaScript object (default)
                           * -n, --name  name     - all properties with the specified name
                           * -s, --string string  - all properties that refer to the specified JavaScript string value
+                          * --array-length num   - print maximum of `num` elements in array
 
       inspect         -- Print detailed description and contents of the JavaScript value.
 
