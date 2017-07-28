@@ -232,7 +232,8 @@ function getFreeBSDHeadersDir(version) {
       return includeDir;
     }
   } catch (err) {
-    console.log(includeDir + '/include/lldb doesn\'nt exist Please see install instructions');
+    console.log(includeDir + '/include/lldb doesn\'nt exist');
+    console.log('Please see README.md');
     console.log(err);
     process.exit(1);
   }
