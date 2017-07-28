@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <cinttypes>
+
 #include <lldb/API/SBExpressionOptions.h>
 
 #include "src/llnode.h"
@@ -11,7 +13,19 @@
 
 namespace llnode {
 
-using namespace lldb;
+using lldb::SBCommandInterpreter;
+using lldb::SBCommandReturnObject;
+using lldb::SBDebugger;
+using lldb::SBError;
+using lldb::SBExpressionOptions;
+using lldb::SBFrame;
+using lldb::SBStream;
+using lldb::SBSymbol;
+using lldb::SBTarget;
+using lldb::SBThread;
+using lldb::SBValue;
+using lldb::eReturnStatusFailed;
+using lldb::eReturnStatusSuccessFinishResult;
 
 v8::LLV8 llv8;
 
@@ -20,6 +34,7 @@ char** CommandBase::ParseInspectOptions(char** cmd,
   static struct option opts[] = {
       {"full-string", no_argument, nullptr, 'F'},
       {"string-length", required_argument, nullptr, 0x1001},
+      {"array-length", required_argument, nullptr, 0x1002},
       {"print-map", no_argument, nullptr, 'm'},
       {"print-source", no_argument, nullptr, 's'},
       {nullptr, 0, nullptr, 0}};
@@ -51,6 +66,9 @@ char** CommandBase::ParseInspectOptions(char** cmd,
         break;
       case 0x1001:
         options->string_length = strtol(optarg, nullptr, 10);
+        break;
+      case 0x1002:
+        options->array_length = strtol(optarg, nullptr, 10);
         break;
       case 's':
         options->print_source = true;
@@ -97,30 +115,37 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
   if (number != -1) num_frames = number;
   for (uint32_t i = 0; i < num_frames; i++) {
     SBFrame frame = thread.GetFrameAtIndex(i);
-    SBSymbol symbol = frame.GetSymbol();
+    const char star = (frame == selected_frame ? '*' : ' ');
+    const uint64_t pc = frame.GetPC();
 
-    // C++ symbol
-    if (symbol.IsValid()) {
-      SBStream desc;
-      if (!frame.GetDescription(desc)) continue;
-      result.Printf(frame == selected_frame ? "  * %s" : "    %s",
-                    desc.GetData());
-      continue;
+    if (!frame.GetSymbol().IsValid()) {
+      v8::Error err;
+      v8::JSFrame v8_frame(&llv8, static_cast<int64_t>(frame.GetFP()));
+      std::string res = v8_frame.Inspect(true, err);
+      if (err.Success()) {
+        result.Printf("  %c frame #%u: 0x%016" PRIx64 " %s\n", star, i, pc,
+                      res.c_str());
+        continue;
+      }
     }
 
-    // V8 frame
-    v8::Error err;
-    v8::JSFrame v8_frame(&llv8, static_cast<int64_t>(frame.GetFP()));
-    std::string res = v8_frame.Inspect(true, err);
+#ifdef LLDB_SBMemoryRegionInfoList_h_
+    // Heuristic: a PC in WX memory is almost certainly a V8 builtin.
+    // TODO(bnoordhuis) Find a way to map the PC to the builtin's name.
+    {
+      lldb::SBMemoryRegionInfo info;
+      if (target.GetProcess().GetMemoryRegionInfo(pc, info).Success() &&
+          info.IsExecutable() && info.IsWritable()) {
+        result.Printf("  %c frame #%u: 0x%016" PRIx64 " <builtin>\n", star, i, pc);
+        continue;
+      }
+    }
+#endif  // LLDB_SBMemoryRegionInfoList_h_
 
-    // Skip invalid frames
-    if (err.Fail()) continue;
-
-    // V8 symbol
-    result.Printf(frame == selected_frame ? "  * frame #%u: 0x%016llx %s\n"
-                                          : "    frame #%u: 0x%016llx %s\n",
-                  i, static_cast<unsigned long long int>(frame.GetPC()),
-                  res.c_str());
+    // C++ stack frame.
+    SBStream desc;
+    if (frame.GetDescription(desc))
+      result.Printf("  %c %s", star, desc.GetData());
   }
 
   result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -130,7 +155,7 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
 
 bool PrintCmd::DoExecute(SBDebugger d, char** cmd,
                          SBCommandReturnObject& result) {
-  if (*cmd == NULL) {
+  if (cmd == nullptr || *cmd == nullptr) {
     if (detailed_) {
       result.SetError("USAGE: v8 inspect [flags] expr\n");
     } else {
@@ -184,6 +209,11 @@ bool PrintCmd::DoExecute(SBDebugger d, char** cmd,
 
 bool ListCmd::DoExecute(SBDebugger d, char** cmd,
                         SBCommandReturnObject& result) {
+  if (cmd == nullptr || *cmd == nullptr) {
+    result.SetError("USAGE: v8 source list\n");
+    return false;
+  }
+
   static SBFrame last_frame;
   static uint64_t last_line = 0;
   SBTarget target = d.GetSelectedTarget();
@@ -297,6 +327,7 @@ bool PluginInitialize(SBDebugger d) {
       " * -m, --print-map      - print object's map address\n"
       " * -s, --print-source   - print source code for function objects\n"
       " * --string-length num  - print maximum of `num` characters in string\n"
+      " * --array-length num   - print maximum of `num` elements in array\n"
       "\n"
       "Syntax: v8 inspect [flags] expr\n");
   interpreter.AddCommand("jsprint", new llnode::PrintCmd(true),

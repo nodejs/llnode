@@ -17,12 +17,20 @@
 
 namespace llnode {
 
+using lldb::SBCommandReturnObject;
+using lldb::SBDebugger;
+using lldb::SBError;
+using lldb::SBExpressionOptions;
+using lldb::SBStream;
+using lldb::SBTarget;
+using lldb::SBValue;
+using lldb::eReturnStatusFailed;
+using lldb::eReturnStatusSuccessFinishResult;
+
 // Defined in llnode.cc
 extern v8::LLV8 llv8;
 
 LLScan llscan;
-
-using namespace lldb;
 
 
 bool FindObjectsCmd::DoExecute(SBDebugger d, char** cmd,
@@ -72,7 +80,7 @@ bool FindObjectsCmd::DoExecute(SBDebugger d, char** cmd,
 
 bool FindInstancesCmd::DoExecute(SBDebugger d, char** cmd,
                                  SBCommandReturnObject& result) {
-  if (*cmd == NULL) {
+  if (cmd == nullptr || *cmd == nullptr) {
     result.SetError("USAGE: v8 findjsinstances [-Fm] instance_name\n");
     return false;
   }
@@ -300,7 +308,7 @@ bool NodeInfoCmd::DoExecute(SBDebugger d, char** cmd,
 
 bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
                                   SBCommandReturnObject& result) {
-  if (*cmd == NULL) {
+  if (cmd == nullptr || *cmd == nullptr) {
     result.SetError("USAGE: v8 findrefs expr\n");
     return false;
   }
@@ -397,6 +405,20 @@ bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
     return false;
   }
 
+  if (!scanner->AreReferencesLoaded()) {
+    ScanForReferences(scanner);
+  }
+  ReferencesVector* references = scanner->GetReferences();
+  PrintReferences(result, references, scanner);
+
+  delete scanner;
+
+  result.SetStatus(eReturnStatusSuccessFinishResult);
+  return true;
+}
+
+
+void FindReferencesCmd::ScanForReferences(ObjectScanner* scanner) {
   // Walk all the object instances and handle them according to their type.
   TypeRecordMap mapstoinstances = llscan.GetMapsToInstances();
   for (auto const entry : mapstoinstances) {
@@ -417,11 +439,11 @@ bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
         // Basically we need to access objects and arrays as both objects and
         // arrays.
         v8::JSObject js_obj(heap_object);
-        scanner->PrintRefs(result, js_obj, err);
+        scanner->ScanRefs(js_obj, err);
 
       } else if (type < v8->types()->kFirstNonstringType) {
         v8::String str(heap_object);
-        scanner->PrintRefs(result, str, err);
+        scanner->ScanRefs(str, err);
 
       } else if (type == v8->types()->kJSTypedArrayType) {
         // These should only point to off heap memory,
@@ -432,11 +454,44 @@ bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
       }
     }
   }
+}
 
-  delete scanner;
 
-  result.SetStatus(eReturnStatusSuccessFinishResult);
-  return true;
+void FindReferencesCmd::PrintReferences(SBCommandReturnObject& result,
+                                        ReferencesVector* references,
+                                        ObjectScanner* scanner) {
+  // Walk all the object instances and handle them according to their type.
+  TypeRecordMap mapstoinstances = llscan.GetMapsToInstances();
+  for (uint64_t addr : *references) {
+    v8::Error err;
+    v8::Value obj_value(&llv8, addr);
+    v8::HeapObject heap_object(obj_value);
+    int64_t type = heap_object.GetType(err);
+    v8::LLV8* v8 = heap_object.v8();
+
+    // We only need to handle the types that are in
+    // FindJSObjectsVisitor::IsAHistogramType
+    // as those are the only objects that end up in GetMapsToInstances
+    if (v8::JSObject::IsObjectType(v8, type) ||
+        type == v8->types()->kJSArrayType) {
+      // Objects can have elements and arrays can have named properties.
+      // Basically we need to access objects and arrays as both objects and
+      // arrays.
+      v8::JSObject js_obj(heap_object);
+      scanner->PrintRefs(result, js_obj, err);
+
+    } else if (type < v8->types()->kFirstNonstringType) {
+      v8::String str(heap_object);
+      scanner->PrintRefs(result, str, err);
+
+    } else if (type == v8->types()->kJSTypedArrayType) {
+      // These should only point to off heap memory,
+      // this case should be a no-op.
+    } else {
+      // result.Printf("Unhandled type: %" PRId64 " for addr %" PRIx64
+      //    "\n", type, addr);
+    }
+  }
 }
 
 
@@ -567,6 +622,93 @@ void FindReferencesCmd::ReferenceScanner::PrintRefs(
 }
 
 
+void FindReferencesCmd::ReferenceScanner::ScanRefs(v8::JSObject& js_obj,
+                                                   v8::Error& err) {
+  ReferencesVector* references;
+  std::set<uint64_t> already_saved;
+
+  int64_t length = js_obj.GetArrayLength(err);
+  for (int64_t i = 0; i < length; ++i) {
+    v8::Value v = js_obj.GetArrayElement(i, err);
+
+    // Array is borked, or not array at all - skip it
+    if (!err.Success()) break;
+    if (already_saved.count(v.raw())) continue;
+
+    references = llscan.GetReferencesByValue(v.raw());
+    references->push_back(js_obj.raw());
+    already_saved.insert(v.raw());
+  }
+
+  // Walk all the properties in this object.
+  // We only create strings for the field names that match the search
+  // value.
+  std::vector<std::pair<v8::Value, v8::Value>> entries = js_obj.Entries(err);
+  if (err.Fail()) {
+    return;
+  }
+  for (auto entry : entries) {
+    v8::Value v = entry.second;
+
+    if (already_saved.count(v.raw())) continue;
+
+    references = llscan.GetReferencesByValue(v.raw());
+    references->push_back(js_obj.raw());
+    already_saved.insert(v.raw());
+  }
+}
+
+
+void FindReferencesCmd::ReferenceScanner::ScanRefs(v8::String& str,
+                                                   v8::Error& err) {
+  ReferencesVector* references;
+  std::set<uint64_t> already_saved;
+
+  v8::LLV8* v8 = str.v8();
+
+  int64_t repr = str.Representation(err);
+
+  // Concatenated and sliced strings refer to other strings so
+  // we need to check their references.
+
+  if (repr == v8->string()->kSlicedStringTag) {
+    v8::SlicedString sliced_str(str);
+    v8::String parent = sliced_str.Parent(err);
+
+    if (err.Success()) {
+      references = llscan.GetReferencesByValue(parent.raw());
+      references->push_back(str.raw());
+    }
+
+  } else if (repr == v8->string()->kConsStringTag) {
+    v8::ConsString cons_str(str);
+
+    v8::String first = cons_str.First(err);
+    if (err.Success()) {
+      references = llscan.GetReferencesByValue(first.raw());
+      references->push_back(str.raw());
+    }
+
+    v8::String second = cons_str.Second(err);
+    if (err.Success() && first.raw() != second.raw()) {
+      references = llscan.GetReferencesByValue(second.raw());
+      references->push_back(str.raw());
+    }
+  }
+  // Nothing to do for other kinds of string.
+}
+
+
+bool FindReferencesCmd::ReferenceScanner::AreReferencesLoaded() {
+  return llscan.AreReferencesByValueLoaded();
+}
+
+
+ReferencesVector* FindReferencesCmd::ReferenceScanner::GetReferences() {
+  return llscan.GetReferencesByValue(search_value_.raw());
+}
+
+
 void FindReferencesCmd::PropertyScanner::PrintRefs(
     SBCommandReturnObject& result, v8::JSObject& js_obj, v8::Error& err) {
   // (Note: We skip array elements as they don't have names.)
@@ -590,6 +732,40 @@ void FindReferencesCmd::PropertyScanner::PrintRefs(
                     type_name.c_str(), key.c_str(), entry.second.raw());
     }
   }
+}
+
+
+void FindReferencesCmd::PropertyScanner::ScanRefs(v8::JSObject& js_obj,
+                                                  v8::Error& err) {
+  // (Note: We skip array elements as they don't have names.)
+
+  // Walk all the properties in this object.
+  // We only create strings for the field names that match the search
+  // value.
+  ReferencesVector* references;
+  std::vector<std::pair<v8::Value, v8::Value>> entries = js_obj.Entries(err);
+  if (err.Fail()) {
+    return;
+  }
+  for (auto entry : entries) {
+    v8::HeapObject nameObj(entry.first);
+    std::string key = entry.first.ToString(err);
+    if (err.Fail()) {
+      continue;
+    }
+    references = llscan.GetReferencesByProperty(key);
+    references->push_back(js_obj.raw());
+  }
+}
+
+
+bool FindReferencesCmd::PropertyScanner::AreReferencesLoaded() {
+  return llscan.AreReferencesByPropertyLoaded();
+}
+
+
+ReferencesVector* FindReferencesCmd::PropertyScanner::GetReferences() {
+  return llscan.GetReferencesByProperty(search_value_);
 }
 
 
@@ -729,6 +905,141 @@ void FindReferencesCmd::StringScanner::PrintRefs(SBCommandReturnObject& result,
 }
 
 
+void FindReferencesCmd::StringScanner::ScanRefs(v8::JSObject& js_obj,
+                                                v8::Error& err) {
+  v8::LLV8* v8 = js_obj.v8();
+  ReferencesVector* references;
+  std::set<std::string> already_saved;
+
+  int64_t length = js_obj.GetArrayLength(err);
+  for (int64_t i = 0; i < length; ++i) {
+    v8::Value v = js_obj.GetArrayElement(i, err);
+    if (err.Fail()) {
+      continue;
+    }
+    v8::HeapObject valueObj(v);
+
+    int64_t type = valueObj.GetType(err);
+    if (err.Fail()) {
+      continue;
+    }
+    if (type < v8->types()->kFirstNonstringType) {
+      v8::String valueString(valueObj);
+      std::string value = valueString.ToString(err);
+      if (err.Fail()) {
+        continue;
+      }
+
+      if (already_saved.count(value)) continue;
+
+      references = llscan.GetReferencesByString(value);
+      references->push_back(js_obj.raw());
+      already_saved.insert(value);
+    }
+  }
+
+  // Walk all the properties in this object.
+  // We only create strings for the field names that match the search
+  // value.
+  std::vector<std::pair<v8::Value, v8::Value>> entries = js_obj.Entries(err);
+  if (err.Success()) {
+    for (auto entry : entries) {
+      v8::HeapObject valueObj(entry.second);
+      int64_t type = valueObj.GetType(err);
+      if (err.Fail()) {
+        continue;
+      }
+      if (type < v8->types()->kFirstNonstringType) {
+        v8::String valueString(valueObj);
+        std::string value = valueString.ToString(err);
+        if (err.Fail()) {
+          continue;
+        }
+        if (already_saved.count(value)) continue;
+
+        references = llscan.GetReferencesByString(value);
+        references->push_back(js_obj.raw());
+        already_saved.insert(value);
+      }
+    }
+  }
+}
+
+
+void FindReferencesCmd::StringScanner::ScanRefs(v8::String& str,
+                                                v8::Error& err) {
+  v8::LLV8* v8 = str.v8();
+  ReferencesVector* references;
+
+  // Concatenated and sliced strings refer to other strings so
+  // we need to check their references.
+
+  int64_t repr = str.Representation(err);
+  if (err.Fail()) return;
+
+  if (repr == v8->string()->kSlicedStringTag) {
+    v8::SlicedString sliced_str(str);
+    v8::String parent_str = sliced_str.Parent(err);
+    if (err.Fail()) return;
+    std::string parent = parent_str.ToString(err);
+    if (err.Success()) {
+      references = llscan.GetReferencesByString(parent);
+      references->push_back(str.raw());
+    }
+  } else if (repr == v8->string()->kConsStringTag) {
+    v8::ConsString cons_str(str);
+
+    v8::String first_str = cons_str.First(err);
+    if (err.Fail()) return;
+
+    // It looks like sometimes one of the strings can be <null> or another
+    // value,
+    // verify that they are a JavaScript String before calling ToString.
+    int64_t first_type = first_str.GetType(err);
+    if (err.Fail()) return;
+
+    if (first_type < v8->types()->kFirstNonstringType) {
+      std::string first = first_str.ToString(err);
+
+      if (err.Success()) {
+        references = llscan.GetReferencesByString(first);
+        references->push_back(str.raw());
+      }
+    }
+
+    v8::String second_str = cons_str.Second(err);
+    if (err.Fail()) return;
+
+    // It looks like sometimes one of the strings can be <null> or another
+    // value,
+    // verify that they are a JavaScript String before calling ToString.
+    int64_t second_type = second_str.GetType(err);
+    if (err.Fail()) return;
+
+    if (second_type < v8->types()->kFirstNonstringType) {
+      std::string second = second_str.ToString(err);
+
+      if (err.Success()) {
+        references = llscan.GetReferencesByString(second);
+        references->push_back(str.raw());
+      }
+    }
+  }
+  // Nothing to do for other kinds of string.
+  // They are strings so we will find references to them.
+}
+
+
+bool FindReferencesCmd::StringScanner::AreReferencesLoaded() {
+  return llscan.AreReferencesByStringLoaded();
+}
+
+
+ReferencesVector* FindReferencesCmd::StringScanner::GetReferences() {
+  return llscan.GetReferencesByString(search_value_);
+}
+
+
 FindJSObjectsVisitor::FindJSObjectsVisitor(SBTarget& target,
                                            TypeRecordMap& mapstoinstances)
     : target_(target), mapstoinstances_(mapstoinstances) {
@@ -835,7 +1146,8 @@ bool LLScan::ScanHeapForObjects(lldb::SBTarget target,
   // LLNODE_RANGESFILE with data for the new dump or things won't match up).
   if (target_ != target) {
     ClearMemoryRanges();
-    mapstoinstances_.clear();
+    ClearMapsToInstances();
+    ClearReferences();
     target_ = target;
   }
 
@@ -895,8 +1207,8 @@ void LLScan::ScanMemoryRanges(FindJSObjectsVisitor& v) {
     head = head->next_;
 
 #else  // LLDB_SBMemoryRegionInfoList_h_
-  SBMemoryRegionInfoList memory_regions = process_.GetMemoryRegions();
-  SBMemoryRegionInfo region_info;
+  lldb::SBMemoryRegionInfoList memory_regions = process_.GetMemoryRegions();
+  lldb::SBMemoryRegionInfo region_info;
 
   for (uint32_t i = 0; i < memory_regions.GetSize(); ++i) {
     memory_regions.GetMemoryRegionAtIndex(i, region_info);
@@ -1021,12 +1333,33 @@ void LLScan::ClearMemoryRanges() {
 
 
 void LLScan::ClearMapsToInstances() {
-  TypeRecordMap::iterator end = GetMapsToInstances().end();
-  for (TypeRecordMap::iterator it = GetMapsToInstances().begin(); it != end;
-       ++it) {
-    TypeRecord* t = it->second;
+  TypeRecord* t;
+  for (auto entry : mapstoinstances_) {
+    t = entry.second;
     delete t;
   }
-  GetMapsToInstances().clear();
+  mapstoinstances_.clear();
+}
+
+void LLScan::ClearReferences() {
+  ReferencesVector* references;
+
+  for (auto entry : references_by_value_) {
+    references = entry.second;
+    delete references;
+  }
+  references_by_value_.clear();
+
+  for (auto entry : references_by_property_) {
+    references = entry.second;
+    delete references;
+  }
+  references_by_property_.clear();
+
+  for (auto entry : references_by_string_) {
+    references = entry.second;
+    delete references;
+  }
+  references_by_string_.clear();
 }
 }  // namespace llnode

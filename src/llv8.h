@@ -51,14 +51,17 @@ class Value {
         : detailed(false),
           print_map(false),
           print_source(false),
-          string_length(kStringLength) {}
+          string_length(kStringLength),
+          array_length(kArrayLength) {}
 
     static const unsigned int kStringLength = 16;
+    static const unsigned int kArrayLength = 16;
 
     bool detailed;
     bool print_map;
     bool print_source;
     unsigned int string_length;
+    unsigned int array_length;
   };
 
   Value(const Value& v) = default;
@@ -240,6 +243,7 @@ class JSObject : public HeapObject {
   std::string InspectProperties(Error& err);
 
   std::string InspectElements(Error& err);
+  std::string InspectElements(int64_t length, Error& err);
   std::string InspectDictionary(Error& err);
   std::string InspectDescriptors(Map map, Error& err);
   void Keys(std::vector<std::string>& keys, Error& err);
