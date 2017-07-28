@@ -52,7 +52,7 @@ if (osName === 'Darwin') {
   }
 
   // console.log('lldb_version is ' + lldb_version)
-  var installedHeadersDir = getLinuxHeadersDir(lldbVersion);
+  const installedHeadersDir = getLinuxHeadersDir(lldbVersion);
   // console.log('installed_headers_dir is ' + installed_headers_dir);
   if (installedHeadersDir === undefined) {
     // Initialising lldb_headers_branch will cause us to clone them.
@@ -62,23 +62,23 @@ if (osName === 'Darwin') {
     lldbIncludeDir = installedHeadersDir;
   }
 } else if (osName === 'FreeBSD') {
-  
-  lldbExe = getLldbExecutable();	
+
+  lldbExe = getLldbExecutable();
   lldbVersion = getFreeBSDVersion(lldbExe);
 
   if (lldbVersion === undefined) {
     console.log('Unable to locate lldb binary. llnode installation failed.');
-    process.exit(1);  
+    process.exit(1);
   }
-  
-  var installedHeadersDir = getFreeBSDHeadersDir(lldbVersion);
+
+  const installedHeadersDir = getFreeBSDHeadersDir(lldbVersion);
   if (installedHeadersDir === undefined) {
     // As this is a BSD we know this system is in an improper state
     // So we can exit with an error
-    console.log('The system isn\'t set up correcly.'); 
+    console.log('The system isn\'t set up correcly.');
     console.log('Try `pkg install llvm39');
     console.log('And `ln -s /usr/local/bin/lldb39 /usr/bin/lldb`');
-    process.exit(1);	  
+    process.exit(1);
   } else {
     lldbIncludeDir = installedHeadersDir;
   }
@@ -213,9 +213,9 @@ function getFreeBSDVersion(lldbExe) {
 }
 
 function getFreeBSDHeadersDir(version) {
-  
+
   console.log('Checking for headers, version is ' + version);
-  
+
   try {
     var includeDir = child_process.execFileSync('llvm-config' + version,
       ['--prefix']).toString().trim();
@@ -223,8 +223,8 @@ function getFreeBSDHeadersDir(version) {
       return includeDir;
     }
   } catch (err) {
-    console.log(includeDir + '/include/lldb doesn\'nt exist Please see install instructions');	   
-    console.log(err);	  
+    console.log(includeDir + '/include/lldb doesn\'nt exist Please see install instructions');
+    console.log(err);
     process.exit(1);
   }
   return undefined;
