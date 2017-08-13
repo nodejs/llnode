@@ -221,6 +221,15 @@ class SlicedString : public String {
   inline std::string ToString(Error& err);
 };
 
+class ThinString : public String {
+ public:
+  V8_VALUE_DEFAULT_METHODS(ThinString, String)
+
+  inline String Actual(Error& err);
+
+  inline std::string ToString(Error& err);
+};
+
 class HeapNumber : public HeapObject {
  public:
   V8_VALUE_DEFAULT_METHODS(HeapNumber, HeapObject)
@@ -405,7 +414,6 @@ class JSArrayBuffer : public HeapObject {
   inline bool WasNeutered(Error& err);
 
   std::string Inspect(InspectOptions* options, Error& err);
-  
 };
 
 class JSArrayBufferView : public HeapObject {
@@ -477,6 +485,7 @@ class LLV8 {
   constants::TwoByteString two_byte_string;
   constants::ConsString cons_string;
   constants::SlicedString sliced_string;
+  constants::ThinString thin_string;
   constants::FixedArrayBase fixed_array_base;
   constants::FixedArray fixed_array;
   constants::Oddball oddball;
@@ -503,6 +512,7 @@ class LLV8 {
   friend class TwoByteString;
   friend class ConsString;
   friend class SlicedString;
+  friend class ThinString;
   friend class HeapNumber;
   friend class JSObject;
   friend class JSArray;

@@ -136,7 +136,8 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
       lldb::SBMemoryRegionInfo info;
       if (target.GetProcess().GetMemoryRegionInfo(pc, info).Success() &&
           info.IsExecutable() && info.IsWritable()) {
-        result.Printf("  %c frame #%u: 0x%016" PRIx64 " <builtin>\n", star, i, pc);
+        result.Printf("  %c frame #%u: 0x%016" PRIx64 " <builtin>\n", star, i,
+                      pc);
         continue;
       }
     }

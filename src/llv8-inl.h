@@ -272,6 +272,8 @@ ACCESSOR(ConsString, Second, cons_string()->kSecondOffset, String);
 ACCESSOR(SlicedString, Parent, sliced_string()->kParentOffset, String);
 ACCESSOR(SlicedString, Offset, sliced_string()->kOffsetOffset, Smi);
 
+ACCESSOR(ThinString, Actual, thin_string()->kActualOffset, String);
+
 ACCESSOR(FixedArrayBase, Length, fixed_array_base()->kLengthOffset, Smi);
 
 inline std::string OneByteString::ToString(Error& err) {
@@ -317,6 +319,16 @@ inline std::string SlicedString::ToString(Error& err) {
   if (err.Fail()) return std::string();
 
   return tmp.substr(offset.GetValue(), length.GetValue());
+}
+
+inline std::string ThinString::ToString(Error& err) {
+  String actual = Actual(err);
+  if (err.Fail()) return std::string();
+
+  std::string tmp = actual.ToString(err);
+  if (err.Fail()) return std::string();
+
+  return tmp;
 }
 
 inline int64_t FixedArray::LeaData() const {

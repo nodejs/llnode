@@ -334,6 +334,7 @@ void String::Load() {
   kConsStringTag = LoadConstant("ConsStringTag");
   kSlicedStringTag = LoadConstant("SlicedStringTag");
   kExternalStringTag = LoadConstant("ExternalStringTag");
+  kThinStringTag = LoadConstant("ThinStringTag");
 
   kLengthOffset = LoadConstant("class_String__length__SMI");
 }
@@ -362,6 +363,9 @@ void SlicedString::Load() {
   kOffsetOffset = LoadConstant("class_SlicedString__offset__SMI");
 }
 
+void ThinString::Load() {
+  kActualOffset = LoadConstant("class_ThinString__actual__String");
+}
 
 void FixedArrayBase::Load() {
   kLengthOffset = LoadConstant("class_FixedArrayBase__length__SMI");
