@@ -99,8 +99,10 @@ std::string LLV8::LoadBytes(int64_t length, int64_t addr, Error& err) {
   }
 
   std::string res;
+  char tmp[10];
   for (int i = 0; i < length; ++i) {
-    res += (i == 0 ? " " : ", ") + std::to_string(buf[i]);
+    snprintf(tmp, sizeof(tmp), "%s%02x", (i == 0 ? "" : ", "), buf[i]);
+    res += tmp;
   }
   delete[] buf;
   return res;
@@ -1107,10 +1109,15 @@ std::string JSArrayBuffer::Inspect(InspectOptions* options, Error& err) {
 
   int byte_length = static_cast<int>(length.GetValue());
 
-  std::string res;
   char tmp[128];
+  snprintf(tmp, sizeof(tmp),
+           "<ArrayBuffer: backingStore=0x%016" PRIx64 ", byteLength=%d",
+           data, byte_length);
+  
+  std::string res;
+  res += tmp;
   if (options->detailed) {
-    res += "<ArrayBuffer: [";
+    res += ": [\n  ";
 
     int display_length = std::min<int>(byte_length, options->array_length);
     res += v8()->LoadBytes(display_length, data, err);
@@ -1118,12 +1125,9 @@ std::string JSArrayBuffer::Inspect(InspectOptions* options, Error& err) {
     if (display_length < byte_length) {
       res += " ...";
     }
-    res += " ]>";
+    res += "\n]>";
   } else {
-    snprintf(tmp, sizeof(tmp),
-             "<ArrayBuffer: backingStore=0x%016" PRIx64 ", byteLength=%d>",
-             data, byte_length);
-    res += tmp;
+    res += ">";
   }
 
   return res;
@@ -1150,24 +1154,25 @@ std::string JSArrayBufferView::Inspect(InspectOptions* options, Error& err) {
 
   int byte_length = static_cast<int>(length.GetValue());
   int byte_offset = static_cast<int>(off.GetValue());
-  std::string res;
   char tmp[128];
+  snprintf(tmp, sizeof(tmp),
+           "<ArrayBufferView: backingStore=0x%016" PRIx64 ", byteOffset=%d, byteLength=%d",
+           data, byte_offset, byte_length);
 
+  std::string res;
+  res += tmp;
   if (options->detailed) {
-    res += "<ArrayBufferView: [";
+    res += ": [\n  ";
 
     int display_length = std::min<int>(byte_length, options->array_length);
-
     res += v8()->LoadBytes(display_length, data + byte_offset, err);
+
     if (display_length < byte_length) {
       res += " ...";
     }
-    res += " ]>";
+    res += "\n]>";
   } else {
-    snprintf(tmp, sizeof(tmp),
-             "<ArrayBufferView: backingStore=0x%016" PRIx64 ", byteOffset=%d, byteLength=%d>",
-             data, byte_offset, byte_length);
-    res += tmp;
+    res += ">";
   }
   return res;
 }

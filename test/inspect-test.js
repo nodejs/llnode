@@ -170,7 +170,11 @@ tape('v8 inspect', (t) => {
 
   sess.linesUntil(/\]>/, (lines) => {
     lines = lines.join('\n');
-    const re = /0x[0-9a-f]+:<ArrayBuffer: \[ 1, 2, 3, 4, 5 ]>$/;
+    const re = new RegExp(
+      '0x[0-9a-f]+:' +
+      '<ArrayBuffer: backingStore=0x[0-9a-f]+, byteLength=5: \\[\n' +
+      '  01, 02, 03, 04, 05\n' +
+      ']>');
     t.ok(
         re.test(lines),
         'array buffer content');
@@ -179,7 +183,11 @@ tape('v8 inspect', (t) => {
 
   sess.linesUntil(/]>/, (lines) => {
     lines = lines.join('\n');
-    const re = /0x[0-9a-f]+:<ArrayBuffer: \[ 1 ... ]>$/;
+    const re = new RegExp(
+      '0x[0-9a-f]+:' +
+      '<ArrayBuffer: backingStore=0x[0-9a-f]+, byteLength=5: \\[\n' +
+      '  01 ...\n' +
+      ']>');
     t.ok(
         re.test(lines),
         'array buffer content with maximum length 1');
@@ -188,7 +196,12 @@ tape('v8 inspect', (t) => {
 
   sess.linesUntil(/]>/, (lines) => {
     lines = lines.join('\n');
-    const re = /0x[0-9a-f]+:<ArrayBufferView: \[ 1, 8, 32, 64, 128, 255 ]>$/;
+    const re = new RegExp(
+      '0x[0-9a-f]+:' +
+      '<ArrayBufferView: backingStore=0x[0-9a-f]+, byteOffset=\\d+, ' +
+      'byteLength=6: \\[\n' +
+      '  01, 40, 60, 80, f0, ff\n' +
+      ']>');
     t.ok(
         re.test(lines),
         'typed array content');
@@ -197,7 +210,12 @@ tape('v8 inspect', (t) => {
 
   sess.linesUntil(/]>/, (lines) => {
     lines = lines.join('\n');
-    const re = /0x[0-9a-f]+:<ArrayBufferView: \[ 1 ... ]>$/;
+    const re = new RegExp(
+      '0x[0-9a-f]+:' +
+      '<ArrayBufferView: backingStore=0x[0-9a-f]+, byteOffset=\\d+, ' +
+      'byteLength=6: \\[\n' +
+      '  01 ...\n' +
+      ']>');
     t.ok(
         re.test(lines),
         'typed array content with maximum length 1');
@@ -206,7 +224,12 @@ tape('v8 inspect', (t) => {
 
   sess.linesUntil(/]>/, (lines) => {
     lines = lines.join('\n');
-    const re = /0x[0-9a-f]+:<ArrayBufferView: \[ 255, 128, 64, 32, 8, 1 ]>$/;
+    const re = new RegExp(
+      '0x[0-9a-f]+:' +
+      '<ArrayBufferView: backingStore=0x[0-9a-f]+, byteOffset=\\d+, ' +
+      'byteLength=6: \\[\n' +
+      '  ff, f0, 80, 0f, 01, 00\n' +
+      ']>');
     t.ok(
         re.test(lines),
         'buffer content');
@@ -215,7 +238,12 @@ tape('v8 inspect', (t) => {
 
   sess.linesUntil(/]>/, (lines) => {
     lines = lines.join('\n');
-    const re = /0x[0-9a-f]+:<ArrayBufferView: \[ 255 ... ]>$/;
+    const re = new RegExp(
+      '0x[0-9a-f]+:' +
+      '<ArrayBufferView: backingStore=0x[0-9a-f]+, byteOffset=\\d+, ' +
+      'byteLength=6: \\[\n' +
+      '  ff ...\n' +
+      ']>');
     t.ok(
         re.test(lines),
         'buffer content with maximum length 1');
