@@ -2,6 +2,7 @@
 
 const os = require('os');
 const fs = require('fs');
+const path = require('path');
 const child_process = require('child_process');
 
 const lldbReleases = {
@@ -52,7 +53,7 @@ if (osName === 'Darwin') {
   }
 
   // console.log('lldb_version is ' + lldb_version)
-  var installedHeadersDir = getLinuxHeadersDir(lldbVersion);
+  const installedHeadersDir = getLinuxHeadersDir(lldbVersion);
   // console.log('installed_headers_dir is ' + installed_headers_dir);
   if (installedHeadersDir === undefined) {
     // Initialising lldb_headers_branch will cause us to clone them.
@@ -61,6 +62,28 @@ if (osName === 'Darwin') {
   } else {
     lldbIncludeDir = installedHeadersDir;
   }
+} else if (osName === 'FreeBSD') {
+
+  lldbExe = getLldbExecutable();
+  lldbVersion = getFreeBSDVersion(lldbExe);
+
+  if (lldbVersion === undefined) {
+    console.log('Unable to locate lldb binary. llnode installation failed.');
+    process.exit(1);
+  }
+
+  const installedHeadersDir = getFreeBSDHeadersDir(lldbVersion);
+  if (installedHeadersDir === undefined) {
+    // As this is a BSD we know this system is in an improper state
+    // So we can exit with an error
+    console.log('The system isn\'t set up correcly.');
+    console.log('Try `pkg install llvm39');
+    console.log('And `ln -s /usr/local/bin/lldb39 /usr/bin/lldb`');
+    process.exit(1);
+  } else {
+    lldbIncludeDir = installedHeadersDir;
+  }
+
 }
 
 console.log(`Installing llnode for ${lldbExe}, lldb version ${lldbVersion}`);
@@ -94,13 +117,18 @@ if (process.env.npm_config_global) {
   gypSubDir = 'npm/node_modules/node-gyp';
 }
 
+// npm can be in a different location than the current                                                                                         
+// location for global installs so we need find out where the npm is                                                                              
+var npmLocation = child_process.execFileSync('which', ['npm']);                                                                                           
+var npmModules = path.join(npmLocation.toString(), '../../lib/node_modules/npm'); 
+
 // Initialize GYP
 // We can use the node-gyp that comes with npm.
 // We can locate it with npm -g explore npm npm explore node-gyp pwd
 // It might have been neater to make node-gyp one of our dependencies
 // *but* they don't get installed until after the install step has run.
 var gypDir = child_process.execFileSync('npm',
-  ['-g', 'explore', 'npm', 'npm', 'explore', gypSubDir, 'pwd'],
+  ['-g', 'explore', npmModules, 'npm', 'explore', gypSubDir, 'pwd'],
   {cwd: buildDir}).toString().trim();
 child_process.execSync('rm -rf tools');
 fs.mkdirSync('tools');
@@ -193,6 +221,30 @@ function getLinuxVersion(lldbExe) {
   return undefined;
 }
 
+// Shim this for consistancy in OS naming
+function getFreeBSDVersion(lldbExe) {
+   //Strip the dots for BSD
+   return getLinuxVersion(lldbExe).replace('.','');
+}
+
+function getFreeBSDHeadersDir(version) {
+
+  console.log('Checking for headers, version is ' + version);
+
+  try {
+    var includeDir = child_process.execFileSync('llvm-config' + version,
+      ['--prefix']).toString().trim();
+    if (fs.existsSync(includeDir + '/include/lldb')) {
+      return includeDir;
+    }
+  } catch (err) {
+    console.log(includeDir + '/include/lldb doesn\'nt exist');
+    console.log('Please see README.md');
+    console.log(err);
+    process.exit(1);
+  }
+  return undefined;
+}
 function getLinuxHeadersDir(version) {
   // Get the directory which should contain the headers and
   // check if they are present.
