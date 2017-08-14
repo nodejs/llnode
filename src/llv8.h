@@ -404,7 +404,8 @@ class JSArrayBuffer : public HeapObject {
 
   inline bool WasNeutered(Error& err);
 
-  std::string Inspect(Error& err);
+  std::string Inspect(InspectOptions* options, Error& err);
+  
 };
 
 class JSArrayBufferView : public HeapObject {
@@ -415,7 +416,7 @@ class JSArrayBufferView : public HeapObject {
   inline Smi ByteOffset(Error& err);
   inline Smi ByteLength(Error& err);
 
-  std::string Inspect(Error& err);
+  std::string Inspect(InspectOptions* options, Error& err);
 };
 
 class JSFrame : public Value {
@@ -450,6 +451,7 @@ class LLV8 {
   int64_t LoadConstant(const char* name);
   int64_t LoadPtr(int64_t addr, Error& err);
   double LoadDouble(int64_t addr, Error& err);
+  std::string LoadBytes(int64_t length, int64_t addr, Error& err);
   std::string LoadString(int64_t addr, int64_t length, Error& err);
   std::string LoadTwoByteString(int64_t addr, int64_t length, Error& err);
   uint8_t* LoadChunk(int64_t addr, int64_t length, Error& err);

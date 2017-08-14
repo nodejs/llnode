@@ -50,6 +50,9 @@ tape('v8 inspect', (t) => {
   let arrowFunc = null;
   let array = null;
   let longArray = null;
+  let arrayBuffer = null;
+  let uint8Array = null;
+  let buffer = null;
 
   sess.wait(/Object/, (line) => {
     t.notEqual(line.indexOf(hashmap), -1, 'addr of `Object` should match');
@@ -83,6 +86,26 @@ tape('v8 inspect', (t) => {
         lines.match(/.long-array=(0x[0-9a-f]+):<Array: length=20>/);
     t.ok(longArrayMatch, '.array JSArray property');
     longArray = longArrayMatch[1];
+
+    const arrayBufferRe = new RegExp('.array-buffer=(0x[0-9a-f]+):' +
+      '<ArrayBuffer: backingStore=0x[0-9a-f]+, byteLength=5>');
+    const arrayBufferMatch = lines.match(arrayBufferRe);
+    t.ok(arrayBufferMatch, '.array-buffer JSArrayBuffer property');
+    arrayBuffer = arrayBufferMatch[1];
+
+    const uint8ArrayRe = new RegExp('.uint8-array=(0x[0-9a-f]+):' +
+      '<ArrayBufferView: backingStore=0x[0-9a-f]+, byteOffset=\\d+, ' +
+      'byteLength=6>');
+    const uint8ArrayMatch = lines.match(uint8ArrayRe);
+    t.ok(uint8ArrayMatch, '.uint8-array JSArrayBufferView property');
+    uint8Array = uint8ArrayMatch[1];
+
+    const bufferRe = new RegExp('.buffer=(0x[0-9a-f]+):' +
+      '<ArrayBufferView: backingStore=0x[0-9a-f]+, byteOffset=\\d+, ' +
+      'byteLength=6>');
+    const bufferMatch = lines.match(bufferRe);
+    t.ok(bufferMatch, '.buffer JSArrayBufferView property');
+    buffer = bufferMatch[1];
 
     const consMatch = lines.match(
         /.cons-string=(0x[0-9a-f]+):<String: "this could be a ...">/);
@@ -139,11 +162,94 @@ tape('v8 inspect', (t) => {
         lines.indexOf('<Array: length=20'),
         -1,
         'long array length');
+      t.ok(
+          lines.match(/\[9\]=<Smi: 5>}>$/),
+          'long array content');
+      sess.send(`v8 inspect ${arrayBuffer}`);
+  });
+
+  sess.linesUntil(/\]>/, (lines) => {
+    lines = lines.join('\n');
+    const re = new RegExp(
+      '0x[0-9a-f]+:' +
+      '<ArrayBuffer: backingStore=0x[0-9a-f]+, byteLength=5: \\[\n' +
+      '  01, 02, 03, 04, 05\n' +
+      ']>');
     t.ok(
-        lines.match(/\[9\]=<Smi: 5>}>$/),
-        'long array content');
+        re.test(lines),
+        'array buffer content');
+    sess.send(`v8 inspect --array-length 1 ${arrayBuffer}`);
+  });
+
+  sess.linesUntil(/]>/, (lines) => {
+    lines = lines.join('\n');
+    const re = new RegExp(
+      '0x[0-9a-f]+:' +
+      '<ArrayBuffer: backingStore=0x[0-9a-f]+, byteLength=5: \\[\n' +
+      '  01 ...\n' +
+      ']>');
+    t.ok(
+        re.test(lines),
+        'array buffer content with maximum length 1');
+    sess.send(`v8 inspect ${uint8Array}`);
+  });
+
+  sess.linesUntil(/]>/, (lines) => {
+    lines = lines.join('\n');
+    const re = new RegExp(
+      '0x[0-9a-f]+:' +
+      '<ArrayBufferView: backingStore=0x[0-9a-f]+, byteOffset=\\d+, ' +
+      'byteLength=6: \\[\n' +
+      '  01, 40, 60, 80, f0, ff\n' +
+      ']>');
+    t.ok(
+        re.test(lines),
+        'typed array content');
+    sess.send(`v8 inspect --array-length 1 ${uint8Array}`);
+  });
+
+  sess.linesUntil(/]>/, (lines) => {
+    lines = lines.join('\n');
+    const re = new RegExp(
+      '0x[0-9a-f]+:' +
+      '<ArrayBufferView: backingStore=0x[0-9a-f]+, byteOffset=\\d+, ' +
+      'byteLength=6: \\[\n' +
+      '  01 ...\n' +
+      ']>');
+    t.ok(
+        re.test(lines),
+        'typed array content with maximum length 1');
+    sess.send(`v8 inspect ${buffer}`);
+  });
+
+  sess.linesUntil(/]>/, (lines) => {
+    lines = lines.join('\n');
+    const re = new RegExp(
+      '0x[0-9a-f]+:' +
+      '<ArrayBufferView: backingStore=0x[0-9a-f]+, byteOffset=\\d+, ' +
+      'byteLength=6: \\[\n' +
+      '  ff, f0, 80, 0f, 01, 00\n' +
+      ']>');
+    t.ok(
+        re.test(lines),
+        'buffer content');
+    sess.send(`v8 inspect --array-length 1 ${buffer}`);
+  });
+
+  sess.linesUntil(/]>/, (lines) => {
+    lines = lines.join('\n');
+    const re = new RegExp(
+      '0x[0-9a-f]+:' +
+      '<ArrayBufferView: backingStore=0x[0-9a-f]+, byteOffset=\\d+, ' +
+      'byteLength=6: \\[\n' +
+      '  ff ...\n' +
+      ']>');
+    t.ok(
+        re.test(lines),
+        'buffer content with maximum length 1');
     sess.send(`v8 inspect -s ${arrowFunc}`);
   });
+
 
   sess.linesUntil(/^>/, (lines) => {
     lines = lines.join('\n');

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cinttypes>
+#include <algorithm>
 
 #include "llv8-inl.h"
 #include "llv8.h"
@@ -85,6 +86,27 @@ double LLV8::LoadDouble(int64_t addr, Error& err) {
   return *reinterpret_cast<double*>(&value);
 }
 
+
+std::string LLV8::LoadBytes(int64_t length, int64_t addr, Error& err) {
+  uint8_t* buf = new uint8_t[length + 1];
+  SBError sberr;
+  process_.ReadMemory(addr, buf,
+                      static_cast<size_t>(length), sberr);
+  if (sberr.Fail()) {
+    err = Error::Failure("Failed to load V8 raw buffer");
+    delete[] buf;
+    return std::string();
+  }
+
+  std::string res;
+  char tmp[10];
+  for (int i = 0; i < length; ++i) {
+    snprintf(tmp, sizeof(tmp), "%s%02x", (i == 0 ? "" : ", "), buf[i]);
+    res += tmp;
+  }
+  delete[] buf;
+  return res;
+}
 
 std::string LLV8::LoadString(int64_t addr, int64_t length, Error& err) {
   if (length < 0) {
@@ -775,12 +797,12 @@ std::string HeapObject::Inspect(InspectOptions* options, Error& err) {
 
   if (type == v8()->types()->kJSArrayBufferType) {
     JSArrayBuffer buf(this);
-    return pre + buf.Inspect(err);
+    return pre + buf.Inspect(options, err);
   }
 
   if (type == v8()->types()->kJSTypedArrayType) {
     JSArrayBufferView view(this);
-    return pre + view.Inspect(err);
+    return pre + view.Inspect(options, err);
   }
 
   if (type == v8()->types()->kJSDateType) {
@@ -1073,8 +1095,7 @@ std::string Oddball::Inspect(Error& err) {
   return "<Oddball>";
 }
 
-
-std::string JSArrayBuffer::Inspect(Error& err) {
+std::string JSArrayBuffer::Inspect(InspectOptions* options, Error& err) {
   bool neutered = WasNeutered(err);
   if (err.Fail()) return std::string();
 
@@ -1086,14 +1107,34 @@ std::string JSArrayBuffer::Inspect(Error& err) {
   Smi length = ByteLength(err);
   if (err.Fail()) return std::string();
 
+  int byte_length = static_cast<int>(length.GetValue());
+
   char tmp[128];
-  snprintf(tmp, sizeof(tmp), "<ArrayBuffer 0x%016" PRIx64 ":%d>", data,
-           static_cast<int>(length.GetValue()));
-  return tmp;
+  snprintf(tmp, sizeof(tmp),
+           "<ArrayBuffer: backingStore=0x%016" PRIx64 ", byteLength=%d",
+           data, byte_length);
+  
+  std::string res;
+  res += tmp;
+  if (options->detailed) {
+    res += ": [\n  ";
+
+    int display_length = std::min<int>(byte_length, options->array_length);
+    res += v8()->LoadBytes(display_length, data, err);
+
+    if (display_length < byte_length) {
+      res += " ...";
+    }
+    res += "\n]>";
+  } else {
+    res += ">";
+  }
+
+  return res;
 }
 
 
-std::string JSArrayBufferView::Inspect(Error& err) {
+std::string JSArrayBufferView::Inspect(InspectOptions* options, Error& err) {
   JSArrayBuffer buf = Buffer(err);
   if (err.Fail()) return std::string();
 
@@ -1111,11 +1152,29 @@ std::string JSArrayBufferView::Inspect(Error& err) {
   Smi length = ByteLength(err);
   if (err.Fail()) return std::string();
 
+  int byte_length = static_cast<int>(length.GetValue());
+  int byte_offset = static_cast<int>(off.GetValue());
   char tmp[128];
-  snprintf(tmp, sizeof(tmp), "<ArrayBufferView 0x%016" PRIx64 "+%d:%d>", data,
-           static_cast<int>(off.GetValue()),
-           static_cast<int>(length.GetValue()));
-  return tmp;
+  snprintf(tmp, sizeof(tmp),
+           "<ArrayBufferView: backingStore=0x%016" PRIx64 ", byteOffset=%d, byteLength=%d",
+           data, byte_offset, byte_length);
+
+  std::string res;
+  res += tmp;
+  if (options->detailed) {
+    res += ": [\n  ";
+
+    int display_length = std::min<int>(byte_length, options->array_length);
+    res += v8()->LoadBytes(display_length, data + byte_offset, err);
+
+    if (display_length < byte_length) {
+      res += " ...";
+    }
+    res += "\n]>";
+  } else {
+    res += ">";
+  }
+  return res;
 }
 
 
