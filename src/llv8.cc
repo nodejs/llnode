@@ -73,6 +73,22 @@ int64_t LLV8::LoadPtr(int64_t addr, Error& err) {
 }
 
 
+int64_t LLV8::LoadUnsigned(int64_t addr, uint32_t byte_size, Error& err) {
+  SBError sberr;
+  int64_t value = process_.ReadUnsignedFromMemory(static_cast<addr_t>(addr),
+                                                  byte_size, sberr);
+
+  if (sberr.Fail()) {
+    // TODO(indutny): add more information
+    err = Error::Failure("Failed to load V8 value");
+    return -1;
+  }
+
+  err = Error::Ok();
+  return value;
+}
+
+
 double LLV8::LoadDouble(int64_t addr, Error& err) {
   SBError sberr;
   int64_t value = process_.ReadUnsignedFromMemory(static_cast<addr_t>(addr),

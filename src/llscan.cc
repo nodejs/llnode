@@ -1209,6 +1209,7 @@ void LLScan::ScanMemoryRanges(FindJSObjectsVisitor& v) {
   bool done = false;
 
   const uint64_t addr_size = process_.GetAddressByteSize();
+  ByteOrder process_byte_order = process_.GetByteOrder();
 
   // Pages are usually around 1mb, so this should more than enough
   const uint64_t block_size = 1024 * 1024 * addr_size;
@@ -1258,12 +1259,20 @@ void LLScan::ScanMemoryRanges(FindJSObjectsVisitor& v) {
       for (size_t j = 0; j + addr_size <= loaded;) {
         uint64_t value;
 
-        if (addr_size == 4)
+        if (addr_size == 4) {
           value = *reinterpret_cast<uint32_t*>(&block[j]);
-        else if (addr_size == 8)
+          if (process_byte_order != HOST_BYTE_ORDER) {
+            value = __builtin_bswap32(value);
+          }
+        }
+        else if (addr_size == 8) {
           value = *reinterpret_cast<uint64_t*>(&block[j]);
-        else
+          if (process_byte_order != HOST_BYTE_ORDER) {
+            value = __builtin_bswap64(value);
+          }
+        } else {
           break;
+        }
 
         increment = v.Visit(j + searchAddress, value);
         if (increment == 0) break;

@@ -7,6 +7,14 @@
 
 #include "src/llv8-constants.h"
 
+using lldb::ByteOrder;
+
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+#define HOST_BYTE_ORDER ByteOrder::eByteOrderLittle
+#else
+#define HOST_BYTE_ORDER ByteOrder::eByteOrderBig
+#endif
+
 namespace llnode {
 
 class FindJSObjectsVisitor;
@@ -462,6 +470,7 @@ class LLV8 {
 
   int64_t LoadConstant(const char* name);
   int64_t LoadPtr(int64_t addr, Error& err);
+  int64_t LoadUnsigned(int64_t addr, uint32_t byte_size, Error& err);
   double LoadDouble(int64_t addr, Error& err);
   std::string LoadBytes(int64_t length, int64_t addr, Error& err);
   std::string LoadString(int64_t addr, int64_t length, Error& err);
