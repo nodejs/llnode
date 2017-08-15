@@ -267,6 +267,8 @@ std::string JSFrame::Inspect(bool with_args, Error& err) {
       return "<internal>";
     } else if (value == v8()->frame()->kConstructFrame) {
       return "<constructor>";
+    } else if (value == v8()->frame()->kStubFrame) {
+      return "<stub>";
     } else if (value != v8()->frame()->kJSFrame &&
                value != v8()->frame()->kOptimizedFrame) {
       err = Error::Failure("Unknown frame marker");

@@ -18,7 +18,7 @@ tape('v8 stack', (t) => {
     // FIXME(bnoordhuis) This can fail with versions of lldb that don't
     // support the GetMemoryRegions() API; llnode won't be able to identify
     // V8 builtins stack frames, it just prints them as anonymous frames.
-    lines = lines.filter((s) => !/<builtin>/.test(s));
+    lines = lines.filter((s) => !/<builtin>|<stub>/.test(s));
     const eyecatcher = lines[0];
     const adapter = lines[1];
     const crasher = lines[2];

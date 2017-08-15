@@ -522,6 +522,7 @@ void Frame::Load() {
   kConstructFrame = LoadConstant("frametype_ConstructFrame");
   kJSFrame = LoadConstant("frametype_JavaScriptFrame");
   kOptimizedFrame = LoadConstant("frametype_OptimizedFrame");
+  kStubFrame = LoadConstant("frametype_StubFrame");
 }
 
 
