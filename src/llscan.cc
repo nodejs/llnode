@@ -1264,8 +1264,7 @@ void LLScan::ScanMemoryRanges(FindJSObjectsVisitor& v) {
           if (process_byte_order != HOST_BYTE_ORDER) {
             value = __builtin_bswap32(value);
           }
-        }
-        else if (addr_size == 8) {
+        } else if (addr_size == 8) {
           value = *reinterpret_cast<uint64_t*>(&block[j]);
           if (process_byte_order != HOST_BYTE_ORDER) {
             value = __builtin_bswap64(value);

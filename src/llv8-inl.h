@@ -81,7 +81,8 @@ inline int64_t HeapObject::GetType(Error& err) {
 
 
 inline int64_t Map::GetType(Error& err) {
-  int64_t type = v8()->LoadUnsigned(LeaField(v8()->map()->kInstanceAttrsOffset), 2, err);
+  int64_t type =
+      v8()->LoadUnsigned(LeaField(v8()->map()->kInstanceAttrsOffset), 2, err);
   if (err.Fail()) return -1;
 
   return type & 0xff;
@@ -159,8 +160,9 @@ inline int64_t Map::InObjectProperties(Error& err) {
 }
 
 inline int64_t Map::InstanceSize(Error& err) {
-  return v8()->LoadUnsigned(LeaField(v8()->map()->kInstanceSizeOffset), 1, err)
-      * v8()->common()->kPointerSize;
+  return v8()->LoadUnsigned(LeaField(v8()->map()->kInstanceSizeOffset), 1,
+                            err) *
+         v8()->common()->kPointerSize;
 }
 
 ACCESSOR(JSObject, Properties, js_object()->kPropertiesOffset, HeapObject)

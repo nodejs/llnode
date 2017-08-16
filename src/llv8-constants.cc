@@ -20,7 +20,6 @@ using lldb::SBSymbolContext;
 using lldb::SBSymbolContextList;
 using lldb::SBTarget;
 using lldb::addr_t;
-using lldb::ByteOrder;
 
 static std::string kConstantPrefix = "v8dbg_";
 
