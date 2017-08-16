@@ -9,7 +9,7 @@
 
 using lldb::ByteOrder;
 
-#if __BYTE_ORDER == __ORDER_LITTLE_ENDIAN__
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
 #define HOST_BYTE_ORDER ByteOrder::eByteOrderLittle
 #else
 #define HOST_BYTE_ORDER ByteOrder::eByteOrderBig
