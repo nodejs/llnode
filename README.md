@@ -224,7 +224,8 @@ The following subcommands are supported:
                          dumped.
 
                          Syntax: v8 bt [number]
-      findjsinstances -- List all objects which share the specified map.
+      findjsinstances -- List every object with the specified type name.
+                         Use -i or --inspect to display detailed `v8 inspect` outputfor each object.
                          Accepts the same options as `v8 inspect`
       findjsobjects   -- List all object types and instance counts grouped by map and sorted by instance count.
                          Requires `LLNODE_RANGESFILE` environment variable to be set to a file containing memory ranges for the

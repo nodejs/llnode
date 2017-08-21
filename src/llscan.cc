@@ -81,7 +81,7 @@ bool FindObjectsCmd::DoExecute(SBDebugger d, char** cmd,
 bool FindInstancesCmd::DoExecute(SBDebugger d, char** cmd,
                                  SBCommandReturnObject& result) {
   if (cmd == nullptr || *cmd == nullptr) {
-    result.SetError("USAGE: v8 findjsinstances [-Fm] instance_name\n");
+    result.SetError("USAGE: v8 findjsinstances [flags] instance_name\n");
     return false;
   }
 
@@ -101,7 +101,20 @@ bool FindInstancesCmd::DoExecute(SBDebugger d, char** cmd,
 
   inspect_options.detailed = detailed_;
 
-  char** start = ParseInspectOptions(cmd, &inspect_options);
+  char** start = cmd;
+  for (; cmd != nullptr && *start != nullptr; start++) {
+    if (strcmp(*start, "-i") == 0 || strcmp(*start, "--inspect") == 0) {
+      inspect_options.detailed = true;
+      // Shuffle up the remaining parameters.
+      char** curr = start;
+      for (; *curr != nullptr; curr++) {
+        char** next = curr + 1;
+        *curr = *next;
+      }
+    }
+  }
+
+  start = ParseInspectOptions(cmd, &inspect_options);
 
   std::string full_cmd;
   for (; start != nullptr && *start != nullptr; start++) full_cmd += *start;
