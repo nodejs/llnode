@@ -356,7 +356,9 @@ bool PluginInitialize(SBDebugger d) {
                          "Alias for `v8 findjsobjects`");
 
   v8.AddCommand("findjsinstances", new llnode::FindInstancesCmd(),
-                "List all objects which share the specified map.\n"
+                "List every object with the specified type name.\n"
+                "Use -i or --inspect to display detailed `v8 inspect` output"
+                "for each object.\n"
                 "Accepts the same options as `v8 inspect`");
 
   interpreter.AddCommand("findjsinstances", new llnode::FindInstancesCmd(),
