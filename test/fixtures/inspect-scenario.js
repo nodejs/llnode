@@ -8,6 +8,13 @@ let outerVar = 'outer variable';
 
 exports.holder = {};
 
+function makeThin(a, b) {
+  var str = a + b;
+  var obj = {};
+  obj[str];  // Turn the cons string into a thin string.
+  return str;
+}
+
 function closure() {
 
   function Class() {
@@ -28,6 +35,9 @@ function closure() {
   c.hashmap['cons-string'] =
       'this could be a bit smaller, but v8 wants big str.';
   c.hashmap['cons-string'] += c.hashmap['cons-string'];
+  c.hashmap['internalized-string'] = 'foobar';
+  // This thin string points to the previous 'foobar'.
+  c.hashmap['thin-string'] = makeThin('foo', 'bar');
   c.hashmap['array'] = [true, 1, undefined, null, 'test', Class];
   c.hashmap['long-array'] = new Array(20).fill(5);
   c.hashmap['array-buffer'] = new Uint8Array(

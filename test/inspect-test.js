@@ -47,6 +47,7 @@ tape('v8 inspect', (t) => {
 
   let regexp = null;
   let cons = null;
+  let thin = null;
   let arrowFunc = null;
   let array = null;
   let longArray = null;
@@ -112,6 +113,11 @@ tape('v8 inspect', (t) => {
     t.ok(consMatch, '.cons-string ConsString property');
     cons = consMatch[1];
 
+    const thinMatch = lines.match(
+        /.thin-string=(0x[0-9a-f]+):<String: "foobar">/);
+    t.ok(thinMatch, '.thin-string ThinString property');
+    thin = thinMatch[1];
+
     sess.send(`v8 inspect ${regexp}`);
     sess.send(`v8 inspect -F ${cons}`);
   });
@@ -140,6 +146,15 @@ tape('v8 inspect', (t) => {
         lines.indexOf('this could be a bit ...'),
         -1,
         '--string-length truncates the string');
+
+    sess.send(`v8 inspect ${thin}`);
+  });
+
+  sess.linesUntil(/">/, (lines) => {
+    lines = lines.join('\n');
+    t.ok(
+      /0x[0-9a-f]+:<String: "foobar">/.test(lines),
+      'thin string content');
 
     sess.send(`v8 inspect ${array}`);
   });

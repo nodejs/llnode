@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <cinttypes>
-#include <algorithm>
 
 #include "llv8-inl.h"
 #include "llv8.h"
@@ -43,6 +42,7 @@ void LLV8::Load(SBTarget target) {
   two_byte_string.Assign(target, &common);
   cons_string.Assign(target, &common);
   sliced_string.Assign(target, &common);
+  thin_string.Assign(target, &common);
   fixed_array_base.Assign(target, &common);
   fixed_array.Assign(target, &common);
   oddball.Assign(target, &common);
@@ -90,8 +90,7 @@ double LLV8::LoadDouble(int64_t addr, Error& err) {
 std::string LLV8::LoadBytes(int64_t length, int64_t addr, Error& err) {
   uint8_t* buf = new uint8_t[length + 1];
   SBError sberr;
-  process_.ReadMemory(addr, buf,
-                      static_cast<size_t>(length), sberr);
+  process_.ReadMemory(addr, buf, static_cast<size_t>(length), sberr);
   if (sberr.Fail()) {
     err = Error::Failure("Failed to load V8 raw buffer");
     delete[] buf;
@@ -268,6 +267,8 @@ std::string JSFrame::Inspect(bool with_args, Error& err) {
       return "<internal>";
     } else if (value == v8()->frame()->kConstructFrame) {
       return "<constructor>";
+    } else if (value == v8()->frame()->kStubFrame) {
+      return "<stub>";
     } else if (value != v8()->frame()->kJSFrame &&
                value != v8()->frame()->kOptimizedFrame) {
       err = Error::Failure("Unknown frame marker");
@@ -957,6 +958,11 @@ std::string String::ToString(Error& err) {
     return std::string("(external)");
   }
 
+  if (repr == v8()->string()->kThinStringTag) {
+    ThinString thin(this);
+    return thin.ToString(err);
+  }
+
   err = Error::Failure("Unsupported string representation");
   return std::string();
 }
@@ -1111,9 +1117,9 @@ std::string JSArrayBuffer::Inspect(InspectOptions* options, Error& err) {
 
   char tmp[128];
   snprintf(tmp, sizeof(tmp),
-           "<ArrayBuffer: backingStore=0x%016" PRIx64 ", byteLength=%d",
-           data, byte_length);
-  
+           "<ArrayBuffer: backingStore=0x%016" PRIx64 ", byteLength=%d", data,
+           byte_length);
+
   std::string res;
   res += tmp;
   if (options->detailed) {
@@ -1156,7 +1162,8 @@ std::string JSArrayBufferView::Inspect(InspectOptions* options, Error& err) {
   int byte_offset = static_cast<int>(off.GetValue());
   char tmp[128];
   snprintf(tmp, sizeof(tmp),
-           "<ArrayBufferView: backingStore=0x%016" PRIx64 ", byteOffset=%d, byteLength=%d",
+           "<ArrayBufferView: backingStore=0x%016" PRIx64
+           ", byteOffset=%d, byteLength=%d",
            data, byte_offset, byte_length);
 
   std::string res;

@@ -617,6 +617,14 @@ void FindReferencesCmd::ReferenceScanner::PrintRefs(
       result.Printf("0x%" PRIx64 ": %s.%s=0x%" PRIx64 "\n", str.raw(),
                     type_name.c_str(), "<Second>", search_value_.raw());
     }
+  } else if (repr == v8->string()->kThinStringTag) {
+    v8::ThinString thin_str(str);
+    v8::String actual = thin_str.Actual(err);
+    if (err.Success() && actual.raw() == search_value_.raw()) {
+      std::string type_name = thin_str.GetTypeName(err);
+      result.Printf("0x%" PRIx64 ": %s.%s=0x%" PRIx64 "\n", str.raw(),
+                    type_name.c_str(), "<Actual>", search_value_.raw());
+    }
   }
   // Nothing to do for other kinds of string.
 }
@@ -692,6 +700,14 @@ void FindReferencesCmd::ReferenceScanner::ScanRefs(v8::String& str,
     v8::String second = cons_str.Second(err);
     if (err.Success() && first.raw() != second.raw()) {
       references = llscan.GetReferencesByValue(second.raw());
+      references->push_back(str.raw());
+    }
+  } else if (repr == v8->string()->kThinStringTag) {
+    v8::ThinString thin_str(str);
+    v8::String actual = thin_str.Actual(err);
+
+    if (err.Success()) {
+      references = llscan.GetReferencesByValue(actual.raw());
       references->push_back(str.raw());
     }
   }
