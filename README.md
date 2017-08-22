@@ -212,7 +212,7 @@ v8 bt command. See the [Commands](#commands) section below for more commands.
 ### Commands
 
 ```
-(lldb) v8 help
+(llnode) v8 help
      Node.js helpers
 
 Syntax: v8
@@ -226,7 +226,7 @@ The following subcommands are supported:
                          Syntax: v8 bt [number]
       findjsinstances -- List all objects which share the specified map.
                          Accepts the same options as `v8 inspect`
-      findjsobjects   -- List all object types and instance counts grouped by map and sorted by instance count.
+      findjsobjects   -- List all object types and instance counts grouped by typename and sorted by instance count.
                          Requires `LLNODE_RANGESFILE` environment variable to be set to a file containing memory ranges for the
                          core file being debugged.
                          There are scripts for generating this file on Linux and Mac in the scripts directory of the llnode
@@ -238,7 +238,6 @@ The following subcommands are supported:
                           * -v, --value expr     - all properties that refer to the specified JavaScript object (default)
                           * -n, --name  name     - all properties with the specified name
                           * -s, --string string  - all properties that refer to the specified JavaScript string value
-                          * --array-length num   - print maximum of `num` elements in array
 
       inspect         -- Print detailed description and contents of the JavaScript value.
 
@@ -247,7 +246,7 @@ The following subcommands are supported:
                           * -F, --full-string    - print whole string without adding ellipsis
                           * -m, --print-map      - print object's map address
                           * -s, --print-source   - print source code for function objects
-                          * --string-length num  - print maximum of `num` characters in string
+                          * -l num, --length num - print maximum of `num` elements from string/array
 
                          Syntax: v8 inspect [flags] expr
       nodeinfo        -- Print information about Node.js

@@ -33,8 +33,9 @@ char** CommandBase::ParseInspectOptions(char** cmd,
                                         v8::Value::InspectOptions* options) {
   static struct option opts[] = {
       {"full-string", no_argument, nullptr, 'F'},
-      {"string-length", required_argument, nullptr, 0x1001},
-      {"array-length", required_argument, nullptr, 0x1002},
+      {"string-length", required_argument, nullptr, 'l'},
+      {"array-length", required_argument, nullptr, 'l'},
+      {"length", required_argument, nullptr, 'l'},
       {"print-map", no_argument, nullptr, 'm'},
       {"print-source", no_argument, nullptr, 's'},
       {nullptr, 0, nullptr, 0}};
@@ -54,21 +55,18 @@ char** CommandBase::ParseInspectOptions(char** cmd,
   optind = 0;
   opterr = 1;
   do {
-    int arg = getopt_long(argc, args, "Fms", opts, nullptr);
+    int arg = getopt_long(argc, args, "Fmsl:", opts, nullptr);
     if (arg == -1) break;
 
     switch (arg) {
       case 'F':
-        options->string_length = 0;
+        options->length = 0;
         break;
       case 'm':
         options->print_map = true;
         break;
-      case 0x1001:
-        options->string_length = strtol(optarg, nullptr, 10);
-        break;
-      case 0x1002:
-        options->array_length = strtol(optarg, nullptr, 10);
+      case 'l':
+        options->length = strtol(optarg, nullptr, 10);
         break;
       case 's':
         options->print_source = true;
@@ -327,8 +325,8 @@ bool PluginInitialize(SBDebugger d) {
       " * -F, --full-string    - print whole string without adding ellipsis\n"
       " * -m, --print-map      - print object's map address\n"
       " * -s, --print-source   - print source code for function objects\n"
-      " * --string-length num  - print maximum of `num` characters in string\n"
-      " * --array-length num   - print maximum of `num` elements in array\n"
+      " * -l num, --length num - print maximum of `num` elements from "
+      "string/array\n"
       "\n"
       "Syntax: v8 inspect [flags] expr\n");
   interpreter.AddCommand("jsprint", new llnode::PrintCmd(true),
@@ -343,8 +341,8 @@ bool PluginInitialize(SBDebugger d) {
                          "Alias for `v8 source list`");
 
   v8.AddCommand("findjsobjects", new llnode::FindObjectsCmd(),
-                "List all object types and instance counts grouped by map and "
-                "sorted by instance count.\n"
+                "List all object types and instance counts grouped by type"
+                "name and sorted by instance count.\n"
 #ifndef LLDB_SBMemoryRegionInfoList_h_
                 "Requires `LLNODE_RANGESFILE` environment variable to be set "
                 "to a file containing memory ranges for the core file being "

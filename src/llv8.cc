@@ -972,7 +972,7 @@ std::string String::Inspect(InspectOptions* options, Error& err) {
   std::string val = ToString(err);
   if (err.Fail()) return std::string();
 
-  unsigned int len = options->string_length;
+  unsigned int len = options->length;
 
   if (len != 0 && val.length() > len) val = val.substr(0, len) + "...";
 
@@ -1125,7 +1125,7 @@ std::string JSArrayBuffer::Inspect(InspectOptions* options, Error& err) {
   if (options->detailed) {
     res += ": [\n  ";
 
-    int display_length = std::min<int>(byte_length, options->array_length);
+    int display_length = std::min<int>(byte_length, options->length);
     res += v8()->LoadBytes(display_length, data, err);
 
     if (display_length < byte_length) {
@@ -1171,7 +1171,7 @@ std::string JSArrayBufferView::Inspect(InspectOptions* options, Error& err) {
   if (options->detailed) {
     res += ": [\n  ";
 
-    int display_length = std::min<int>(byte_length, options->array_length);
+    int display_length = std::min<int>(byte_length, options->length);
     res += v8()->LoadBytes(display_length, data + byte_offset, err);
 
     if (display_length < byte_length) {
@@ -1921,7 +1921,7 @@ std::string JSArray::Inspect(InspectOptions* options, Error& err) {
 
   std::string res = "<Array: length=" + std::to_string(length);
   if (options->detailed) {
-    int64_t display_length = std::min<int64_t>(length, options->array_length);
+    int64_t display_length = std::min<int64_t>(length, options->length);
     std::string elems = InspectElements(display_length, err);
     if (err.Fail()) return std::string();
 

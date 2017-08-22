@@ -51,17 +51,14 @@ class Value {
         : detailed(false),
           print_map(false),
           print_source(false),
-          string_length(kStringLength),
-          array_length(kArrayLength) {}
+          length(kLength) {}
 
-    static const unsigned int kStringLength = 16;
-    static const unsigned int kArrayLength = 16;
+    static const unsigned int kLength = 16;
 
     bool detailed;
     bool print_map;
     bool print_source;
-    unsigned int string_length;
-    unsigned int array_length;
+    unsigned int length;
   };
 
   Value(const Value& v) = default;
