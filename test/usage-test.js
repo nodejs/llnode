@@ -28,7 +28,7 @@ tape('usage messages', (t) => {
   });
 
   sess.stderr.linesUntil(/USAGE/, (lines) => {
-    const re = /^error: USAGE: v8 findjsinstances \[-Fm\] instance_name$/;
+    const re = /^error: USAGE: v8 findjsinstances \[flags\] instance_name$/;
 
     t.ok(re.test(removeBlankLines(lines)[0]),
          'findjsinstances usage message');

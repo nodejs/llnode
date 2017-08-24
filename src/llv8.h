@@ -51,17 +51,14 @@ class Value {
         : detailed(false),
           print_map(false),
           print_source(false),
-          string_length(kStringLength),
-          array_length(kArrayLength) {}
+          length(kLength) {}
 
-    static const unsigned int kStringLength = 16;
-    static const unsigned int kArrayLength = 16;
+    static const unsigned int kLength = 16;
 
     bool detailed;
     bool print_map;
     bool print_source;
-    unsigned int string_length;
-    unsigned int array_length;
+    unsigned int length;
   };
 
   Value(const Value& v) = default;
@@ -217,6 +214,15 @@ class SlicedString : public String {
 
   inline String Parent(Error& err);
   inline Smi Offset(Error& err);
+
+  inline std::string ToString(Error& err);
+};
+
+class ThinString : public String {
+ public:
+  V8_VALUE_DEFAULT_METHODS(ThinString, String)
+
+  inline String Actual(Error& err);
 
   inline std::string ToString(Error& err);
 };
@@ -405,7 +411,6 @@ class JSArrayBuffer : public HeapObject {
   inline bool WasNeutered(Error& err);
 
   std::string Inspect(InspectOptions* options, Error& err);
-  
 };
 
 class JSArrayBufferView : public HeapObject {
@@ -477,6 +482,7 @@ class LLV8 {
   constants::TwoByteString two_byte_string;
   constants::ConsString cons_string;
   constants::SlicedString sliced_string;
+  constants::ThinString thin_string;
   constants::FixedArrayBase fixed_array_base;
   constants::FixedArray fixed_array;
   constants::Oddball oddball;
@@ -503,6 +509,7 @@ class LLV8 {
   friend class TwoByteString;
   friend class ConsString;
   friend class SlicedString;
+  friend class ThinString;
   friend class HeapNumber;
   friend class JSObject;
   friend class JSArray;

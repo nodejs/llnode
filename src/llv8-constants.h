@@ -248,6 +248,7 @@ class String : public Module {
   int64_t kConsStringTag;
   int64_t kSlicedStringTag;
   int64_t kExternalStringTag;
+  int64_t kThinStringTag;
 
   int64_t kLengthOffset;
 
@@ -292,6 +293,16 @@ class SlicedString : public Module {
 
   int64_t kParentOffset;
   int64_t kOffsetOffset;
+
+ protected:
+  void Load();
+};
+
+class ThinString : public Module {
+ public:
+  MODULE_DEFAULT_METHODS(ThinString);
+
+  int64_t kActualOffset;
 
  protected:
   void Load();
@@ -441,6 +452,7 @@ class Frame : public Module {
   int64_t kConstructFrame;
   int64_t kJSFrame;
   int64_t kOptimizedFrame;
+  int64_t kStubFrame;
 
  protected:
   void Load();
