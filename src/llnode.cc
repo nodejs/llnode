@@ -38,6 +38,7 @@ char** CommandBase::ParseInspectOptions(char** cmd,
       {"length", required_argument, nullptr, 'l'},
       {"print-map", no_argument, nullptr, 'm'},
       {"print-source", no_argument, nullptr, 's'},
+      {"inspect", no_argument, nullptr, 'i'},
       {nullptr, 0, nullptr, 0}};
 
   int argc = 1;
@@ -55,7 +56,7 @@ char** CommandBase::ParseInspectOptions(char** cmd,
   optind = 0;
   opterr = 1;
   do {
-    int arg = getopt_long(argc, args, "Fmsl:", opts, nullptr);
+    int arg = getopt_long(argc, args, "Fmsil:", opts, nullptr);
     if (arg == -1) break;
 
     switch (arg) {
@@ -70,6 +71,9 @@ char** CommandBase::ParseInspectOptions(char** cmd,
         break;
       case 's':
         options->print_source = true;
+        break;
+      case 'i':
+        options->detailed = true;
         break;
       default:
         continue;
