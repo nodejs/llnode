@@ -45,6 +45,7 @@ void LLV8::Load(SBTarget target) {
   thin_string.Assign(target, &common);
   fixed_array_base.Assign(target, &common);
   fixed_array.Assign(target, &common);
+  fixed_typed_array_base.Assign(target, &common);
   oddball.Assign(target, &common);
   js_array_buffer.Assign(target, &common);
   js_array_buffer_view.Assign(target, &common);
@@ -1151,6 +1152,18 @@ std::string JSArrayBufferView::Inspect(InspectOptions* options, Error& err) {
 
   int64_t data = buf.BackingStore(err);
   if (err.Fail()) return std::string();
+
+  if (data == 0) {
+    // The backing store has not been materialized yet.
+    HeapObject elements_obj = Elements(err);
+    if (err.Fail()) return std::string();
+    FixedTypedArrayBase elements(elements_obj);
+    int64_t base = elements.GetBase(err);
+    if (err.Fail()) return std::string();
+    int64_t external = elements.GetExternal(err);
+    if (err.Fail()) return std::string();
+    data = base + external;
+  }
 
   Smi off = ByteOffset(err);
   if (err.Fail()) return std::string();

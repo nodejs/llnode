@@ -259,7 +259,8 @@ inline int64_t SharedFunctionInfo::EndPosition(Error& err) {
   if (err.Fail()) return -1;
 
   field &= 0xffffffff;
-  return field >> 1;
+  field >>= v8()->shared_info()->kEndPositionShift;
+  return field;
 }
 
 ACCESSOR(JSFunction, Info, js_function()->kSharedInfoOffset,
@@ -275,6 +276,14 @@ ACCESSOR(SlicedString, Offset, sliced_string()->kOffsetOffset, Smi);
 ACCESSOR(ThinString, Actual, thin_string()->kActualOffset, String);
 
 ACCESSOR(FixedArrayBase, Length, fixed_array_base()->kLengthOffset, Smi);
+
+inline int64_t FixedTypedArrayBase::GetBase(Error& err) {
+  return LoadField(v8()->fixed_typed_array_base()->kBasePointerOffset, err);
+}
+
+inline int64_t FixedTypedArrayBase::GetExternal(Error& err) {
+  return LoadField(v8()->fixed_typed_array_base()->kExternalPointerOffset, err);
+}
 
 inline std::string OneByteString::ToString(Error& err) {
   int64_t chars = LeaField(v8()->one_byte_string()->kCharsOffset);
@@ -449,11 +458,6 @@ inline Smi ScopeInfo::StackLocalCount(Error& err) {
 
 inline Smi ScopeInfo::ContextLocalCount(Error& err) {
   return FixedArray::Get<Smi>(v8()->scope_info()->kContextLocalCountOffset,
-                              err);
-}
-
-inline Smi ScopeInfo::ContextGlobalCount(Error& err) {
-  return FixedArray::Get<Smi>(v8()->scope_info()->kContextGlobalCountOffset,
                               err);
 }
 

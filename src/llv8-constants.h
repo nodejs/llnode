@@ -176,6 +176,7 @@ class SharedInfo : public Module {
 
   int64_t kStartPositionMask;
   int64_t kStartPositionShift;
+  int64_t kEndPositionShift;
 
  protected:
   void Load();
@@ -199,7 +200,6 @@ class ScopeInfo : public Module {
   int64_t kParameterCountOffset;
   int64_t kStackLocalCountOffset;
   int64_t kContextLocalCountOffset;
-  int64_t kContextGlobalCountOffset;
   int64_t kVariablePartIndex;
 
  protected:
@@ -323,6 +323,17 @@ class FixedArray : public Module {
   MODULE_DEFAULT_METHODS(FixedArray);
 
   int64_t kDataOffset;
+
+ protected:
+  void Load();
+};
+
+class FixedTypedArrayBase : public Module {
+ public:
+  MODULE_DEFAULT_METHODS(FixedTypedArrayBase);
+
+  int64_t kBasePointerOffset;
+  int64_t kExternalPointerOffset;
 
  protected:
   void Load();

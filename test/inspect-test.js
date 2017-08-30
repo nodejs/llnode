@@ -78,12 +78,12 @@ tape('v8 inspect', (t) => {
     t.ok(/.other-key=[^\n]*<String: "ohai">/.test(lines),
          '.other-key property');
 
-    const arrayMatch = 
+    const arrayMatch =
         lines.match(/.array=(0x[0-9a-f]+):<Array: length=6>/);
     t.ok(arrayMatch, '.array JSArray property');
     array = arrayMatch[1];
 
-    const longArrayMatch = 
+    const longArrayMatch =
         lines.match(/.long-array=(0x[0-9a-f]+):<Array: length=20>/);
     t.ok(longArrayMatch, '.array JSArray property');
     longArray = longArrayMatch[1];

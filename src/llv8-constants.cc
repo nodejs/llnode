@@ -212,8 +212,13 @@ void Map::Load() {
 
 
 void JSObject::Load() {
-  kPropertiesOffset = LoadConstant("class_JSReceiver__properties__FixedArray",
-                                   "class_JSObject__properties__FixedArray");
+  kPropertiesOffset =
+      LoadConstant("class_JSReceiver__raw_properties_or_hash__Object",
+                   "class_JSReceiver__properties__FixedArray");
+
+  if (kPropertiesOffset == -1)
+    kPropertiesOffset = LoadConstant("class_JSObject__properties__FixedArray");
+
   kElementsOffset = LoadConstant("class_JSObject__elements__Object");
   kInternalFieldsOffset =
       LoadConstant("class_JSObject__internal_fields__uintptr_t");
@@ -262,19 +267,27 @@ void JSDate::Load() {
 
 
 void SharedInfo::Load() {
-  kNameOffset = LoadConstant("class_SharedFunctionInfo__name__Object");
+  kNameOffset = LoadConstant("class_SharedFunctionInfo__raw_name__Object",
+                             "class_SharedFunctionInfo__name__Object");
   kInferredNameOffset =
       LoadConstant("class_SharedFunctionInfo__inferred_name__String",
                    "class_SharedFunctionInfo__function_identifier__Object");
   kScriptOffset = LoadConstant("class_SharedFunctionInfo__script__Object");
   kCodeOffset = LoadConstant("class_SharedFunctionInfo__code__Code");
   kStartPositionOffset =
-      LoadConstant("class_SharedFunctionInfo__start_position_and_type__SMI");
+      LoadConstant("class_SharedFunctionInfo__start_position_and_type__int",
+                   "class_SharedFunctionInfo__start_position_and_type__SMI");
   kEndPositionOffset =
-      LoadConstant("class_SharedFunctionInfo__end_position__SMI");
+      LoadConstant("class_SharedFunctionInfo__end_position__int",
+                   "class_SharedFunctionInfo__end_position__SMI");
   kParameterCountOffset = LoadConstant(
-      "class_SharedFunctionInfo__internal_formal_parameter_count__SMI",
-      "class_SharedFunctionInfo__formal_parameter_count__SMI");
+      "class_SharedFunctionInfo__internal_formal_parameter_count__int",
+      "class_SharedFunctionInfo__internal_formal_parameter_count__SMI");
+
+  if (kParameterCountOffset == -1) {
+    kParameterCountOffset =
+        LoadConstant("class_SharedFunctionInfo__formal_parameter_count__SMI");
+  }
 
   // NOTE: Could potentially be -1 on v4 and v5 node, should check in llv8
   kScopeInfoOffset =
@@ -288,6 +301,11 @@ void SharedInfo::Load() {
     kStartPositionShift = 2;
     kStartPositionMask = ~((1 << kStartPositionShift) - 1);
   }
+
+  if (LoadConstant("class_SharedFunctionInfo__compiler_hints__int") == -1)
+    kEndPositionShift = 1;
+  else
+    kEndPositionShift = 0;
 }
 
 
@@ -301,7 +319,6 @@ void ScopeInfo::Load() {
   kParameterCountOffset = LoadConstant("scopeinfo_idx_nparams");
   kStackLocalCountOffset = LoadConstant("scopeinfo_idx_nstacklocals");
   kContextLocalCountOffset = LoadConstant("scopeinfo_idx_ncontextlocals");
-  kContextGlobalCountOffset = LoadConstant("scopeinfo_idx_ncontextglobals");
   kVariablePartIndex = LoadConstant("scopeinfo_idx_first_vars");
 }
 
@@ -374,6 +391,14 @@ void FixedArrayBase::Load() {
 
 void FixedArray::Load() {
   kDataOffset = LoadConstant("class_FixedArray__data__uintptr_t");
+}
+
+
+void FixedTypedArrayBase::Load() {
+  kBasePointerOffset =
+      LoadConstant("class_FixedTypedArrayBase__base_pointer__Object");
+  kExternalPointerOffset =
+      LoadConstant("class_FixedTypedArrayBase__external_pointer__Object");
 }
 
 
@@ -516,7 +541,8 @@ void Frame::Load() {
 
   kAdaptorFrame = LoadConstant("frametype_ArgumentsAdaptorFrame");
   kEntryFrame = LoadConstant("frametype_EntryFrame");
-  kEntryConstructFrame = LoadConstant("frametype_EntryConstructFrame");
+  kEntryConstructFrame = LoadConstant("frametype_ConstructEntryFrame",
+                                      "frametype_EntryConstructFrame");
   kExitFrame = LoadConstant("frametype_ExitFrame");
   kInternalFrame = LoadConstant("frametype_InternalFrame");
   kConstructFrame = LoadConstant("frametype_ConstructFrame");
@@ -537,7 +563,8 @@ void Types::Load() {
   kOddballType = LoadConstant("type_Oddball__ODDBALL_TYPE");
   kJSObjectType = LoadConstant("type_JSObject__JS_OBJECT_TYPE");
   kJSAPIObjectType = LoadConstant("APIObjectType");
-  kJSSpecialAPIObjectType = LoadConstant("APISpecialObjectType");
+  kJSSpecialAPIObjectType =
+      LoadConstant("SpecialAPIObjectType", "APISpecialObjectType");
   kJSArrayType = LoadConstant("type_JSArray__JS_ARRAY_TYPE");
   kCodeType = LoadConstant("type_Code__CODE_TYPE");
   kJSFunctionType = LoadConstant("type_JSFunction__JS_FUNCTION_TYPE");
