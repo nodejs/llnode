@@ -471,7 +471,6 @@ void DescriptorArray::Load() {
         LoadConstant("prop_attributes_DONT_ENUM");
 
     kPropertyKindMask = LoadConstant("prop_kind_mask");
-    kPropertyKindShift = LoadConstant("prop_kind_shift", int64_t(0));
     kPropertyKindEnum_kAccessor = LoadConstant("prop_kind_Accessor");
     kPropertyKindEnum_kData = LoadConstant("prop_kind_Data");
 
