@@ -5,16 +5,6 @@ const fs = require('fs');
 const path = require('path');
 const child_process = require('child_process');
 
-const lldbReleases = {
-  '4.0': 'release_40',
-  '3.9': 'release_39',
-  '3.8': 'release_38',
-  '3.7': 'release_37',
-  '3.6': 'release_36',
-  '3.5': 'release_35',
-  '3.4': 'release_34',
-};
-
 const buildDir = process.cwd();
 
 console.log('Build dir is: ' + buildDir);
@@ -39,7 +29,7 @@ if (osName === 'Darwin') {
     process.exit(1);
   }
 
-  lldbHeadersBranch = lldbReleases[lldbVersion];
+  lldbHeadersBranch = lldbVersionToBranch(lldbVersion);
   lldbIncludeDir = 'lldb-' + lldbVersion;
 
 } else if (osName === 'Linux') {
@@ -57,7 +47,7 @@ if (osName === 'Darwin') {
   // console.log('installed_headers_dir is ' + installed_headers_dir);
   if (installedHeadersDir === undefined) {
     // Initialising lldb_headers_branch will cause us to clone them.
-    lldbHeadersBranch = lldbReleases[lldbVersion];
+    lldbHeadersBranch = lldbVersionToBranch(lldbVersion);
     lldbIncludeDir = 'lldb-' + lldbVersion;
   } else {
     lldbIncludeDir = installedHeadersDir;
@@ -140,6 +130,10 @@ fs.writeFileSync(`${buildDir}/scripts/llnode.sh`, scriptText(lldbExe));
 // Exit with success.
 process.exit(0);
 
+function lldbVersionToBranch(version) {
+    return 'release_' + version.replace('.','');
+}
+
 // On Mac the lldb version string doesn't match the original lldb versions.
 function getDarwinRelease() {
   var xcodeStr;
@@ -173,11 +167,12 @@ function getDarwinRelease() {
 // - the one specified by the user using npm --lldb_exe=... install llnode
 // - the default lldb executable
 // - the higest known lldb version
+// - the names of future releases are predictable for linux
 function getLldbExecutable() {
   var lldbExe = process.env.npm_config_lldb_exe;
   if (lldbExe === undefined) {
-    var lldbExeNames = ['lldb', 'lldb-4.0', 'lldb-3.9',
-      'lldb-3.8', 'lldb-3.7', 'lldb-3.6'];
+    var lldbExeNames = ['lldb', 'lldb-5.0', 'lldb-4.0',
+	'lldb-3.9', 'lldb-3.8', 'lldb-3.7', 'lldb-3.6'];
     for (var lldbExeVersion of lldbExeNames) {
       try {
         lldbExe = child_process.execSync('which ' +
@@ -205,18 +200,9 @@ function getLinuxVersion(lldbExe) {
     return undefined;
   }
   // Ignore minor revisions like 3.8.1
-  if (lldbStr.indexOf('version 4.0') > 0) {
-    return '4.0';
-  } else if (lldbStr.indexOf('version 3.9') > 0) {
-    return '3.9';
-  } else if (lldbStr.indexOf('version 3.8') > 0) {
-    return '3.8';
-  } else if (lldbStr.indexOf('version 3.7') > 0) {
-    return '3.7';
-  } if (lldbStr.indexOf('version 3.6') > 0) {
-    return '3.6';
-  } if (lldbStr.indexOf('version 3.5') > 0) {
-    return '3.5';
+  let versionMatch = lldbStr.match(/version (\d.\d)/);
+  if (versionMatch) {
+      return versionMatch[1];
   }
   return undefined;
 }
