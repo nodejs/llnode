@@ -120,6 +120,7 @@ function Session(scenario) {
     '--',
     process.execPath,
     '--abort_on_uncaught_exception',
+    '--expose_externalize_string',
     path.join(exports.fixturesDir, scenario)
   ], {
     stdio: [ 'pipe', 'pipe', 'pipe' ],

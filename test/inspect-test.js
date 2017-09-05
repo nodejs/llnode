@@ -48,6 +48,8 @@ tape('v8 inspect', (t) => {
   let regexp = null;
   let cons = null;
   let thin = null;
+  let ext = null;
+  let extSliced = null;
   let arrowFunc = null;
   let array = null;
   let longArray = null;
@@ -78,12 +80,12 @@ tape('v8 inspect', (t) => {
     t.ok(/.other-key=[^\n]*<String: "ohai">/.test(lines),
          '.other-key property');
 
-    const arrayMatch = 
+    const arrayMatch =
         lines.match(/.array=(0x[0-9a-f]+):<Array: length=6>/);
     t.ok(arrayMatch, '.array JSArray property');
     array = arrayMatch[1];
 
-    const longArrayMatch = 
+    const longArrayMatch =
         lines.match(/.long-array=(0x[0-9a-f]+):<Array: length=20>/);
     t.ok(longArrayMatch, '.array JSArray property');
     longArray = longArrayMatch[1];
@@ -117,6 +119,17 @@ tape('v8 inspect', (t) => {
         /.thin-string=(0x[0-9a-f]+):<String: "foobar">/);
     t.ok(thinMatch, '.thin-string ThinString property');
     thin = thinMatch[1];
+
+    const extMatch = lines.match(
+        /.externalized-string=(0x[0-9a-f]+):<String: "\(external\)">/);
+    t.ok(extMatch, '.externalized-string ExternalString property');
+    ext = extMatch[1];
+
+    const extSlicedMatch = lines.match(
+      /.sliced-externalized-string=(0x[0-9a-f]+):<String: "\(external\)">/);
+    t.ok(extSlicedMatch,
+      '.sliced-externalized-string Sliced ExternalString property');
+    extSliced = extSlicedMatch[1];
 
     sess.send(`v8 inspect ${regexp}`);
     sess.send(`v8 inspect -F ${cons}`);
