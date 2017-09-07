@@ -131,7 +131,7 @@ fs.writeFileSync(`${buildDir}/scripts/llnode.sh`, scriptText(lldbExe));
 process.exit(0);
 
 function lldbVersionToBranch(version) {
-    return 'release_' + version.replace('.','');
+  return 'release_' + version.replace('.', '');
 }
 
 // On Mac the lldb version string doesn't match the original lldb versions.
@@ -202,7 +202,7 @@ function getLinuxVersion(lldbExe) {
   // Ignore minor revisions like 3.8.1
   let versionMatch = lldbStr.match(/version (\d.\d)/);
   if (versionMatch) {
-      return versionMatch[1];
+    return versionMatch[1];
   }
   return undefined;
 }
