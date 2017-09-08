@@ -81,7 +81,7 @@ bool FindObjectsCmd::DoExecute(SBDebugger d, char** cmd,
 bool FindInstancesCmd::DoExecute(SBDebugger d, char** cmd,
                                  SBCommandReturnObject& result) {
   if (cmd == nullptr || *cmd == nullptr) {
-    result.SetError("USAGE: v8 findjsinstances [-Fm] instance_name\n");
+    result.SetError("USAGE: v8 findjsinstances [flags] instance_name\n");
     return false;
   }
 
