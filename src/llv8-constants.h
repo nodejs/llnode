@@ -176,6 +176,7 @@ class SharedInfo : public Module {
 
   int64_t kStartPositionMask;
   int64_t kStartPositionShift;
+  int64_t kEndPositionShift;
 
  protected:
   void Load();
@@ -199,7 +200,6 @@ class ScopeInfo : public Module {
   int64_t kParameterCountOffset;
   int64_t kStackLocalCountOffset;
   int64_t kContextLocalCountOffset;
-  int64_t kContextGlobalCountOffset;
   int64_t kVariablePartIndex;
 
  protected:
@@ -328,6 +328,17 @@ class FixedArray : public Module {
   void Load();
 };
 
+class FixedTypedArrayBase : public Module {
+ public:
+  MODULE_DEFAULT_METHODS(FixedTypedArrayBase);
+
+  int64_t kBasePointerOffset;
+  int64_t kExternalPointerOffset;
+
+ protected:
+  void Load();
+};
+
 class Oddball : public Module {
  public:
   MODULE_DEFAULT_METHODS(Oddball);
@@ -407,7 +418,6 @@ class DescriptorArray : public Module {
   int64_t kPropertyAttributesEnum_DONT_DELETE = -1;
 
   int64_t kPropertyKindMask = -1;
-  int64_t kPropertyKindShift = -1;
   int64_t kPropertyKindEnum_kAccessor = -1;
   int64_t kPropertyKindEnum_kData = -1;
 

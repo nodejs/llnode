@@ -350,7 +350,7 @@ bool PluginInitialize(SBDebugger d) {
                 "There are scripts for generating this file on Linux and Mac "
                 "in the scripts directory of the llnode repository."
 #endif  // LLDB_SBMemoryRegionInfoList_h_
-                );
+  );
 
   interpreter.AddCommand("findjsobjects", new llnode::FindObjectsCmd(),
                          "Alias for `v8 findjsobjects`");

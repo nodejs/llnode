@@ -340,6 +340,14 @@ class FixedArray : public FixedArrayBase {
   std::string InspectContents(int length, Error& err);
 };
 
+class FixedTypedArrayBase : public FixedArrayBase {
+ public:
+  V8_VALUE_DEFAULT_METHODS(FixedTypedArrayBase, FixedArrayBase)
+
+  inline int64_t GetBase(Error& err);
+  inline int64_t GetExternal(Error& err);
+};
+
 class DescriptorArray : public FixedArray {
  public:
   V8_VALUE_DEFAULT_METHODS(DescriptorArray, FixedArray)
@@ -383,7 +391,6 @@ class ScopeInfo : public FixedArray {
   inline Smi ParameterCount(Error& err);
   inline Smi StackLocalCount(Error& err);
   inline Smi ContextLocalCount(Error& err);
-  inline Smi ContextGlobalCount(Error& err);
 
   inline String ContextLocalName(int index, int param_count, int stack_count,
                                  Error& err);
@@ -400,9 +407,9 @@ class Oddball : public HeapObject {
   std::string Inspect(Error& err);
 };
 
-class JSArrayBuffer : public HeapObject {
+class JSArrayBuffer : public JSObject {
  public:
-  V8_VALUE_DEFAULT_METHODS(JSArrayBuffer, HeapObject)
+  V8_VALUE_DEFAULT_METHODS(JSArrayBuffer, JSObject)
 
   inline int64_t BackingStore(Error& err);
   inline int64_t BitField(Error& err);
@@ -413,9 +420,9 @@ class JSArrayBuffer : public HeapObject {
   std::string Inspect(InspectOptions* options, Error& err);
 };
 
-class JSArrayBufferView : public HeapObject {
+class JSArrayBufferView : public JSObject {
  public:
-  V8_VALUE_DEFAULT_METHODS(JSArrayBufferView, HeapObject)
+  V8_VALUE_DEFAULT_METHODS(JSArrayBufferView, JSObject)
 
   inline JSArrayBuffer Buffer(Error& err);
   inline Smi ByteOffset(Error& err);
@@ -484,6 +491,7 @@ class LLV8 {
   constants::SlicedString sliced_string;
   constants::ThinString thin_string;
   constants::FixedArrayBase fixed_array_base;
+  constants::FixedTypedArrayBase fixed_typed_array_base;
   constants::FixedArray fixed_array;
   constants::Oddball oddball;
   constants::JSArrayBuffer js_array_buffer;
@@ -515,6 +523,7 @@ class LLV8 {
   friend class JSArray;
   friend class FixedArrayBase;
   friend class FixedArray;
+  friend class FixedTypedArrayBase;
   friend class DescriptorArray;
   friend class NameDictionary;
   friend class Context;
