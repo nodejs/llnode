@@ -101,20 +101,7 @@ bool FindInstancesCmd::DoExecute(SBDebugger d, char** cmd,
 
   inspect_options.detailed = detailed_;
 
-  char** start = cmd;
-  for (; cmd != nullptr && *start != nullptr; start++) {
-    if (strcmp(*start, "-i") == 0 || strcmp(*start, "--inspect") == 0) {
-      inspect_options.detailed = true;
-      // Shuffle up the remaining parameters.
-      char** curr = start;
-      for (; *curr != nullptr; curr++) {
-        char** next = curr + 1;
-        *curr = *next;
-      }
-    }
-  }
-
-  start = ParseInspectOptions(cmd, &inspect_options);
+  char** start = ParseInspectOptions(cmd, &inspect_options);
 
   std::string full_cmd;
   for (; start != nullptr && *start != nullptr; start++) full_cmd += *start;

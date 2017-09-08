@@ -38,7 +38,7 @@ char** CommandBase::ParseInspectOptions(char** cmd,
       {"length", required_argument, nullptr, 'l'},
       {"print-map", no_argument, nullptr, 'm'},
       {"print-source", no_argument, nullptr, 's'},
-      {"inspect", no_argument, nullptr, 'i'},
+      {"verbose", no_argument, nullptr, 'v'},
       {nullptr, 0, nullptr, 0}};
 
   int argc = 1;
@@ -56,7 +56,7 @@ char** CommandBase::ParseInspectOptions(char** cmd,
   optind = 0;
   opterr = 1;
   do {
-    int arg = getopt_long(argc, args, "Fmsil:", opts, nullptr);
+    int arg = getopt_long(argc, args, "Fmsvl:", opts, nullptr);
     if (arg == -1) break;
 
     switch (arg) {
@@ -72,7 +72,7 @@ char** CommandBase::ParseInspectOptions(char** cmd,
       case 's':
         options->print_source = true;
         break;
-      case 'i':
+      case 'v':
         options->detailed = true;
         break;
       default:
@@ -361,7 +361,7 @@ bool PluginInitialize(SBDebugger d) {
 
   v8.AddCommand("findjsinstances", new llnode::FindInstancesCmd(),
                 "List every object with the specified type name.\n"
-                "Use -i or --inspect to display detailed `v8 inspect` output "
+                "Use -v or --verbose to display detailed `v8 inspect` output "
                 "for each object.\n"
                 "Accepts the same options as `v8 inspect`");
 
