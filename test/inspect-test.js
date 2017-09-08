@@ -126,9 +126,9 @@ tape('v8 inspect', (t) => {
     ext = extMatch[1];
 
     const extSlicedMatch = lines.match(
-      /.sliced-externalized-string=(0x[0-9a-f]+):<String: "\(external\)">/);
+        /.sliced-externalized-string=(0x[0-9a-f]+):<String: "\(external\)">/);
     t.ok(extSlicedMatch,
-      '.sliced-externalized-string Sliced ExternalString property');
+         '.sliced-externalized-string Sliced ExternalString property');
     extSliced = extSlicedMatch[1];
 
     sess.send(`v8 inspect ${regexp}`);

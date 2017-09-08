@@ -40,12 +40,12 @@ function closure() {
   c.hashmap['thin-string'] = makeThin('foo', 'bar');
   // Create an externalized string and slice it.
   c.hashmap['externalized-string'] =
-    'string that will be externalized and sliced';
+      'string that will be externalized and sliced';
   externalizeString(c.hashmap['externalized-string']);
   // Sliced strings need to be longer that SlicedString::kMinLength
   // which seems to be 13 so our string is 26.
   c.hashmap['sliced-externalized-string'] =
-    c.hashmap['externalized-string'].substring(10,36);
+      c.hashmap['externalized-string'].substring(10,36);
 
   c.hashmap['array'] = [true, 1, undefined, null, 'test', Class];
   c.hashmap['long-array'] = new Array(20).fill(5);
