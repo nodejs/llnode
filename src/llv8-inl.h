@@ -318,6 +318,13 @@ inline std::string SlicedString::ToString(Error& err) {
   String parent = Parent(err);
   if (err.Fail()) return std::string();
 
+  // TODO - Remove when we add support for external strings
+  // We can't use the offset and length safely if we get "(external)"
+  // instead of the original parent string.
+  if (parent.Representation(err) == v8()->string()->kExternalStringTag) {
+    return parent.ToString(err);
+  }
+
   Smi offset = Offset(err);
   if (err.Fail()) return std::string();
 

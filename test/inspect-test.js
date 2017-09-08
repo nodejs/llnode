@@ -48,6 +48,8 @@ tape('v8 inspect', (t) => {
   let regexp = null;
   let cons = null;
   let thin = null;
+  let ext = null;
+  let extSliced = null;
   let arrowFunc = null;
   let array = null;
   let longArray = null;
@@ -117,6 +119,17 @@ tape('v8 inspect', (t) => {
         /.thin-string=(0x[0-9a-f]+):<String: "foobar">/);
     t.ok(thinMatch, '.thin-string ThinString property');
     thin = thinMatch[1];
+
+    const extMatch = lines.match(
+        /.externalized-string=(0x[0-9a-f]+):<String: "\(external\)">/);
+    t.ok(extMatch, '.externalized-string ExternalString property');
+    ext = extMatch[1];
+
+    const extSlicedMatch = lines.match(
+        /.sliced-externalized-string=(0x[0-9a-f]+):<String: "\(external\)">/);
+    t.ok(extSlicedMatch,
+         '.sliced-externalized-string Sliced ExternalString property');
+    extSliced = extSlicedMatch[1];
 
     sess.send(`v8 inspect ${regexp}`);
     sess.send(`v8 inspect -F ${cons}`);
