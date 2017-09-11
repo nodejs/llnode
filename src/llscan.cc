@@ -17,6 +17,7 @@
 
 namespace llnode {
 
+using lldb::ByteOrder;
 using lldb::SBCommandReturnObject;
 using lldb::SBDebugger;
 using lldb::SBError;
@@ -1204,12 +1205,19 @@ bool LLScan::ScanHeapForObjects(lldb::SBTarget target,
   return true;
 }
 
+inline static ByteOrder GetHostByteOrder() {
+  union {
+    uint8_t a[2];
+    uint16_t b;
+  } u = {{0, 1}};
+  return u.b == 1 ? ByteOrder::eByteOrderBig : ByteOrder::eByteOrderLittle;
+}
 
 void LLScan::ScanMemoryRanges(FindJSObjectsVisitor& v) {
   bool done = false;
 
   const uint64_t addr_size = process_.GetAddressByteSize();
-  ByteOrder process_byte_order = process_.GetByteOrder();
+  bool swap_bytes = process_.GetByteOrder() != GetHostByteOrder();
 
   // Pages are usually around 1mb, so this should more than enough
   const uint64_t block_size = 1024 * 1024 * addr_size;
@@ -1261,12 +1269,12 @@ void LLScan::ScanMemoryRanges(FindJSObjectsVisitor& v) {
 
         if (addr_size == 4) {
           value = *reinterpret_cast<uint32_t*>(&block[j]);
-          if (process_byte_order != HOST_BYTE_ORDER) {
+          if (swap_bytes) {
             value = __builtin_bswap32(value);
           }
         } else if (addr_size == 8) {
           value = *reinterpret_cast<uint64_t*>(&block[j]);
-          if (process_byte_order != HOST_BYTE_ORDER) {
+          if (swap_bytes) {
             value = __builtin_bswap64(value);
           }
         } else {

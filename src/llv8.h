@@ -7,14 +7,6 @@
 
 #include "src/llv8-constants.h"
 
-using lldb::ByteOrder;
-
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-#define HOST_BYTE_ORDER ByteOrder::eByteOrderLittle
-#else
-#define HOST_BYTE_ORDER ByteOrder::eByteOrderBig
-#endif
-
 namespace llnode {
 
 class FindJSObjectsVisitor;
