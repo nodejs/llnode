@@ -81,8 +81,10 @@ inline int64_t HeapObject::GetType(Error& err) {
 
 
 inline int64_t Map::GetType(Error& err) {
-  int64_t type = LoadField(v8()->map()->kInstanceAttrsOffset, err);
+  int64_t type =
+      v8()->LoadUnsigned(LeaField(v8()->map()->kInstanceAttrsOffset), 2, err);
   if (err.Fail()) return -1;
+
   return type & 0xff;
 }
 
@@ -150,7 +152,7 @@ ACCESSOR(Map, InstanceDescriptors, map()->kInstanceDescriptorsOffset,
          HeapObject)
 
 inline int64_t Map::BitField3(Error& err) {
-  return LoadField(v8()->map()->kBitField3Offset, err) & 0xffffffff;
+  return v8()->LoadUnsigned(LeaField(v8()->map()->kBitField3Offset), 4, err);
 }
 
 inline int64_t Map::InObjectProperties(Error& err) {
@@ -158,7 +160,8 @@ inline int64_t Map::InObjectProperties(Error& err) {
 }
 
 inline int64_t Map::InstanceSize(Error& err) {
-  return (LoadField(v8()->map()->kInstanceSizeOffset, err) & 0xff) *
+  return v8()->LoadUnsigned(LeaField(v8()->map()->kInstanceSizeOffset), 1,
+                            err) *
          v8()->common()->kPointerSize;
 }
 

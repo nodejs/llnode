@@ -68,18 +68,15 @@ static int64_t LookupConstant(SBTarget target, const char* name, int64_t def,
 
   // NOTE: size could be bigger for at the end symbols
   if (size >= 8) {
-    process.ReadMemory(addr, &res, 8, sberr);
+    res = process.ReadUnsignedFromMemory(addr, 8, sberr);
   } else if (size == 4) {
-    int32_t tmp;
-    process.ReadMemory(addr, &tmp, size, sberr);
+    int32_t tmp = process.ReadUnsignedFromMemory(addr, size, sberr);
     res = static_cast<int64_t>(tmp);
   } else if (size == 2) {
-    int16_t tmp;
-    process.ReadMemory(addr, &tmp, size, sberr);
+    int16_t tmp = process.ReadUnsignedFromMemory(addr, size, sberr);
     res = static_cast<int64_t>(tmp);
   } else if (size == 1) {
-    int8_t tmp;
-    process.ReadMemory(addr, &tmp, size, sberr);
+    int8_t tmp = process.ReadUnsignedFromMemory(addr, size, sberr);
     res = static_cast<int64_t>(tmp);
   } else {
     err = Error::Failure("Unexpected symbol size");
