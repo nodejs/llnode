@@ -212,7 +212,7 @@ bool PrintCmd::DoExecute(SBDebugger d, char** cmd,
 
 bool ListCmd::DoExecute(SBDebugger d, char** cmd,
                         SBCommandReturnObject& result) {
-  if (cmd == nullptr || *cmd == nullptr) {
+  if (cmd == nullptr) {
     result.SetError("USAGE: v8 source list\n");
     return false;
   }
