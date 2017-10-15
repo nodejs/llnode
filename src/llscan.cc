@@ -13,7 +13,6 @@
 #include "src/llnode.h"
 #include "src/llscan.h"
 #include "src/llv8-inl.h"
-#include "src/llv8.h"
 
 namespace llnode {
 
@@ -28,12 +27,6 @@ using lldb::SBValue;
 using lldb::eReturnStatusFailed;
 using lldb::eReturnStatusSuccessFinishResult;
 
-// Defined in llnode.cc
-extern v8::LLV8 llv8;
-
-LLScan llscan;
-
-
 bool FindObjectsCmd::DoExecute(SBDebugger d, char** cmd,
                                SBCommandReturnObject& result) {
   SBTarget target = d.GetSelectedTarget();
@@ -42,8 +35,11 @@ bool FindObjectsCmd::DoExecute(SBDebugger d, char** cmd,
     return false;
   }
 
+  // Load V8 constants from postmortem data
+  llscan_->v8()->Load(target);
+
   /* Ensure we have a map of objects. */
-  if (!llscan.ScanHeapForObjects(target, result)) {
+  if (!llscan_->ScanHeapForObjects(target, result)) {
     result.SetStatus(eReturnStatusFailed);
     return false;
   }
@@ -67,8 +63,8 @@ void FindObjectsCmd::SimpleOutput(SBCommandReturnObject& result) {
    * TODO(hhellyer) - Make sort type an option (by count, size or name)
    */
   std::vector<TypeRecord*> sorted_by_count;
-  TypeRecordMap::iterator end = llscan.GetMapsToInstances().end();
-  for (TypeRecordMap::iterator it = llscan.GetMapsToInstances().begin();
+  TypeRecordMap::iterator end = llscan_->GetMapsToInstances().end();
+  for (TypeRecordMap::iterator it = llscan_->GetMapsToInstances().begin();
        it != end; ++it) {
     sorted_by_count.push_back(it->second);
   }
@@ -98,7 +94,7 @@ void FindObjectsCmd::SimpleOutput(SBCommandReturnObject& result) {
 
 void FindObjectsCmd::DetailedOutput(SBCommandReturnObject& result) {
   std::vector<DetailedTypeRecord*> sorted_by_count;
-  for (auto kv : llscan.GetDetailedMapsToInstances()) {
+  for (auto kv : llscan_->GetDetailedMapsToInstances()) {
     sorted_by_count.push_back(kv.second);
   }
 
@@ -142,8 +138,11 @@ bool FindInstancesCmd::DoExecute(SBDebugger d, char** cmd,
     return false;
   }
 
+  // Load V8 constants from postmortem data
+  llscan_->v8()->Load(target);
+
   /* Ensure we have a map of objects. */
-  if (!llscan.ScanHeapForObjects(target, result)) {
+  if (!llscan_->ScanHeapForObjects(target, result)) {
     result.SetStatus(eReturnStatusFailed);
     return false;
   }
@@ -159,17 +158,14 @@ bool FindInstancesCmd::DoExecute(SBDebugger d, char** cmd,
 
   std::string type_name = full_cmd;
 
-  // Load V8 constants from postmortem data
-  llv8.Load(target);
-
   TypeRecordMap::iterator instance_it =
-      llscan.GetMapsToInstances().find(type_name);
-  if (instance_it != llscan.GetMapsToInstances().end()) {
+      llscan_->GetMapsToInstances().find(type_name);
+  if (instance_it != llscan_->GetMapsToInstances().end()) {
     TypeRecord* t = instance_it->second;
     for (std::set<uint64_t>::iterator it = t->GetInstances().begin();
          it != t->GetInstances().end(); ++it) {
       v8::Error err;
-      v8::Value v8_value(&llv8, *it);
+      v8::Value v8_value(llscan_->v8(), *it);
       std::string res = v8_value.Inspect(&inspect_options, err);
       result.Printf("%s\n", res.c_str());
     }
@@ -193,24 +189,27 @@ bool NodeInfoCmd::DoExecute(SBDebugger d, char** cmd,
     return false;
   }
 
+  // Load V8 constants from postmortem data
+  llscan_->v8()->Load(target);
+
   /* Ensure we have a map of objects. */
-  if (!llscan.ScanHeapForObjects(target, result)) {
+  if (!llscan_->ScanHeapForObjects(target, result)) {
     return false;
   }
 
   std::string process_type_name("process");
 
   TypeRecordMap::iterator instance_it =
-      llscan.GetMapsToInstances().find(process_type_name);
+      llscan_->GetMapsToInstances().find(process_type_name);
 
-  if (instance_it != llscan.GetMapsToInstances().end()) {
+  if (instance_it != llscan_->GetMapsToInstances().end()) {
     TypeRecord* t = instance_it->second;
     for (std::set<uint64_t>::iterator it = t->GetInstances().begin();
          it != t->GetInstances().end(); ++it) {
       v8::Error err;
 
       // The properties object should be a JSObject
-      v8::JSObject process_obj(&llv8, *it);
+      v8::JSObject process_obj(llscan_->v8(), *it);
 
 
       v8::Value pid_val = process_obj.GetProperty("pid", err);
@@ -370,6 +369,9 @@ bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
     return false;
   }
 
+  // Load V8 constants from postmortem data
+  llscan_->v8()->Load(target);
+
   // Default scan type.
   ScanType type = ScanType::kFieldValue;
 
@@ -380,9 +382,6 @@ bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
     result.SetStatus(eReturnStatusFailed);
     return false;
   }
-
-  // Load V8 constants from postmortem data
-  llv8.Load(target);
 
   ObjectScanner* scanner;
 
@@ -402,14 +401,14 @@ bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
         return false;
       }
       // Check the address we've been given at least looks like a valid object.
-      v8::Value search_value(&llv8, value.GetValueAsSigned());
+      v8::Value search_value(llscan_->v8(), value.GetValueAsSigned());
       v8::Smi smi(search_value);
       if (smi.Check()) {
         result.SetError("Search value is an SMI.");
         result.SetStatus(eReturnStatusFailed);
         return false;
       }
-      scanner = new ReferenceScanner(search_value);
+      scanner = new ReferenceScanner(llscan_, search_value);
       break;
     }
     case ScanType::kPropertyName: {
@@ -420,7 +419,7 @@ bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
         return false;
       }
       std::string property_name = start[0];
-      scanner = new PropertyScanner(property_name);
+      scanner = new PropertyScanner(llscan_, property_name);
       break;
     }
     case ScanType::kStringValue: {
@@ -431,7 +430,7 @@ bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
         return false;
       }
       std::string string_value = start[0];
-      scanner = new StringScanner(string_value);
+      scanner = new StringScanner(llscan_, string_value);
       break;
     }
     /* We can add options to the command and further sub-classes of
@@ -450,7 +449,7 @@ bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
    * (Do this after we've checked the options to avoid
    * a long pause before reporting an error.)
    */
-  if (!llscan.ScanHeapForObjects(target, result)) {
+  if (!llscan_->ScanHeapForObjects(target, result)) {
     delete scanner;
     result.SetStatus(eReturnStatusFailed);
     return false;
@@ -471,12 +470,12 @@ bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
 
 void FindReferencesCmd::ScanForReferences(ObjectScanner* scanner) {
   // Walk all the object instances and handle them according to their type.
-  TypeRecordMap mapstoinstances = llscan.GetMapsToInstances();
+  TypeRecordMap mapstoinstances = llscan_->GetMapsToInstances();
   for (auto const entry : mapstoinstances) {
     TypeRecord* typerecord = entry.second;
     for (uint64_t addr : typerecord->GetInstances()) {
       v8::Error err;
-      v8::Value obj_value(&llv8, addr);
+      v8::Value obj_value(llscan_->v8(), addr);
       v8::HeapObject heap_object(obj_value);
       int64_t type = heap_object.GetType(err);
       v8::LLV8* v8 = heap_object.v8();
@@ -512,10 +511,10 @@ void FindReferencesCmd::PrintReferences(SBCommandReturnObject& result,
                                         ReferencesVector* references,
                                         ObjectScanner* scanner) {
   // Walk all the object instances and handle them according to their type.
-  TypeRecordMap mapstoinstances = llscan.GetMapsToInstances();
+  TypeRecordMap mapstoinstances = llscan_->GetMapsToInstances();
   for (uint64_t addr : *references) {
     v8::Error err;
-    v8::Value obj_value(&llv8, addr);
+    v8::Value obj_value(llscan_->v8(), addr);
     v8::HeapObject heap_object(obj_value);
     int64_t type = heap_object.GetType(err);
     v8::LLV8* v8 = heap_object.v8();
@@ -694,7 +693,7 @@ void FindReferencesCmd::ReferenceScanner::ScanRefs(v8::JSObject& js_obj,
     if (!err.Success()) break;
     if (already_saved.count(v.raw())) continue;
 
-    references = llscan.GetReferencesByValue(v.raw());
+    references = llscan_->GetReferencesByValue(v.raw());
     references->push_back(js_obj.raw());
     already_saved.insert(v.raw());
   }
@@ -711,7 +710,7 @@ void FindReferencesCmd::ReferenceScanner::ScanRefs(v8::JSObject& js_obj,
 
     if (already_saved.count(v.raw())) continue;
 
-    references = llscan.GetReferencesByValue(v.raw());
+    references = llscan_->GetReferencesByValue(v.raw());
     references->push_back(js_obj.raw());
     already_saved.insert(v.raw());
   }
@@ -735,7 +734,7 @@ void FindReferencesCmd::ReferenceScanner::ScanRefs(v8::String& str,
     v8::String parent = sliced_str.Parent(err);
 
     if (err.Success()) {
-      references = llscan.GetReferencesByValue(parent.raw());
+      references = llscan_->GetReferencesByValue(parent.raw());
       references->push_back(str.raw());
     }
 
@@ -744,13 +743,13 @@ void FindReferencesCmd::ReferenceScanner::ScanRefs(v8::String& str,
 
     v8::String first = cons_str.First(err);
     if (err.Success()) {
-      references = llscan.GetReferencesByValue(first.raw());
+      references = llscan_->GetReferencesByValue(first.raw());
       references->push_back(str.raw());
     }
 
     v8::String second = cons_str.Second(err);
     if (err.Success() && first.raw() != second.raw()) {
-      references = llscan.GetReferencesByValue(second.raw());
+      references = llscan_->GetReferencesByValue(second.raw());
       references->push_back(str.raw());
     }
   } else if (repr == v8->string()->kThinStringTag) {
@@ -758,7 +757,7 @@ void FindReferencesCmd::ReferenceScanner::ScanRefs(v8::String& str,
     v8::String actual = thin_str.Actual(err);
 
     if (err.Success()) {
-      references = llscan.GetReferencesByValue(actual.raw());
+      references = llscan_->GetReferencesByValue(actual.raw());
       references->push_back(str.raw());
     }
   }
@@ -767,12 +766,12 @@ void FindReferencesCmd::ReferenceScanner::ScanRefs(v8::String& str,
 
 
 bool FindReferencesCmd::ReferenceScanner::AreReferencesLoaded() {
-  return llscan.AreReferencesByValueLoaded();
+  return llscan_->AreReferencesByValueLoaded();
 }
 
 
 ReferencesVector* FindReferencesCmd::ReferenceScanner::GetReferences() {
-  return llscan.GetReferencesByValue(search_value_.raw());
+  return llscan_->GetReferencesByValue(search_value_.raw());
 }
 
 
@@ -820,19 +819,19 @@ void FindReferencesCmd::PropertyScanner::ScanRefs(v8::JSObject& js_obj,
     if (err.Fail()) {
       continue;
     }
-    references = llscan.GetReferencesByProperty(key);
+    references = llscan_->GetReferencesByProperty(key);
     references->push_back(js_obj.raw());
   }
 }
 
 
 bool FindReferencesCmd::PropertyScanner::AreReferencesLoaded() {
-  return llscan.AreReferencesByPropertyLoaded();
+  return llscan_->AreReferencesByPropertyLoaded();
 }
 
 
 ReferencesVector* FindReferencesCmd::PropertyScanner::GetReferences() {
-  return llscan.GetReferencesByProperty(search_value_);
+  return llscan_->GetReferencesByProperty(search_value_);
 }
 
 
@@ -999,7 +998,7 @@ void FindReferencesCmd::StringScanner::ScanRefs(v8::JSObject& js_obj,
 
       if (already_saved.count(value)) continue;
 
-      references = llscan.GetReferencesByString(value);
+      references = llscan_->GetReferencesByString(value);
       references->push_back(js_obj.raw());
       already_saved.insert(value);
     }
@@ -1024,7 +1023,7 @@ void FindReferencesCmd::StringScanner::ScanRefs(v8::JSObject& js_obj,
         }
         if (already_saved.count(value)) continue;
 
-        references = llscan.GetReferencesByString(value);
+        references = llscan_->GetReferencesByString(value);
         references->push_back(js_obj.raw());
         already_saved.insert(value);
       }
@@ -1050,7 +1049,7 @@ void FindReferencesCmd::StringScanner::ScanRefs(v8::String& str,
     if (err.Fail()) return;
     std::string parent = parent_str.ToString(err);
     if (err.Success()) {
-      references = llscan.GetReferencesByString(parent);
+      references = llscan_->GetReferencesByString(parent);
       references->push_back(str.raw());
     }
   } else if (repr == v8->string()->kConsStringTag) {
@@ -1069,7 +1068,7 @@ void FindReferencesCmd::StringScanner::ScanRefs(v8::String& str,
       std::string first = first_str.ToString(err);
 
       if (err.Success()) {
-        references = llscan.GetReferencesByString(first);
+        references = llscan_->GetReferencesByString(first);
         references->push_back(str.raw());
       }
     }
@@ -1087,7 +1086,7 @@ void FindReferencesCmd::StringScanner::ScanRefs(v8::String& str,
       std::string second = second_str.ToString(err);
 
       if (err.Success()) {
-        references = llscan.GetReferencesByString(second);
+        references = llscan_->GetReferencesByString(second);
         references->push_back(str.raw());
       }
     }
@@ -1098,12 +1097,12 @@ void FindReferencesCmd::StringScanner::ScanRefs(v8::String& str,
 
 
 bool FindReferencesCmd::StringScanner::AreReferencesLoaded() {
-  return llscan.AreReferencesByStringLoaded();
+  return llscan_->AreReferencesByStringLoaded();
 }
 
 
 ReferencesVector* FindReferencesCmd::StringScanner::GetReferences() {
-  return llscan.GetReferencesByString(search_value_);
+  return llscan_->GetReferencesByString(search_value_);
 }
 
 
@@ -1111,14 +1110,12 @@ FindJSObjectsVisitor::FindJSObjectsVisitor(SBTarget& target, LLScan* llscan)
     : target_(target), llscan_(llscan) {
   found_count_ = 0;
   address_byte_size_ = target_.GetProcess().GetAddressByteSize();
-  // Load V8 constants from postmortem data
-  llv8.Load(target);
 }
 
 
 /* Visit every address, a bit brute force but it works. */
 uint64_t FindJSObjectsVisitor::Visit(uint64_t location, uint64_t word) {
-  v8::Value v8_value(&llv8, word);
+  v8::Value v8_value(llscan_->v8(), word);
 
   v8::Error err;
   // Test if this is SMI
@@ -1136,7 +1133,7 @@ uint64_t FindJSObjectsVisitor::Visit(uint64_t location, uint64_t word) {
 
   MapCacheEntry map_info;
   if (map_cache_.count(map.raw()) == 0) {
-    map_info.Load(map, heap_object, err);
+    map_info.Load(map, heap_object, llscan_->v8(), err);
     if (err.Fail()) {
       return address_byte_size_;
     }
@@ -1309,6 +1306,7 @@ FindJSObjectsVisitor::MapCacheEntry::GetTypeNameWithProperties(
 
 bool FindJSObjectsVisitor::MapCacheEntry::Load(v8::Map map,
                                                v8::HeapObject heap_object,
+                                               v8::LLV8* llv8,
                                                v8::Error& err) {
   // Check type first
   is_histogram = FindJSObjectsVisitor::IsAHistogramType(map, err);
@@ -1325,8 +1323,8 @@ bool FindJSObjectsVisitor::MapCacheEntry::Load(v8::Map map,
 
   int64_t type = heap_object.GetType(err);
   indexed_properties_count_ = 0;
-  if (v8::JSObject::IsObjectType(&llv8, type) ||
-      (type == llv8.types()->kJSArrayType)) {
+  if (v8::JSObject::IsObjectType(llv8, type) ||
+      (type == llv8->types()->kJSArrayType)) {
     v8::JSObject js_obj(heap_object);
     indexed_properties_count_ = js_obj.GetArrayLength(err);
     if (err.Fail()) return false;
