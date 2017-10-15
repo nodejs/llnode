@@ -19,6 +19,7 @@ typedef std::map<std::string, ReferencesVector*> ReferencesByStringMap;
 
 class FindObjectsCmd : public CommandBase {
  public:
+  FindObjectsCmd(LLScan* llscan) : llscan_(llscan) {}
   ~FindObjectsCmd() override {}
 
   bool DoExecute(lldb::SBDebugger d, char** cmd,
@@ -26,29 +27,40 @@ class FindObjectsCmd : public CommandBase {
 
   void SimpleOutput(lldb::SBCommandReturnObject& result);
   void DetailedOutput(lldb::SBCommandReturnObject& result);
+
+ private:
+  LLScan* llscan_;
 };
 
 class FindInstancesCmd : public CommandBase {
  public:
+  FindInstancesCmd(LLScan* llscan, bool detailed)
+      : llscan_(llscan), detailed_(detailed) {}
   ~FindInstancesCmd() override {}
 
   bool DoExecute(lldb::SBDebugger d, char** cmd,
                  lldb::SBCommandReturnObject& result) override;
 
  private:
+  LLScan* llscan_;
   bool detailed_;
 };
 
 class NodeInfoCmd : public CommandBase {
  public:
+  NodeInfoCmd(LLScan* llscan) : llscan_(llscan) {}
   ~NodeInfoCmd() override {}
 
   bool DoExecute(lldb::SBDebugger d, char** cmd,
                  lldb::SBCommandReturnObject& result) override;
+
+ private:
+  LLScan* llscan_;
 };
 
 class FindReferencesCmd : public CommandBase {
  public:
+  FindReferencesCmd(LLScan* llscan) : llscan_(llscan) {}
   ~FindReferencesCmd() override {}
 
   bool DoExecute(lldb::SBDebugger d, char** cmd,
@@ -82,7 +94,8 @@ class FindReferencesCmd : public CommandBase {
 
   class ReferenceScanner : public ObjectScanner {
    public:
-    ReferenceScanner(v8::Value search_value) : search_value_(search_value) {}
+    ReferenceScanner(LLScan* llscan, v8::Value search_value)
+        : llscan_(llscan), search_value_(search_value) {}
 
     bool AreReferencesLoaded() override;
 
@@ -97,12 +110,14 @@ class FindReferencesCmd : public CommandBase {
                    v8::Error& err) override;
 
    private:
+    LLScan* llscan_;
     v8::Value search_value_;
   };
 
   class PropertyScanner : public ObjectScanner {
    public:
-    PropertyScanner(std::string search_value) : search_value_(search_value) {}
+    PropertyScanner(LLScan* llscan, std::string search_value)
+        : llscan_(llscan), search_value_(search_value) {}
 
     bool AreReferencesLoaded() override;
 
@@ -116,13 +131,15 @@ class FindReferencesCmd : public CommandBase {
                    v8::Error& err) override;
 
    private:
+    LLScan* llscan_;
     std::string search_value_;
   };
 
 
   class StringScanner : public ObjectScanner {
    public:
-    StringScanner(std::string search_value) : search_value_(search_value) {}
+    StringScanner(LLScan* llscan, std::string search_value)
+        : llscan_(llscan), search_value_(search_value) {}
 
     bool AreReferencesLoaded() override;
 
@@ -137,8 +154,12 @@ class FindReferencesCmd : public CommandBase {
                    v8::Error& err) override;
 
    private:
+    LLScan* llscan_;
     std::string search_value_;
   };
+
+ private:
+  LLScan* llscan_;  // FindReferencesCmd::llscan_
 };
 
 class MemoryVisitor {
@@ -236,7 +257,8 @@ class FindJSObjectsVisitor : MemoryVisitor {
         ShowArrayLength show_array_length = kShowArrayLength,
         size_t max_properties = 0);
 
-    bool Load(v8::Map map, v8::HeapObject heap_object, v8::Error& err);
+    bool Load(v8::Map map, v8::HeapObject heap_object,
+              v8::LLV8* llv8, v8::Error& err);
   };
 
   static bool IsAHistogramType(v8::Map& map, v8::Error& err);
@@ -259,7 +281,9 @@ class FindJSObjectsVisitor : MemoryVisitor {
 
 class LLScan {
  public:
-  LLScan() {}
+  LLScan(v8::LLV8* llv8) : llv8_(llv8) {}
+
+  v8::LLV8* v8() { return llv8_; }
 
   bool ScanHeapForObjects(lldb::SBTarget target,
                           lldb::SBCommandReturnObject& result);
@@ -301,6 +325,8 @@ class LLScan {
     }
     return references_by_string_[string_value];
   };
+
+  v8::LLV8* llv8_;
 
  private:
   void ScanMemoryRanges(FindJSObjectsVisitor& v);
