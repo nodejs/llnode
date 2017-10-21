@@ -82,12 +82,19 @@ console.log(`Installing llnode for ${lldbExe}, lldb version ${lldbVersion}`);
 // TODO: The llvm project is probably moving to github soon at that point we
 // should stop using the mirror.
 if (lldbHeadersBranch != undefined) {
-  console.log('Cloning lldb from ' + lldbHeadersBranch);
-  child_process.execSync(`rm -rf ${lldbIncludeDir}`);
-  child_process.execFileSync('git',
+  if (!fs.lstatSync(path.join(lldbIncludeDir, 'include')).isDirectory()) {    
+    console.log('Cloning lldb from ' + lldbHeadersBranch);  
+    child_process.execSync(`rm -rf ${lldbIncludeDir}`);
+    child_process.execFileSync('git',
     ['clone', '--depth=1', '-b', lldbHeadersBranch,
       'https://github.com/llvm-mirror/lldb.git', lldbIncludeDir],
-    {cwd: buildDir});
+    {
+      cwd: buildDir,
+      stdio: 'inherit'  // show progress
+    });
+  } else {
+    console.log(`Skip cloning lldb headers because ${lldbIncludeDir} exists`);
+  }
 }
 
 // Link to the headers file so we can run gyp_llnode directly and don't need to
@@ -136,6 +143,20 @@ function lldbVersionToBranch(version) {
 
 // On Mac the lldb version string doesn't match the original lldb versions.
 function getDarwinRelease() {
+  try {
+    const version = child_process.execFileSync('llvm-config', ['--version']).toString().trim();
+    const prefix = child_process.execFileSync('llvm-config', ['--prefix']).toString().trim();
+    const options = JSON.stringify({
+      variables: { "lldb_build_dir%": prefix }
+    }, null, 2);
+    fs.writeFileSync('options.gypi', Buffer.from(options), 'utf-8');
+    console.log('Overwriting options.gypi with output from llvm-config:');
+    console.log(options);
+    return version.split('.').slice(0, 2).join('.');
+  } catch(err) {
+    // No llvm-config, try to get the version from xcodebuild
+  }
+
   var xcodeStr;
   try {
     xcodeStr = child_process.execFileSync('xcodebuild', ['-version'])
