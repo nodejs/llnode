@@ -28,7 +28,7 @@ if (osName === 'Darwin') {
   }
 
   console.log(`Installing llnode for ${lldbExe}, lldb version ${lldbVersion}`);
-  const installedDir = getDarwinIntallDir();
+  const installedDir = getDarwinInstallDir();
   if (installedDir === undefined) {
     const lldbHeadersBranch = lldbVersionToBranch(lldbVersion);
     lldbInstallDir = 'lldb-' + lldbVersion;
@@ -90,8 +90,7 @@ function getLldbHeadersPath(lldbInstallDir) {
 // should stop using the mirror.
 function cloneHeaders(lldbHeadersBranch, lldbInstallDir, buildDir) {
   const lldbHeaders = getLldbHeadersPath(lldbInstallDir);
-  if (!fs.existsSync(lldbHeaders)) {
-    child_process.execSync(`rm -rf ${lldbInstallDir}`);
+  if (!fs.existsSync(lldbInstallDir)) {
     console.log(`Cloning lldb from ${lldbHeadersBranch} to ${lldbInstallDir}`);
     child_process.execFileSync('git',
       ['clone', '--depth=1', '-b', lldbHeadersBranch,
@@ -174,7 +173,7 @@ function getDarwinRelease() {
   var versionStr = '';
   var splitStr = xcodeStr.split(os.EOL);
   for (var str of splitStr) {
-    if (str.indexOf('Xcode') !== -1) {
+    if (str.includes('Xcode')) {
       versionStr = str.split(' ')[1];
       break;
     }
@@ -203,7 +202,7 @@ function setDarwinBuildDir() {
   console.log(options);
 }
 
-function getDarwinIntallDir() {
+function getDarwinInstallDir() {
   var installedDir;
   try {
     installedDir = child_process.execFileSync('llvm-config', [
