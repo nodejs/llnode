@@ -1,17 +1,28 @@
 'use strict';
 
-// No `process save-core` on linuxes :(
-if (process.platform !== 'darwin')
-  return;
-
+const util = require('util');
 const tape = require('tape');
-
 const common = require('./common');
 
 tape('v8 findrefs and friends', (t) => {
-  t.timeoutAfter(90000);
+  t.timeoutAfter(common.saveCoreTimeout);
 
-  const sess = common.Session.create('inspect-scenario.js');
+  // Use prepared core and executable to test
+  if (process.env.LLNODE_CORE && process.env.LLNODE_NODE_EXE) {
+    test(process.env.LLNODE_NODE_EXE, process.env.LLNODE_CORE, t);
+  } else {
+    if (process.platform === 'linux') {
+      t.skip('No `process save-core` on linux');
+      t.end();
+    } else {
+      saveCoreAndTest(t);
+    }
+  }
+});
+
+function saveCoreAndTest(t) {
+  // Create a core and test
+  const sess = common.Session.create('inspect-scenario.js'); sess.timeoutAfter(common.saveCoreTimeout);
 
   sess.waitBreak(() => {
     sess.send(`process save-core ${common.core}`);
@@ -21,22 +32,38 @@ tape('v8 findrefs and friends', (t) => {
 
   sess.wait(/lldb\-/, () => {
     t.ok(true, 'Saved core');
+    sess.send('target delete 0');
+    sess.quit();
 
-    sess.send(`target create -c ${common.core}`);
+    test(process.execPath, common.core, t);
   });
+}
 
-  sess.wait(/Core file[^\n]+was loaded/, () => {
+function test(executable, core, t) {
+  let sess, ranges;
+  if (process.env.LLNODE_NO_RANGES) {
+    sess = common.Session.loadCore(executable, core);
+  } else {
+    ranges = core + '.ranges';
+    sess = common.Session.loadCore(executable, core, ranges);
+  }
+  sess.timeoutAfter(common.loadCoreTimeout);
+
+  sess.waitCoreLoad(() => {
     t.ok(true, 'Loaded core');
 
-    common.generateRanges((err) => {
-      t.error(err, 'generateRanges');
+    if (ranges) {
+      common.generateRanges(core, ranges, (err) => {
+        t.error(err, 'generateRanges');
+        t.ok(true, 'Generated ranges');
+        sess.send('version');
+      })
+    } else {
       sess.send('version');
-    });
+    }
   });
 
   sess.wait(/lldb\-/, () => {
-    t.ok(true, 'Generated ranges');
-
     sess.send('v8 findjsobjects');
     // Just a separator
     sess.send('version');
@@ -79,8 +106,8 @@ tape('v8 findrefs and friends', (t) => {
     t.ok(/Object\.holder/.test(lines.join('\n')), 'Should find reference #2');
     t.ok(/\(Array\)\[1\]/.test(lines.join('\n')), 'Should find reference #3');
 
-    sess.send('target delete 1');
+    sess.send('target delete 0');
     sess.quit();
     t.end();
   });
-});
+}

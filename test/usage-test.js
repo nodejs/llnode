@@ -2,10 +2,6 @@
 const tape = require('tape');
 const common = require('./common');
 
-function removeBlankLines(lines) {
-  return lines.filter((line) => { return line.trim() !== ''; });
-}
-
 tape('usage messages', (t) => {
   t.timeoutAfter(15000);
 
@@ -16,28 +12,27 @@ tape('usage messages', (t) => {
   });
 
   sess.stderr.linesUntil(/USAGE/, (lines) => {
-    t.ok(/^error: USAGE: v8 print expr$/.test(removeBlankLines(lines)[0]),
-         'print usage message');
+    const re = /^error: USAGE: v8 print expr$/;
+    t.ok(lines.some(line => re.test(line.trim())), 'print usage message');
     sess.send('v8 source list');
   });
 
   sess.stderr.linesUntil(/USAGE/, (lines) => {
-    t.ok(/^error: USAGE: v8 source list$/.test(removeBlankLines(lines)[0]),
-         'list usage message');
+    const re = /^error: USAGE: v8 source list$/;
+    t.ok(lines.some(line => re.test(line.trim())), 'list usage message');
     sess.send('v8 findjsinstances');
   });
 
   sess.stderr.linesUntil(/USAGE/, (lines) => {
     const re = /^error: USAGE: v8 findjsinstances \[flags\] instance_name$/;
-
-    t.ok(re.test(removeBlankLines(lines)[0]),
+    t.ok(lines.some(line => re.test(line.trim())),
          'findjsinstances usage message');
     sess.send('v8 findrefs');
   });
 
   sess.stderr.linesUntil(/USAGE/, (lines) => {
-    t.ok(/^error: USAGE: v8 findrefs expr$/.test(removeBlankLines(lines)[0]),
-         'findrefs usage message');
+    const re = /^error: USAGE: v8 findrefs expr$/;
+    t.ok(lines.some(line => re.test(line.trim())), 'findrefs usage message');
     sess.quit();
     t.end();
   });

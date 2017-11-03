@@ -190,10 +190,8 @@ tape('v8 inspect', (t) => {
         lines.indexOf('<Array: length=20'),
         -1,
         'long array length');
-      t.ok(
-          lines.match(/\[9\]=<Smi: 5>}>$/),
-          'long array content');
-      sess.send(`v8 inspect ${arrayBuffer}`);
+    t.ok(lines.match(/\[9\]=<Smi: 5>}>$/), 'long array content');
+    sess.send(`v8 inspect ${arrayBuffer}`);
   });
 
   sess.linesUntil(/\]>/, (lines) => {
@@ -286,7 +284,7 @@ tape('v8 inspect', (t) => {
     // the function we want.)
     const arrowSource = 'source:\n' +
         'function c.hashmap.(anonymous function)(a,b)=>{a+b}\n' +
-        '>'
+        '>';
 
     t.ok(lines.includes(
         arrowSource),
@@ -301,11 +299,11 @@ tape('v8 inspect', (t) => {
     // Include 'source:' and '>' to act as boundaries. (Avoid
     // passing if the whole file it displayed instead of just
     // the function we want.)
-    const methodSource = "  source:\n" +
-    "function method() {\n" +
-    "    throw new Error('Uncaught');\n" +
-    "  }\n" +
-    ">"
+    const methodSource = '  source:\n' +
+    'function method() {\n' +
+    '    throw new Error(\'Uncaught\');\n' +
+    '  }\n' +
+    '>';
 
     t.ok(lines.includes(
         methodSource),
