@@ -62,6 +62,7 @@ bool FindObjectsCmd::DoExecute(SBDebugger d, char** cmd,
             TypeRecord::CompareInstanceCounts);
 
   uint64_t total_objects = 0;
+  uint64_t total_size = 0;
 
   result.Printf(" Instances  Total Size Name\n");
   result.Printf(" ---------- ---------- ----\n");
@@ -72,7 +73,11 @@ bool FindObjectsCmd::DoExecute(SBDebugger d, char** cmd,
     result.Printf(" %10" PRId64 " %10" PRId64 " %s\n", t->GetInstanceCount(),
                   t->GetTotalInstanceSize(), t->GetTypeName().c_str());
     total_objects += t->GetInstanceCount();
+    total_size += t->GetTotalInstanceSize();
   }
+
+  result.Printf(" ---------- ---------- \n");
+  result.Printf(" %10" PRId64 " %10" PRId64 " \n", total_objects, total_size);
 
   result.SetStatus(eReturnStatusSuccessFinishResult);
   return true;
