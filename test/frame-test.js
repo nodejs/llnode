@@ -8,11 +8,13 @@ tape('v8 stack', (t) => {
   t.timeoutAfter(15000);
 
   const sess = common.Session.create('frame-scenario.js');
-  sess.waitBreak(() => {
+  sess.waitBreak((err) => {
+    t.error(err);
     sess.send('v8 bt');
   });
 
-  sess.linesUntil(/eyecatcher/, (lines) => {
+  sess.linesUntil(/eyecatcher/, (err, lines) => {
+    t.error(err);
     lines.reverse();
     t.ok(lines.length > 4, 'frame count');
     // FIXME(bnoordhuis) This can fail with versions of lldb that don't

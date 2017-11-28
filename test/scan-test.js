@@ -1,6 +1,5 @@
 'use strict';
 
-const util = require('util');
 const tape = require('tape');
 const common = require('./common');
 
@@ -10,19 +9,18 @@ tape('v8 findrefs and friends', (t) => {
   // Use prepared core and executable to test
   if (process.env.LLNODE_CORE && process.env.LLNODE_NODE_EXE) {
     test(process.env.LLNODE_NODE_EXE, process.env.LLNODE_CORE, t);
+  } else if (process.platform === 'linux') {
+    t.skip('No `process save-core` on linux');
+    t.end();
   } else {
-    if (process.platform === 'linux') {
-      t.skip('No `process save-core` on linux');
-      t.end();
-    } else {
-      saveCoreAndTest(t);
-    }
+    saveCoreAndTest(t);
   }
 });
 
 function saveCoreAndTest(t) {
   // Create a core and test
-  const sess = common.Session.create('inspect-scenario.js'); sess.timeoutAfter(common.saveCoreTimeout);
+  const sess = common.Session.create('inspect-scenario.js');
+  sess.timeoutAfter(common.saveCoreTimeout);
 
   sess.waitBreak(() => {
     sess.send(`process save-core ${common.core}`);
@@ -30,7 +28,8 @@ function saveCoreAndTest(t) {
     sess.send('version');
   });
 
-  sess.wait(/lldb\-/, () => {
+  sess.wait(/lldb-/, (err) => {
+    t.error(err);
     t.ok(true, 'Saved core');
     sess.send('target delete 0');
     sess.quit();
@@ -49,27 +48,30 @@ function test(executable, core, t) {
   }
   sess.timeoutAfter(common.loadCoreTimeout);
 
-  sess.waitCoreLoad(() => {
+  sess.waitCoreLoad((err) => {
+    t.error(err);
     t.ok(true, 'Loaded core');
 
     if (ranges) {
       common.generateRanges(core, ranges, (err) => {
-        t.error(err, 'generateRanges');
+        t.error(err);
         t.ok(true, 'Generated ranges');
         sess.send('version');
-      })
+      });
     } else {
       sess.send('version');
     }
   });
 
-  sess.wait(/lldb\-/, () => {
+  sess.wait(/lldb-/, (err) => {
+    t.error(err);
     sess.send('v8 findjsobjects');
     // Just a separator
     sess.send('version');
   });
 
-  sess.linesUntil(/lldb\-/, (lines) => {
+  sess.linesUntil(/lldb-/, (err, lines) => {
+    t.error(err);
     t.ok(/\d+ Zlib/.test(lines.join('\n')), 'Zlib should be in findjsobjects');
 
     sess.send('v8 findjsinstances Zlib');
@@ -77,7 +79,8 @@ function test(executable, core, t) {
     sess.send('version');
   });
 
-  sess.linesUntil(/lldb\-/, (lines) => {
+  sess.linesUntil(/lldb-/, (err, lines) => {
+    t.error(err);
     // Find refs to every Zlib instance
     let found = false;
     for (let i = lines.length - 1; i >= 0; i--) {
@@ -94,7 +97,9 @@ function test(executable, core, t) {
     sess.send('version');
   });
 
-  sess.linesUntil(/lldb\-/, (lines) => {
+  sess.linesUntil(/lldb-/, (err, lines) => {
+    t.error(err);
+
     // `class Deflate extends Zlib` makes instances show up as
     // Transform objects (which Zlib inherits from) in node.js 8.0.0.
     // That change was reverted in https://github.com/nodejs/node/pull/13374

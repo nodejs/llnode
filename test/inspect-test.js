@@ -9,14 +9,16 @@ tape('v8 inspect', (t) => {
 
   const sess = common.Session.create('inspect-scenario.js');
 
-  sess.waitBreak(() => {
+  sess.waitBreak((err) => {
+    t.error(err);
     sess.send('v8 bt');
   });
 
   let that = null;
   let fn = null;
 
-  sess.wait(/inspect-scenario.js/, (line) => {
+  sess.wait(/inspect-scenario.js/, (err, line) => {
+    t.error(err);
     let match = line.match(/method\(this=(0x[0-9a-f]+)[^\n]+fn=(0x[0-9a-f]+)/i);
     t.ok(match, 'method should have `this`');
 
@@ -28,11 +30,13 @@ tape('v8 inspect', (t) => {
 
   let hashmap = null;
 
-  sess.wait(/Class/, (line) => {
+  sess.wait(/Class/, (err, line) => {
+    t.error(err);
     t.notEqual(line.indexOf(that), -1, 'addr of `Class` should match');
   });
 
-  sess.linesUntil(/}>/, (lines) => {
+  sess.linesUntil(/}>/, (err, lines) => {
+    t.error(err);
     lines = lines.join('\n');
     t.ok(/x=<Smi: 1>/.test(lines), '.x smi property');
     t.ok(/y=123.456/.test(lines), '.y heap number property');
@@ -57,11 +61,13 @@ tape('v8 inspect', (t) => {
   let uint8Array = null;
   let buffer = null;
 
-  sess.wait(/Object/, (line) => {
+  sess.wait(/Object/, (err, line) => {
+    t.error(err);
     t.notEqual(line.indexOf(hashmap), -1, 'addr of `Object` should match');
   });
 
-  sess.linesUntil(/}>/, (lines) => {
+  sess.linesUntil(/}>/, (err, lines) => {
+    t.error(err);
     lines = lines.join('\n');
     t.ok(/\[0\]=[^\n]*null/.test(lines), '[0] null element');
     t.ok(/\[4\]=[^\n]*undefined/.test(lines), '[4] undefined element');
@@ -135,14 +141,16 @@ tape('v8 inspect', (t) => {
     sess.send(`v8 inspect -F ${cons}`);
   });
 
-  sess.linesUntil(/}>/, (lines) => {
+  sess.linesUntil(/}>/, (err, lines) => {
+    t.error(err);
     lines = lines.join('\n');
     t.ok(/source=\/regexp\//.test(lines) ||
              /\.source=[^\n]*<String: "regexp">/.test(lines),
          'regexp.source');
   });
 
-  sess.linesUntil(/">/, (lines) => {
+  sess.linesUntil(/">/, (err, lines) => {
+    t.error(err);
     lines = lines.join('\n');
     t.notEqual(
         lines.indexOf('this could be a bit smaller, but v8 wants big str.' +
@@ -153,7 +161,8 @@ tape('v8 inspect', (t) => {
     sess.send(`v8 inspect --string-length 20 ${cons}`);
   });
 
-  sess.linesUntil(/">/, (lines) => {
+  sess.linesUntil(/">/, (err, lines) => {
+    t.error(err);
     lines = lines.join('\n');
     t.notEqual(
         lines.indexOf('this could be a bit ...'),
@@ -163,7 +172,8 @@ tape('v8 inspect', (t) => {
     sess.send(`v8 inspect ${thin}`);
   });
 
-  sess.linesUntil(/">/, (lines) => {
+  sess.linesUntil(/">/, (err, lines) => {
+    t.error(err);
     lines = lines.join('\n');
     t.ok(
       /0x[0-9a-f]+:<String: "foobar">/.test(lines),
@@ -172,7 +182,8 @@ tape('v8 inspect', (t) => {
     sess.send(`v8 inspect ${array}`);
   });
 
-  sess.linesUntil(/}>/, (lines) => {
+  sess.linesUntil(/}>/, (err, lines) => {
+    t.error(err);
     lines = lines.join('\n');
     t.notEqual(
         lines.indexOf('<Array: length=6'),
@@ -184,7 +195,8 @@ tape('v8 inspect', (t) => {
     sess.send(`v8 inspect --array-length 10 ${longArray}`);
   });
 
-  sess.linesUntil(/}>/, (lines) => {
+  sess.linesUntil(/}>/, (err, lines) => {
+    t.error(err);
     lines = lines.join('\n');
     t.notEqual(
         lines.indexOf('<Array: length=20'),
@@ -194,7 +206,8 @@ tape('v8 inspect', (t) => {
     sess.send(`v8 inspect ${arrayBuffer}`);
   });
 
-  sess.linesUntil(/\]>/, (lines) => {
+  sess.linesUntil(/\]>/, (err, lines) => {
+    t.error(err);
     lines = lines.join('\n');
     const re = new RegExp(
       '0x[0-9a-f]+:' +
@@ -207,7 +220,8 @@ tape('v8 inspect', (t) => {
     sess.send(`v8 inspect --array-length 1 ${arrayBuffer}`);
   });
 
-  sess.linesUntil(/]>/, (lines) => {
+  sess.linesUntil(/]>/, (err, lines) => {
+    t.error(err);
     lines = lines.join('\n');
     const re = new RegExp(
       '0x[0-9a-f]+:' +
@@ -220,7 +234,8 @@ tape('v8 inspect', (t) => {
     sess.send(`v8 inspect ${uint8Array}`);
   });
 
-  sess.linesUntil(/]>/, (lines) => {
+  sess.linesUntil(/]>/, (err, lines) => {
+    t.error(err);
     lines = lines.join('\n');
     const re = new RegExp(
       '0x[0-9a-f]+:' +
@@ -234,7 +249,8 @@ tape('v8 inspect', (t) => {
     sess.send(`v8 inspect --array-length 1 ${uint8Array}`);
   });
 
-  sess.linesUntil(/]>/, (lines) => {
+  sess.linesUntil(/]>/, (err, lines) => {
+    t.error(err);
     lines = lines.join('\n');
     const re = new RegExp(
       '0x[0-9a-f]+:' +
@@ -248,7 +264,8 @@ tape('v8 inspect', (t) => {
     sess.send(`v8 inspect ${buffer}`);
   });
 
-  sess.linesUntil(/]>/, (lines) => {
+  sess.linesUntil(/]>/, (err, lines) => {
+    t.error(err);
     lines = lines.join('\n');
     const re = new RegExp(
       '0x[0-9a-f]+:' +
@@ -262,7 +279,8 @@ tape('v8 inspect', (t) => {
     sess.send(`v8 inspect --array-length 1 ${buffer}`);
   });
 
-  sess.linesUntil(/]>/, (lines) => {
+  sess.linesUntil(/]>/, (err, lines) => {
+    t.error(err);
     lines = lines.join('\n');
     const re = new RegExp(
       '0x[0-9a-f]+:' +
@@ -277,7 +295,8 @@ tape('v8 inspect', (t) => {
   });
 
 
-  sess.linesUntil(/^>/, (lines) => {
+  sess.linesUntil(/^>/, (err, lines) => {
+    t.error(err);
     lines = lines.join('\n');
     // Include 'source:' and '>' to act as boundaries. (Avoid
     // passing if the whole file it displayed instead of just
@@ -293,7 +312,8 @@ tape('v8 inspect', (t) => {
     sess.send(`v8 inspect -s ${fn}`);
   });
 
-  sess.linesUntil(/^>/, (lines) => {
+  sess.linesUntil(/^>/, (err, lines) => {
+    t.error(err);
     lines = lines.join('\n');
 
     // Include 'source:' and '>' to act as boundaries. (Avoid
@@ -331,17 +351,21 @@ tape('v8 inspect', (t) => {
     }
   });
 
-  sess.linesUntil(/}>/, (lines) => {
-    lines = lines.join('\n');
-    t.ok(/internal fields/.test(lines), 'method.scopedAPI.internalFields');
-  });
+  if (process.version >= 'v5.0.0') {
+    sess.linesUntil(/}>/, (err, lines) => {
+      t.error(err);
+      lines = lines.join('\n');
+      t.ok(/internal fields/.test(lines), 'method.scopedAPI.internalFields');
+    });
 
-  sess.linesUntil(/}>/, (lines) => {
-    lines = lines.join('\n');
-    t.ok(/outerVar[^\n]+"outer variable"/.test(lines),
-         'method.closure.outerVar');
+    sess.linesUntil(/}>/, (err, lines) => {
+      t.error(err);
+      lines = lines.join('\n');
+      t.ok(/outerVar[^\n]+"outer variable"/.test(lines),
+          'method.closure.outerVar');
 
-    sess.quit();
-    t.end();
-  });
+      sess.quit();
+      t.end();
+    });
+  }
 });
