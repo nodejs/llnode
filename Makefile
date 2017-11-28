@@ -19,9 +19,14 @@ uninstall-linux:
 format:
 	clang-format -i src/*
 
-_travis:
-	./gyp_llnode -Dlldb_dir=/usr/lib/llvm-3.6/ -f make
-	make -C out/
-	TEST_LLDB_BINARY=`which lldb-3.6` npm test
+configure: scripts/configure.js
+	node scripts/configure.js
+
+plugin: configure
+	./gyp_llnode
+	$(MAKE) -C out/
+
+_travis: plugin
+	TEST_LLDB_BINARY=`which lldb-3.9` npm test
 
 .PHONY: all
