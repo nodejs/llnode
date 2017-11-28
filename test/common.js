@@ -62,7 +62,9 @@ function SessionOutput(session, stream, timeout) {
   });
 
   // Ignore errors
-  stream.on('error', () => {});
+  stream.on('error', (err) => {
+    debug('[stream error]', err);
+  });
 }
 util.inherits(SessionOutput, EventEmitter);
 
@@ -104,34 +106,32 @@ SessionOutput.prototype.wait = function wait(regexp, callback, allLines) {
     self._unqueueWait();
     done = true;
 
-    callback(allLines ? lines : line);
+    callback(null, allLines ? lines : line);
   }
 
   let done = false;
-  let timePassed = 0;
-  const interval = 100;
-  const check = setInterval(() => {
-    timePassed += interval;
+  const check = setTimeout(() => {
     if (done)
-      clearInterval(check);
+      return;
 
-    if (timePassed > self.timeout) {
-      self.removeListener('line', onLine);
-      self._unqueueWait();
-      const message = `Test timeout in ${this.timeout} ` +
-        `waiting for ${regexp}\n` +
-        `\n${'='.repeat(10)} lldb output ${'='.repeat(10)}\n` +
-        `\n${lines.join('\n')}` +
-        `\n${'='.repeat(30)}\n`;
-      throw new Error(message);
-    }
-  }, interval);
+    self.removeListener('line', onLine);
+    self._unqueueWait();
+    console.error(`${'='.repeat(10)} lldb output ${'='.repeat(10)}`);
+    console.error(lines.join('\n'));
+    console.error('='.repeat(33));
+    const message = `Test timeout in ${this.timeout} ` +
+      `waiting for ${regexp}`;
+    callback(new Error(message));
+  }, this.timeout).unref();
 
   this.on('line', onLine);
 };
 
 SessionOutput.prototype.waitBreak = function waitBreak(callback) {
-  this.wait(/Process \d+ stopped/i, () => {
+  this.wait(/Process \d+ stopped/i, (err) => {
+    if (err)
+      return callback(err);
+
     // Do not resume immediately since the process would print
     // the instructions out and input sent before the stdout finish
     // could be lost
