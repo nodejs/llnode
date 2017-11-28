@@ -27,6 +27,6 @@ plugin: configure
 	$(MAKE) -C out/
 
 _travis: plugin
-	TEST_LLDB_BINARY=`which lldb-3.9` npm test
+	TEST_LLDB_BINARY=`which lldb-3.9` TEST_LLNODE_DEBUG=true npm test
 
 .PHONY: all
