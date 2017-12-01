@@ -1,6 +1,7 @@
 #ifndef SRC_LLV8_INL_H_
 #define SRC_LLV8_INL_H_
 
+#include <cinttypes>
 #include "llv8.h"
 
 namespace llnode {
@@ -19,7 +20,9 @@ inline T LLV8::LoadValue(int64_t addr, Error& err) {
 
   T res = T(this, ptr);
   if (!res.Check()) {
-    err = Error::Failure("Invalid value");
+    // TODO(joyeecheung): use Error::Failure() to report information when
+    // there is less noise from here.
+    err = Error(true, "Invalid value");
     return T();
   }
 
@@ -63,7 +66,8 @@ inline T HeapObject::LoadFieldValue(int64_t off, Error& err) {
   T res = v8()->LoadValue<T>(LeaField(off), err);
   if (err.Fail()) return T();
   if (!res.Check()) {
-    err = Error::Failure("Invalid value");
+    err = Error::Failure("Invalid field value %s at 0x%016" PRIx64,
+                         T::ClassName(), off);
     return T();
   }
 

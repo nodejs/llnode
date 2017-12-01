@@ -21,6 +21,7 @@
     "url": "git+ssh://git@github.com/nodejs/llnode.git"
   },
   "files": [
+    "Makefile",
     "llnode.gyp.json",
     "gyp_llnode",
     "common.gypi",

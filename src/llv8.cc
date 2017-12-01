@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cinttypes>
+#include <cstdarg>
 
 #include "llv8-inl.h"
 #include "llv8.h"
@@ -57,14 +58,56 @@ void LLV8::Load(SBTarget target) {
   types.Assign(target, &common);
 }
 
+bool Error::is_debug_mode = false;
+
+Error::Error(bool failed, const char* format, ...) {
+  failed_ = failed;
+  char tmp[kMaxMessageLength];
+  va_list arglist;
+  va_start(arglist, format);
+  vsnprintf(tmp, sizeof(tmp), format, arglist);
+  va_end(arglist);
+  msg_ = tmp;
+}
+
+
+void Error::PrintInDebugMode(const char* format, ...) {
+  if (!is_debug_mode) {
+    return;
+  }
+  char fmt[kMaxMessageLength];
+  snprintf(fmt, sizeof(fmt), "[llv8] %s\n", format);
+  va_list arglist;
+  va_start(arglist, format);
+  vfprintf(stderr, fmt, arglist);
+  va_end(arglist);
+}
+
+
+Error Error::Failure(std::string msg) {
+  PrintInDebugMode("%s", msg.c_str());
+  return Error(true, msg);
+}
+
+
+Error Error::Failure(const char* format, ...) {
+  char tmp[kMaxMessageLength];
+  va_list arglist;
+  va_start(arglist, format);
+  vsnprintf(tmp, sizeof(tmp), format, arglist);
+  va_end(arglist);
+  return Error::Failure(std::string(tmp));
+}
+
 
 int64_t LLV8::LoadPtr(int64_t addr, Error& err) {
   SBError sberr;
   int64_t value =
       process_.ReadPointerFromMemory(static_cast<addr_t>(addr), sberr);
   if (sberr.Fail()) {
-    // TODO(indutny): add more information
-    err = Error::Failure("Failed to load V8 value");
+    // TODO(joyeecheung): use Error::Failure() to report information when
+    // there is less noise from here.
+    err = Error(true, "Failed to load pointer from v8 memory");
     return -1;
   }
 
@@ -79,8 +122,9 @@ int64_t LLV8::LoadUnsigned(int64_t addr, uint32_t byte_size, Error& err) {
                                                   byte_size, sberr);
 
   if (sberr.Fail()) {
-    // TODO(indutny): add more information
-    err = Error::Failure("Failed to load V8 value");
+    // TODO(joyeecheung): use Error::Failure() to report information when
+    // there is less noise from here.
+    err = Error(true, "Failed to load unsigned from v8 memory");
     return -1;
   }
 
@@ -94,8 +138,10 @@ double LLV8::LoadDouble(int64_t addr, Error& err) {
   int64_t value = process_.ReadUnsignedFromMemory(static_cast<addr_t>(addr),
                                                   sizeof(double), sberr);
   if (sberr.Fail()) {
-    // TODO(indutny): add more information
-    err = Error::Failure("Failed to load V8 double value");
+    err = Error::Failure(
+        "Failed to load double from v8 memory, "
+        "addr=0x%016" PRIx64,
+        addr);
     return -1.0;
   }
 
@@ -104,12 +150,15 @@ double LLV8::LoadDouble(int64_t addr, Error& err) {
 }
 
 
-std::string LLV8::LoadBytes(int64_t length, int64_t addr, Error& err) {
+std::string LLV8::LoadBytes(int64_t addr, int64_t length, Error& err) {
   uint8_t* buf = new uint8_t[length + 1];
   SBError sberr;
   process_.ReadMemory(addr, buf, static_cast<size_t>(length), sberr);
   if (sberr.Fail()) {
-    err = Error::Failure("Failed to load V8 raw buffer");
+    err = Error::Failure(
+        "Failed to load v8 backing store memory, "
+        "addr=0x%016" PRIx64 ", length=%" PRId64,
+        addr, length);
     delete[] buf;
     return std::string();
   }
@@ -135,8 +184,10 @@ std::string LLV8::LoadString(int64_t addr, int64_t length, Error& err) {
   process_.ReadMemory(static_cast<addr_t>(addr), buf,
                       static_cast<size_t>(length), sberr);
   if (sberr.Fail()) {
-    // TODO(indutny): add more information
-    err = Error::Failure("Failed to load V8 one byte string");
+    err = Error::Failure(
+        "Failed to load v8 one byte string memory, "
+        "addr=0x%016" PRIx64 ", length=%" PRId64,
+        addr, length);
     delete[] buf;
     return std::string();
   }
@@ -161,8 +212,10 @@ std::string LLV8::LoadTwoByteString(int64_t addr, int64_t length, Error& err) {
   process_.ReadMemory(static_cast<addr_t>(addr), buf,
                       static_cast<size_t>(length * 2), sberr);
   if (sberr.Fail()) {
-    // TODO(indutny): add more information
-    err = Error::Failure("Failed to load V8 two byte string");
+    err = Error::Failure(
+        "Failed to load V8 two byte string memory, "
+        "addr=0x%016" PRIx64 ", length=%" PRId64,
+        addr, length);
     delete[] buf;
     return std::string();
   }
@@ -183,8 +236,10 @@ uint8_t* LLV8::LoadChunk(int64_t addr, int64_t length, Error& err) {
   process_.ReadMemory(static_cast<addr_t>(addr), buf,
                       static_cast<size_t>(length), sberr);
   if (sberr.Fail()) {
-    // TODO(indutny): add more information
-    err = Error::Failure("Failed to load V8 memory chunk");
+    err = Error::Failure(
+        "Failed to load V8 chunk memory, "
+        "addr=0x%016" PRIx64 ", length=%" PRId64,
+        addr, length);
     delete[] buf;
     return nullptr;
   }
@@ -235,7 +290,7 @@ uint32_t JSFrame::GetSourceForDisplay(bool reset_line, uint32_t line_start,
   if (err.Fail()) {
     const char* msg = err.GetMessage();
     if (msg == nullptr) {
-      err = Error(true, "Failed to get Function Source");
+      err = Error::Failure("Failed to get Function Source");
     }
     return line_start;
   }
@@ -288,7 +343,7 @@ std::string JSFrame::Inspect(bool with_args, Error& err) {
       return "<stub>";
     } else if (value != v8()->frame()->kJSFrame &&
                value != v8()->frame()->kOptimizedFrame) {
-      err = Error::Failure("Unknown frame marker");
+      err = Error::Failure("Unknown frame marker %" PRId64, value);
       return std::string();
     }
   }
@@ -432,7 +487,7 @@ std::string JSFunction::GetSource(Error& err) {
 
   // No source
   if (source_type > v8()->types()->kFirstNonstringType) {
-    err = Error(true, "No source");
+    err = Error::Failure("No source, source_type=%" PRId64, source_type);
     return std::string();
   }
 
@@ -591,7 +646,7 @@ void Script::GetLines(uint64_t start_line, std::string lines[],
 
   // No source
   if (type > v8()->types()->kFirstNonstringType) {
-    err = Error(true, "No source");
+    err = Error::Failure("No source, source_type=%" PRId64, type);
     return;
   }
 
@@ -828,6 +883,8 @@ std::string HeapObject::Inspect(InspectOptions* options, Error& err) {
     return pre + date.Inspect(err);
   }
 
+  Error::PrintInDebugMode(
+      "Unknown HeapObject Type %" PRId64 " at 0x%016" PRIx64 "", type, raw());
   return pre + "<unknown>";
 }
 
@@ -956,7 +1013,7 @@ std::string String::ToString(Error& err) {
       return two.ToString(err);
     }
 
-    err = Error::Failure("Unsupported seq string encoding");
+    err = Error::Failure("Unsupported seq string encoding %" PRId64, encoding);
     return std::string();
   }
 
@@ -980,7 +1037,7 @@ std::string String::ToString(Error& err) {
     return thin.ToString(err);
   }
 
-  err = Error::Failure("Unsupported string representation");
+  err = Error::Failure("Unsupported string representation %" PRId64, repr);
   return std::string();
 }
 
@@ -1143,7 +1200,7 @@ std::string JSArrayBuffer::Inspect(InspectOptions* options, Error& err) {
     res += ": [\n  ";
 
     int display_length = std::min<int>(byte_length, options->length);
-    res += v8()->LoadBytes(display_length, data, err);
+    res += v8()->LoadBytes(data, display_length, err);
 
     if (display_length < byte_length) {
       res += " ...";
@@ -1201,7 +1258,7 @@ std::string JSArrayBufferView::Inspect(InspectOptions* options, Error& err) {
     res += ": [\n  ";
 
     int display_length = std::min<int>(byte_length, options->length);
-    res += v8()->LoadBytes(display_length, data + byte_offset, err);
+    res += v8()->LoadBytes(data + byte_offset, display_length, err);
 
     if (display_length < byte_length) {
       res += " ...";
@@ -1502,6 +1559,8 @@ std::string JSObject::InspectDescriptors(Map map, Error& err) {
 
     // Skip non-fields for now
     if (!descriptors.IsFieldDetails(details)) {
+      Error::PrintInDebugMode("Unknown field Type %" PRId64,
+                              details.GetValue());
       res += "<unknown field type>";
       continue;
     }
