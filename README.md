@@ -81,13 +81,13 @@ make install-osx
 git clone https://github.com/nodejs/llnode.git && cd llnode
 
 # Install lldb and headers
-sudo apt-get install lldb-3.8 lldb-3.8-dev
+sudo apt-get install lldb-3.9 liblldb-3.9-dev
 
 # Initialize GYP
 git clone https://chromium.googlesource.com/external/gyp.git tools/gyp
 
 # Configure
-./gyp_llnode -Dlldb_dir=/usr/lib/llvm-3.8/
+./gyp_llnode -Dlldb_dir=/usr/lib/llvm-3.9/
 
 # Build
 make -C out/ -j9
