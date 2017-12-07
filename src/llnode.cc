@@ -39,6 +39,7 @@ char** CommandBase::ParseInspectOptions(char** cmd,
       {"print-map", no_argument, nullptr, 'm'},
       {"print-source", no_argument, nullptr, 's'},
       {"verbose", no_argument, nullptr, 'v'},
+      {"detailed", no_argument, nullptr, 'd'},
       {nullptr, 0, nullptr, 0}};
 
   int argc = 1;
@@ -56,7 +57,7 @@ char** CommandBase::ParseInspectOptions(char** cmd,
   optind = 0;
   opterr = 1;
   do {
-    int arg = getopt_long(argc, args, "Fmsvl:", opts, nullptr);
+    int arg = getopt_long(argc, args, "Fmsdvl:", opts, nullptr);
     if (arg == -1) break;
 
     switch (arg) {
@@ -72,6 +73,7 @@ char** CommandBase::ParseInspectOptions(char** cmd,
       case 's':
         options->print_source = true;
         break;
+      case 'd':
       case 'v':
         options->detailed = true;
         break;
@@ -358,8 +360,10 @@ bool PluginInitialize(SBDebugger d) {
                          "Alias for `v8 source list`");
 
   v8.AddCommand("findjsobjects", new llnode::FindObjectsCmd(),
-                "List all object types and instance counts grouped by type"
-                "name and sorted by instance count.\n"
+                "List all object types and instance counts grouped by type "
+                "name and sorted by instance count. Use -d or --detailed to "
+                "get an output grouped by type name, properties, and array "
+                "length, as well as more information regarding each type.\n"
 #ifndef LLDB_SBMemoryRegionInfoList_h_
                 "Requires `LLNODE_RANGESFILE` environment variable to be set "
                 "to a file containing memory ranges for the core file being "

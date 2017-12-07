@@ -8,6 +8,8 @@
 
 namespace llnode {
 
+class LLScan;
+
 typedef std::vector<uint64_t> ReferencesVector;
 
 typedef std::map<uint64_t, ReferencesVector*> ReferencesByValueMap;
@@ -21,6 +23,9 @@ class FindObjectsCmd : public CommandBase {
 
   bool DoExecute(lldb::SBDebugger d, char** cmd,
                  lldb::SBCommandReturnObject& result) override;
+
+  void SimpleOutput(lldb::SBCommandReturnObject& result);
+  void DetailedOutput(lldb::SBCommandReturnObject& result);
 };
 
 class FindInstancesCmd : public CommandBase {
@@ -143,6 +148,8 @@ class MemoryVisitor {
   virtual uint64_t Visit(uint64_t location, uint64_t available) = 0;
 };
 
+class DetailedTypeRecord;
+
 class TypeRecord {
  public:
   TypeRecord(std::string& type_name)
@@ -174,36 +181,75 @@ class TypeRecord {
 
 
  private:
+  friend DetailedTypeRecord;
   std::string type_name_;
   uint64_t instance_count_;
   uint64_t total_instance_size_;
   std::set<uint64_t> instances_;
 };
 
+class DetailedTypeRecord : public TypeRecord {
+ public:
+  DetailedTypeRecord(std::string& type_name, uint64_t own_descriptors_count,
+                     uint64_t indexed_properties_count)
+      : TypeRecord(type_name),
+        own_descriptors_count_(own_descriptors_count),
+        indexed_properties_count_(indexed_properties_count) {}
+  const uint64_t GetOwnDescriptorsCount() { return own_descriptors_count_; };
+  const uint64_t GetIndexedPropertiesCount() {
+    return indexed_properties_count_;
+  };
+
+ private:
+  std::vector<std::string> properties_;
+  uint64_t own_descriptors_count_;
+  uint64_t indexed_properties_count_;
+};
+
 typedef std::map<std::string, TypeRecord*> TypeRecordMap;
+typedef std::map<std::string, DetailedTypeRecord*> DetailedTypeRecordMap;
 
 class FindJSObjectsVisitor : MemoryVisitor {
  public:
-  FindJSObjectsVisitor(lldb::SBTarget& target, TypeRecordMap& mapstoinstances);
+  struct MapCacheEntry {
+    enum ShowArrayLength { kShowArrayLength, kDontShowArrayLength };
+
+    std::string type_name;
+    bool is_histogram;
+
+    std::vector<std::string> properties_;
+    uint64_t own_descriptors_count_ = 0;
+    uint64_t indexed_properties_count_ = 0;
+
+    std::unique_ptr<std::string> GetTypeNameWithProperties(
+        ShowArrayLength show_array_length = kShowArrayLength,
+        size_t max_properties = 0);
+
+    bool Load(v8::Map map, v8::HeapObject heap_object, v8::Error& err);
+  };
+
+  FindJSObjectsVisitor(lldb::SBTarget& target, LLScan* llscan);
   ~FindJSObjectsVisitor() {}
 
   uint64_t Visit(uint64_t location, uint64_t word);
 
   uint32_t FoundCount() { return found_count_; }
 
- private:
-  struct MapCacheEntry {
-    std::string type_name;
-    bool is_histogram;
-  };
+  static bool IsAHistogramType(v8::Map& map, v8::Error& err);
 
-  bool IsAHistogramType(v8::Map& map, v8::Error& err);
+ private:
+  void InsertOnMapsToInstances(uint64_t word, v8::Map map,
+                               FindJSObjectsVisitor::MapCacheEntry map_info,
+                               v8::Error& err);
+  void InsertOnDetailedMapsToInstances(
+      uint64_t word, v8::Map map, FindJSObjectsVisitor::MapCacheEntry map_info,
+      v8::Error& err);
 
   lldb::SBTarget& target_;
   uint32_t address_byte_size_;
   uint32_t found_count_;
 
-  TypeRecordMap& mapstoinstances_;
+  LLScan* llscan_;
   std::map<int64_t, MapCacheEntry> map_cache_;
 };
 
@@ -218,6 +264,9 @@ class LLScan {
                             const char* segmentsfilename);
 
   inline TypeRecordMap& GetMapsToInstances() { return mapstoinstances_; };
+  inline DetailedTypeRecordMap& GetDetailedMapsToInstances() {
+    return detailedmapstoinstances_;
+  };
 
   // References By Value
   inline bool AreReferencesByValueLoaded() {
@@ -270,6 +319,7 @@ class LLScan {
   lldb::SBProcess process_;
   MemoryRange* ranges_ = nullptr;
   TypeRecordMap mapstoinstances_;
+  DetailedTypeRecordMap detailedmapstoinstances_;
 
   ReferencesByValueMap references_by_value_;
   ReferencesByPropertyMap references_by_property_;

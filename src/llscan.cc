@@ -48,6 +48,22 @@ bool FindObjectsCmd::DoExecute(SBDebugger d, char** cmd,
     return false;
   }
 
+  v8::Value::InspectOptions inspect_options;
+  inspect_options.detailed;
+  ParseInspectOptions(cmd, &inspect_options);
+
+  if (inspect_options.detailed) {
+    DetailedOutput(result);
+  } else {
+    SimpleOutput(result);
+  }
+
+  result.SetStatus(eReturnStatusSuccessFinishResult);
+  return true;
+}
+
+
+void FindObjectsCmd::SimpleOutput(SBCommandReturnObject& result) {
   /* Create a vector to hold the entries sorted by instance count
    * TODO(hhellyer) - Make sort type an option (by count, size or name)
    */
@@ -78,9 +94,39 @@ bool FindObjectsCmd::DoExecute(SBDebugger d, char** cmd,
 
   result.Printf(" ---------- ---------- \n");
   result.Printf(" %10" PRId64 " %10" PRId64 " \n", total_objects, total_size);
+}
 
-  result.SetStatus(eReturnStatusSuccessFinishResult);
-  return true;
+
+void FindObjectsCmd::DetailedOutput(SBCommandReturnObject& result) {
+  std::vector<DetailedTypeRecord*> sorted_by_count;
+  for (auto it : llscan.GetDetailedMapsToInstances()) {
+    sorted_by_count.push_back(it.second);
+  }
+
+  std::sort(sorted_by_count.begin(), sorted_by_count.end(),
+            TypeRecord::CompareInstanceCounts);
+  uint64_t total_objects = 0;
+  uint64_t total_size = 0;
+
+  result.Printf(
+      "   Repr. Obj.  Instances  Total Size  Properties  Array Size Name\n");
+  result.Printf(
+      " ------------ ---------- ----------- ----------- ----------- ----\n");
+
+  for (auto t : sorted_by_count) {
+    result.Printf(" %12" PRIx64 " %10" PRId64 " %11" PRId64 " %11" PRId64
+                  " %11" PRId64 " %s\n",
+                  *(t->GetInstances().begin()), t->GetInstanceCount(),
+                  t->GetTotalInstanceSize(), t->GetOwnDescriptorsCount(),
+                  t->GetIndexedPropertiesCount(), t->GetTypeName().c_str());
+    total_objects += t->GetInstanceCount();
+    total_size += t->GetTotalInstanceSize();
+  }
+
+  result.Printf(
+      " ------------ ---------- ----------- ----------- ----------- ----\n");
+  result.Printf("             %11" PRId64 " %11" PRId64 " \n", total_objects,
+                total_size);
 }
 
 
@@ -1062,9 +1108,8 @@ ReferencesVector* FindReferencesCmd::StringScanner::GetReferences() {
 }
 
 
-FindJSObjectsVisitor::FindJSObjectsVisitor(SBTarget& target,
-                                           TypeRecordMap& mapstoinstances)
-    : target_(target), mapstoinstances_(mapstoinstances) {
+FindJSObjectsVisitor::FindJSObjectsVisitor(SBTarget& target, LLScan* llscan)
+    : target_(target), llscan_(llscan) {
   found_count_ = 0;
   address_byte_size_ = target_.GetProcess().GetAddressByteSize();
   // Load V8 constants from postmortem data
@@ -1092,13 +1137,7 @@ uint64_t FindJSObjectsVisitor::Visit(uint64_t location, uint64_t word) {
 
   MapCacheEntry map_info;
   if (map_cache_.count(map.raw()) == 0) {
-    // Check type first
-    map_info.is_histogram = IsAHistogramType(map, err);
-
-    // On success load type name
-    if (map_info.is_histogram)
-      map_info.type_name = heap_object.GetTypeName(err);
-
+    if (!map_info.Load(map, heap_object, err)) return address_byte_size_;
     // Cache result
     map_cache_.emplace(map.raw(), map_info);
 
@@ -1109,24 +1148,8 @@ uint64_t FindJSObjectsVisitor::Visit(uint64_t location, uint64_t word) {
 
   if (!map_info.is_histogram) return address_byte_size_;
 
-  /* No entry in the map, create a new one. */
-  if (mapstoinstances_.count(map_info.type_name) == 0) {
-    TypeRecord* t = new TypeRecord(map_info.type_name);
-
-    t->AddInstance(word, map.InstanceSize(err));
-    mapstoinstances_.emplace(map_info.type_name, t);
-
-  } else {
-    /* Update an existing instance, if we haven't seen this instance before. */
-    TypeRecord* t = mapstoinstances_.at(map_info.type_name);
-    /* Determine if this is a new instance.
-     * (We are scanning pointers to objects, we may have seen this location
-     * before.)
-     */
-    if (t->GetInstances().count(word) == 0) {
-      t->AddInstance(word, map.InstanceSize(err));
-    }
-  }
+  InsertOnMapsToInstances(word, map, map_info, err);
+  InsertOnDetailedMapsToInstances(word, map, map_info, err);
 
   if (err.Fail()) {
     return address_byte_size_;
@@ -1138,6 +1161,51 @@ uint64_t FindJSObjectsVisitor::Visit(uint64_t location, uint64_t word) {
    * (Should advance by object size, assuming objects can't overlap!)
    */
   return address_byte_size_;
+}
+
+
+void FindJSObjectsVisitor::InsertOnMapsToInstances(
+    uint64_t word, v8::Map map, FindJSObjectsVisitor::MapCacheEntry map_info,
+    v8::Error& err) {
+  TypeRecord* t;
+
+  auto entry = std::make_pair(map_info.type_name, nullptr);
+  auto pp = &llscan_->GetMapsToInstances().insert(entry).first->second;
+  // No entry in the map, create a new one.
+  if (*pp == nullptr) *pp = new TypeRecord(map_info.type_name);
+  t = *pp;
+
+  // Determine if this is a new instance.
+  // (We are scanning pointers to objects, we may have seen this location
+  // before.)
+  if (t->GetInstances().count(word) == 0) {
+    t->AddInstance(word, map.InstanceSize(err));
+  }
+}
+
+void FindJSObjectsVisitor::InsertOnDetailedMapsToInstances(
+    uint64_t word, v8::Map map, FindJSObjectsVisitor::MapCacheEntry map_info,
+    v8::Error& err) {
+  DetailedTypeRecord* t;
+
+  auto type_name_with_properties = map_info.GetTypeNameWithProperties();
+
+  auto entry = std::make_pair(*type_name_with_properties, nullptr);
+  auto pp = &llscan_->GetDetailedMapsToInstances().insert(entry).first->second;
+  // No entry in the map, create a new one.
+  if (*pp == nullptr)
+    *pp = new DetailedTypeRecord(*map_info.GetTypeNameWithProperties(
+                                     MapCacheEntry::kDontShowArrayLength, 3),
+                                 map_info.own_descriptors_count_,
+                                 map_info.indexed_properties_count_);
+  t = *pp;
+
+  // Determine if this is a new instance.
+  // (We are scanning pointers to objects, we may have seen this location
+  // before.)
+  if (t->GetInstances().count(word) == 0) {
+    t->AddInstance(word, map.InstanceSize(err));
+  }
 }
 
 
@@ -1202,13 +1270,76 @@ bool LLScan::ScanHeapForObjects(lldb::SBTarget target,
 
   /* Populate the map of objects. */
   if (mapstoinstances_.empty()) {
-    FindJSObjectsVisitor v(target, GetMapsToInstances());
+    FindJSObjectsVisitor v(target, this);
 
     ScanMemoryRanges(v);
   }
 
   return true;
 }
+
+std::unique_ptr<std::string>
+FindJSObjectsVisitor::MapCacheEntry::GetTypeNameWithProperties(
+    ShowArrayLength show_array_length, size_t max_properties) {
+  std::unique_ptr<std::string> type_name_with_properties(
+      new std::string(type_name));
+
+  if (show_array_length == kShowArrayLength) {
+    type_name_with_properties->append(
+        "[" + std::to_string(indexed_properties_count_) + "]");
+  }
+
+  int i = 0;
+  max_properties = max_properties ? std::min(max_properties, properties_.size())
+                                  : properties_.size();
+  for (auto it = properties_.begin(); i < max_properties; ++it, i++) {
+    std::string property = *it;
+    type_name_with_properties->append((i ? ", " : ": ") + property);
+  }
+  if (max_properties < properties_.size()) {
+    type_name_with_properties->append(", ...");
+  }
+
+  return type_name_with_properties;
+}
+
+
+bool FindJSObjectsVisitor::MapCacheEntry::Load(v8::Map map,
+                                               v8::HeapObject heap_object,
+                                               v8::Error& err) {
+  // Check type first
+  is_histogram = FindJSObjectsVisitor::IsAHistogramType(map, err);
+
+  // On success load type name
+  if (is_histogram) type_name = heap_object.GetTypeName(err);
+
+  v8::HeapObject descriptors_obj = map.InstanceDescriptors(err);
+  if (err.Fail()) {
+    return false;
+  }
+
+  v8::DescriptorArray descriptors(descriptors_obj);
+  own_descriptors_count_ = map.NumberOfOwnDescriptors(err);
+  if (err.Fail()) return false;
+
+  int64_t type = heap_object.GetType(err);
+  indexed_properties_count_ = 0;
+  if (v8::JSObject::IsObjectType(&llv8, type) ||
+      (type == llv8.types()->kJSArrayType)) {
+    v8::JSObject js_obj(heap_object);
+    indexed_properties_count_ = js_obj.GetArrayLength(err);
+    if (err.Fail()) return false;
+  }
+
+  for (int64_t i = 0; i < own_descriptors_count_; i++) {
+    v8::Value key = descriptors.GetKey(i, err);
+    if (err.Fail()) continue;
+    properties_.emplace_back(key.ToString(err));
+  }
+
+  return true;
+}
+
 
 inline static ByteOrder GetHostByteOrder() {
   union {
