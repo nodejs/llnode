@@ -12,6 +12,7 @@ namespace llnode {
 
 class FindJSObjectsVisitor;
 class FindReferencesCmd;
+class FindObjectsCmd;
 
 namespace v8 {
 
@@ -550,6 +551,7 @@ class LLV8 {
   friend class JSDate;
   friend class CodeMap;
   friend class llnode::FindJSObjectsVisitor;
+  friend class llnode::FindObjectsCmd;
   friend class llnode::FindReferencesCmd;
 };
 

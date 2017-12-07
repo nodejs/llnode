@@ -184,7 +184,9 @@ The following subcommands are supported:
       findjsinstances -- List every object with the specified type name.
                          Use -v or --verbose to display detailed `v8 inspect` output for each object.
                          Accepts the same options as `v8 inspect`
-      findjsobjects   -- List all object types and instance counts grouped by typename and sorted by instance count.
+      findjsobjects   -- List all object types and instance counts grouped by typename and sorted by instance count. Use
+                         -d or --detailed to get an output grouped by type name, properties, and array length, as well as
+                         more information regarding each type.
                          With lldb < 3.9, requires the `LLNODE_RANGESFILE` environment variable to be set to a file
                          containing memory ranges for the core file being debugged.
                          There are scripts for generating this file on Linux and Mac in the scripts directory of the llnode
