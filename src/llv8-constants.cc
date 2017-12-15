@@ -542,6 +542,7 @@ void Frame::Load() {
   kExitFrame = LoadConstant("frametype_ExitFrame");
   kInternalFrame = LoadConstant("frametype_InternalFrame");
   kConstructFrame = LoadConstant("frametype_ConstructFrame");
+  // NOTE: The JavaScript frame type was removed in V8 6.3.158.
   kJSFrame = LoadConstant("frametype_JavaScriptFrame");
   kOptimizedFrame = LoadConstant("frametype_OptimizedFrame");
   kStubFrame = LoadConstant("frametype_StubFrame");
