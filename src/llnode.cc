@@ -299,11 +299,24 @@ bool ListCmd::DoExecute(SBDebugger d, char** cmd,
   return true;
 }
 
+
+void InitDebugMode() {
+  bool is_debug_mode = false;
+  char* var = getenv("LLNODE_DEBUG");
+  if (var != nullptr && strlen(var) != 0) {
+    is_debug_mode = true;
+  }
+
+  v8::Error::SetDebugMode(is_debug_mode);
+}
+
 }  // namespace llnode
 
 namespace lldb {
 
 bool PluginInitialize(SBDebugger d) {
+  llnode::InitDebugMode();
+
   SBCommandInterpreter interpreter = d.GetCommandInterpreter();
 
   SBCommand v8 = interpreter.AddMultiwordCommand("v8", "Node.js helpers");

@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <cinttypes>
 #include <string>
 
 #include <lldb/API/SBExpressionOptions.h>
@@ -23,14 +24,6 @@ using lldb::addr_t;
 
 static std::string kConstantPrefix = "v8dbg_";
 
-static bool IsDebugMode() {
-  char* var = getenv("LLNODE_DEBUG");
-  if (var == nullptr) return false;
-
-  return strlen(var) != 0;
-}
-
-
 void Module::Assign(SBTarget target, Common* common) {
   loaded_ = false;
   target_ = target;
@@ -46,20 +39,20 @@ static int64_t LookupConstant(SBTarget target, const char* name, int64_t def,
 
   SBSymbolContextList context_list = target.FindSymbols(name);
   if (!context_list.IsValid() || context_list.GetSize() == 0) {
-    err = Error::Failure("Failed to find symbol");
+    err = Error::Failure("Failed to find symbol %s", name);
     return res;
   }
 
   SBSymbolContext context = context_list.GetContextAtIndex(0);
   SBSymbol symbol = context.GetSymbol();
   if (!symbol.IsValid()) {
-    err = Error::Failure("Failed to fetch symbol");
+    err = Error::Failure("Failed to fetch symbol %s", name);
     return res;
   }
 
   SBAddress start = symbol.GetStartAddress();
   SBAddress end = symbol.GetEndAddress();
-  size_t size = end.GetOffset() - start.GetOffset();
+  uint32_t size = end.GetOffset() - start.GetOffset();
 
   SBError sberr;
 
@@ -79,12 +72,13 @@ static int64_t LookupConstant(SBTarget target, const char* name, int64_t def,
     int8_t tmp = process.ReadUnsignedFromMemory(addr, size, sberr);
     res = static_cast<int64_t>(tmp);
   } else {
-    err = Error::Failure("Unexpected symbol size");
+    err = Error::Failure("Unexpected symbol size %" PRIu32 " of symbol %s",
+                         size, name);
     return res;
   }
 
   if (sberr.Fail())
-    err = Error::Failure("Failed to load symbol");
+    err = Error::Failure("Failed to load symbol %s", name);
   else
     err = Error::Ok();
 
@@ -95,7 +89,9 @@ static int64_t LookupConstant(SBTarget target, const char* name, int64_t def,
 int64_t Module::LoadRawConstant(const char* name, int64_t def) {
   Error err;
   int64_t v = LookupConstant(target_, name, def, err);
-  if (err.Fail() && IsDebugMode()) fprintf(stderr, "Failed to load %s\n", name);
+  if (err.Fail()) {
+    Error::PrintInDebugMode("Failed to load raw constant %s", name);
+  }
 
   return v;
 }
@@ -105,7 +101,9 @@ int64_t Module::LoadConstant(const char* name, int64_t def) {
   Error err;
   int64_t v =
       LookupConstant(target_, (kConstantPrefix + name).c_str(), def, err);
-  if (err.Fail() && IsDebugMode()) fprintf(stderr, "Failed to load %s\n", name);
+  if (err.Fail()) {
+    Error::PrintInDebugMode("Failed to load constant %s", name);
+  }
 
   return v;
 }
@@ -118,7 +116,10 @@ int64_t Module::LoadConstant(const char* name, const char* fallback,
       LookupConstant(target_, (kConstantPrefix + name).c_str(), def, err);
   if (err.Fail())
     v = LookupConstant(target_, (kConstantPrefix + fallback).c_str(), def, err);
-  if (err.Fail() && IsDebugMode()) fprintf(stderr, "Failed to load %s\n", name);
+  if (err.Fail()) {
+    Error::PrintInDebugMode("Failed to load constant %s, fallback %s", name,
+                            fallback);
+  }
 
   return v;
 }
