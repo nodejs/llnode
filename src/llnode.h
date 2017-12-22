@@ -72,6 +72,7 @@ class V8SnapshotCmd : public CommandBase {
 
   // TODO
   void SerializeStrings(v8::Error &err);
+  void SerializeString(v8::Error &err, const char* s);
 
  private:
   std::ofstream writer_;

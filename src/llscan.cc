@@ -1108,17 +1108,17 @@ bool V8SnapshotCmd::SerializeImpl(v8::Error &err) {
   if (err.Fail()) return false;
   writer_ << "]," << std::endl;
   writer_ << "\"trace_tree\":[";
-  // SerializeTraceTree(err);  // TODO incomplete
+  SerializeTraceTree(err);  // TODO incomplete
   if (err.Fail()) return false;
   writer_ << "]," << std::endl;
 
   writer_ << "\"samples\":[";
-  // SerializeSamples(err);  // TODO incomplete
+  SerializeSamples(err);  // TODO incomplete
   if (err.Fail()) return false;
   writer_ << "]," << std::endl;
 
   writer_ << "\"strings\":[";
-  // SerializeStrings(err);  // TODO incomplete
+  SerializeStrings(err);  // TODO incomplete
   if (err.Fail()) return false;
   writer_ << "]";
   writer_ << "}";
@@ -1292,6 +1292,132 @@ void V8SnapshotCmd::SerializeTraceNodeInfos(v8::Error &err) {
     writer_ << function_id << "," << name << "," << script_name << "," <<
         script_id << "," << line << "," << column << std::endl;
   }
+}
+
+
+void V8SnapshotCmd::SerializeTraceTree(v8::Error &err) {
+  // AllocationTracker* tracker = snapshot_->profiler()->allocation_tracker();
+  // if (!tracker) return;
+  // AllocationTraceTree* traces = tracker->trace_tree();
+  SerializeTraceNode(err);
+}
+
+
+// void HeapSnapshotJSONSerializer::SerializeTraceNode(AllocationTraceNode* node) {
+void V8SnapshotCmd::SerializeTraceNode(v8::Error &err) {
+  auto node_id = 0;  // node->id()
+  auto node_function_info_index = 0;  // node->function_info_index()
+  auto node_allocation_count = 0;  // node->allocation_count()
+  auto node_allocation_size = 0;  // node->allocation_size()
+
+  writer_ << node_id << "," << node_function_info_index << ","
+      << node_allocation_count << "," << node_allocation_size << "," << "[";
+
+
+  // int i = 0;
+  // for (AllocationTraceNode* child : node->children()) {
+  //   if (i++ > 0) {
+  //     writer_->AddCharacter(',');
+  //   }
+  //   SerializeTraceNode(child);
+  // }
+  writer_ << ']';
+}
+
+
+void V8SnapshotCmd::SerializeSamples(v8::Error &err) {
+  // const std::vector<HeapObjectsMap::TimeInterval>& samples =
+  //     snapshot_->profiler()->heap_object_map()->samples();
+  // if (samples.empty()) return;
+  // base::TimeTicks start_time = samples[0].timestamp;
+  // // The buffer needs space for 2 unsigned ints, 2 commas, \n and \0
+  // const int kBufferSize = MaxDecimalDigitsIn<sizeof(
+  //                             base::TimeDelta().InMicroseconds())>::kUnsigned +
+  //                         MaxDecimalDigitsIn<sizeof(samples[0].id)>::kUnsigned +
+  //                         2 + 1 + 1;
+  // EmbeddedVector<char, kBufferSize> buffer;
+  int i = 0;
+  // for (const HeapObjectsMap::TimeInterval& sample : samples) {
+  for (auto it : {1, 2, 3}) {
+    if (i++ > 0) {
+      writer_ << ',';
+    }
+
+    auto time_delta = 0;  // time_delta.InMicroseconds()
+    auto sample_last_assigned_id = 0;  // sample.last_assigned_id()
+
+    writer_ << time_delta << "," << sample_last_assigned_id << std::endl;
+  }
+}
+
+
+void V8SnapshotCmd::SerializeStrings(v8::Error &err) {
+  std::vector<std::string> sorted_strings;
+  sorted_strings.push_back("lala");
+  sorted_strings.push_back("lele");
+  sorted_strings.push_back("lili");
+  // for (base::HashMap::Entry* entry = strings_.Start(); entry != NULL;
+  //      entry = strings_.Next(entry)) {
+  //   int index = static_cast<int>(reinterpret_cast<uintptr_t>(entry->value));
+  //   sorted_strings[index] = reinterpret_cast<const unsigned char*>(entry->key);
+  // }
+  writer_ << "\"<dummy>\"";
+  for (auto s : sorted_strings) {
+    writer_ << ',';
+    SerializeString(err, s.c_str());
+    if (err.Fail()) return;
+  }
+}
+
+
+void V8SnapshotCmd::SerializeString(v8::Error &err, const char* s) {
+  writer_ << '\n';
+  writer_ << '\"';
+  std::cout << "string: " << s << std::endl;
+  for ( ; *s != '\0'; ++s) {
+    switch (*s) {
+      case '\b':
+        writer_ << "\\b";
+        continue;
+      case '\f':
+        writer_ << "\\f";
+        continue;
+      case '\n':
+        writer_ << "\\n";
+        continue;
+      case '\r':
+        writer_ << "\\r";
+        continue;
+      case '\t':
+        writer_ << "\\t";
+        continue;
+      case '\"':
+      case '\\':
+        writer_ << '\\';
+        writer_ << *s;
+        continue;
+      default:
+        if (*s > 31 && *s < 128) {
+          writer_ << *s;
+        // } else if (*s <= 31) {
+        //   // Special character with no dedicated literal.
+        //   WriteUChar(writer_, *s);
+        // } else {
+        //   // Convert UTF-8 into \u UTF-16 literal.
+        //   size_t length = 1, cursor = 0;
+        //   for ( ; length <= 4 && *(s + length) != '\0'; ++length) { }
+        //   unibrow::uchar c = unibrow::Utf8::CalculateValue(s, length, &cursor);
+        //   if (c != unibrow::Utf8::kBadChar) {
+        //     WriteUChar(writer_, c);
+        //     DCHECK(cursor != 0);
+        //     s += cursor - 1;
+        //   } else {
+        //     writer_->AddCharacter('?');
+        //   }
+        }
+    }
+  }
+  writer_ << '\"';
 }
 
 
