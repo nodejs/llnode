@@ -7,6 +7,7 @@
 #include <cinttypes>
 #include <fstream>
 #include <vector>
+#include <iostream>
 
 #include <lldb/API/SBExpressionOptions.h>
 
@@ -1059,6 +1060,238 @@ bool FindReferencesCmd::StringScanner::AreReferencesLoaded() {
 
 ReferencesVector* FindReferencesCmd::StringScanner::GetReferences() {
   return llscan.GetReferencesByString(search_value_);
+}
+
+
+bool V8SnapshotCmd::DoExecute(SBDebugger d, char** cmd,
+                              SBCommandReturnObject& result) {
+  v8::Error err;
+  writer_.open("core.heapsnapshot");
+
+  SBTarget target = d.GetSelectedTarget();
+  if (!target.IsValid()) {
+    result.SetError("No valid process, please start something\n");
+    return false;
+  }
+
+  /* Ensure we have a map of objects. */
+  if (!llscan.ScanHeapForObjects(target, result)) {
+    result.SetStatus(eReturnStatusFailed);
+    return false;
+  }
+
+  SerializeImpl(err);
+
+  writer_.close();
+  return true;
+}
+
+
+bool V8SnapshotCmd::SerializeImpl(v8::Error &err) {
+//
+  writer_ << "{";
+  writer_ << "\"snapshot\":{";
+  SerializeSnapshot(err);  // TODO incomplete
+  if (err.Fail()) return false;
+  writer_ << "}," << std::endl;
+  writer_ << "\"nodes\":[";
+  SerializeNodes(err);  // TODO incomplete
+  if (err.Fail()) return false;
+  writer_ << "]," << std::endl;
+  writer_ << "\"edges\":[";
+  SerializeEdges(err);  // TODO incomplete
+  if (err.Fail()) return false;
+  writer_ << "]," << std::endl;
+
+  writer_ << "\"trace_function_infos\":[";
+  SerializeTraceNodeInfos(err);  // TODO incomplete
+  if (err.Fail()) return false;
+  writer_ << "]," << std::endl;
+  writer_ << "\"trace_tree\":[";
+  // SerializeTraceTree(err);  // TODO incomplete
+  if (err.Fail()) return false;
+  writer_ << "]," << std::endl;
+
+  writer_ << "\"samples\":[";
+  // SerializeSamples(err);  // TODO incomplete
+  if (err.Fail()) return false;
+  writer_ << "]," << std::endl;
+
+  writer_ << "\"strings\":[";
+  // SerializeStrings(err);  // TODO incomplete
+  if (err.Fail()) return false;
+  writer_ << "]";
+  writer_ << "}";
+
+  return true;
+}
+
+
+void V8SnapshotCmd::SerializeSnapshot(v8::Error &err) {
+  writer_ << "\"meta\":";
+  // The object describing node serialization layout.
+  // We use a set of macros to improve readability.
+#define JSON_A(s) "[" s "]"
+#define JSON_O(s) "{" s "}"
+#define JSON_S(s) "\"" s "\""
+  writer_ << JSON_O(
+    JSON_S("node_fields") ":" JSON_A(
+        JSON_S("type") ","
+        JSON_S("name") ","
+        JSON_S("id") ","
+        JSON_S("self_size") ","
+        JSON_S("edge_count") ","
+        JSON_S("trace_node_id")) ","
+    JSON_S("node_types") ":" JSON_A(
+        JSON_A(
+            JSON_S("hidden") ","
+            JSON_S("array") ","
+            JSON_S("string") ","
+            JSON_S("object") ","
+            JSON_S("code") ","
+            JSON_S("closure") ","
+            JSON_S("regexp") ","
+            JSON_S("number") ","
+            JSON_S("native") ","
+            JSON_S("synthetic") ","
+            JSON_S("concatenated string") ","
+            JSON_S("sliced string")) ","
+        JSON_S("string") ","
+        JSON_S("number") ","
+        JSON_S("number") ","
+        JSON_S("number") ","
+        JSON_S("number") ","
+        JSON_S("number")) ","
+    JSON_S("edge_fields") ":" JSON_A(
+        JSON_S("type") ","
+        JSON_S("name_or_index") ","
+        JSON_S("to_node")) ","
+    JSON_S("edge_types") ":" JSON_A(
+        JSON_A(
+            JSON_S("context") ","
+            JSON_S("element") ","
+            JSON_S("property") ","
+            JSON_S("internal") ","
+            JSON_S("hidden") ","
+            JSON_S("shortcut") ","
+            JSON_S("weak")) ","
+        JSON_S("string_or_number") ","
+        JSON_S("node")) ","
+    JSON_S("trace_function_info_fields") ":" JSON_A(
+        JSON_S("function_id") ","
+        JSON_S("name") ","
+        JSON_S("script_name") ","
+        JSON_S("script_id") ","
+        JSON_S("line") ","
+        JSON_S("column")) ","
+    JSON_S("trace_node_fields") ":" JSON_A(
+        JSON_S("id") ","
+        JSON_S("function_info_index") ","
+        JSON_S("count") ","
+        JSON_S("size") ","
+        JSON_S("children")) ","
+    JSON_S("sample_fields") ":" JSON_A(
+        JSON_S("timestamp_us") ","
+        JSON_S("last_assigned_id")));
+#undef JSON_S
+#undef JSON_O
+#undef JSON_A
+  writer_ << ",\"node_count\":";
+  // TODO (mmarchini): entries size
+  // snapshot_ << static_cast<unsigned>(snapshot_->entries().size());
+  writer_ << 0;
+  writer_ << ",\"edge_count\":";
+  // TODO (mmarchini): edges size
+  // snapshot_ << static_cast<double>(snapshot_->edges().size());
+  writer_ << 0;
+  writer_ << ",\"trace_function_count\":";
+  uint32_t count = 0;
+  // TODO (mmarchini): allocator tracker
+  // AllocationTracker* tracker = snapshot_->profiler()->allocation_tracker();
+  // if (tracker) {
+  //   count = static_cast<uint32_t>(tracker->function_info_list().size());
+  // }
+  writer_ << count;
+}
+
+void V8SnapshotCmd::SerializeNodes(v8::Error &err) {
+  bool first_node = true;
+  for(auto type_record : llscan.GetMapsToInstances()) {
+    for(auto instance : type_record.second->GetInstances()) {
+      // SerializeNode(&entry);
+      SerializeNode(err, first_node);
+      if (err.Fail()) return;
+      first_node = false;
+    }
+  }
+  // std::vector<HeapEntry>& entries = snapshot_->entries();
+  // for (const HeapEntry& entry : entries) {
+}
+
+
+// void V8SnapshotCmd::SerializeNode(v8::Error &err, const HeapEntry* entry) {
+void V8SnapshotCmd::SerializeNode(v8::Error &err, bool first_node) {
+  if (!first_node) {
+    writer_ <<  ',';
+  }
+  // TODO get info from entries
+  auto type_id = 0;  // entry->type()
+  auto name_id = 0;  // GetStringId(entry->name())
+  auto entry_id = 0;  // entry->id()
+  auto entry_self_size = 0;  // entry->self_size()
+  auto entry_children_count = 0;  // entry->children_count()
+  auto trace_node_id = 0;  // entry->trace_node_id()
+  writer_ << type_id << "," << name_id << "," << entry_id << "," <<
+      entry_self_size << "," << entry_children_count << "," << trace_node_id
+      << std::endl;
+}
+
+
+void V8SnapshotCmd::SerializeEdges(v8::Error &err) {
+  bool first_edge = true;
+  for(auto type_record : llscan.GetMapsToInstances()) {
+    for(auto instance : type_record.second->GetInstances()) {
+      // TODO we're supposed to take edges here
+      SerializeEdge(err, first_edge);
+      if (err.Fail()) return;
+      first_edge = false;
+    }
+  }
+}
+
+
+void V8SnapshotCmd::SerializeEdge(v8::Error &err, bool first_edge) {
+// void V8SnapshotCmd::SerializeEdge(v8::Error &err, HeapGraphEdge* edge, bool first_edge) {
+  // The buffer needs space for 3 unsigned ints, 3 commas, \n and \0
+  if (!first_edge) {
+    writer_ <<  ',';
+  }
+  auto edge_type = 0;  // edge->type()
+  auto edge_name_or_index = 0;  // edge_name_or_index
+  auto entry_to = 0;  // entry_index(edge->to())
+  writer_ << edge_type << "," << edge_name_or_index << "," << entry_to
+      << std::endl;
+}
+
+
+void V8SnapshotCmd::SerializeTraceNodeInfos(v8::Error &err) {
+  int i = 0;
+  // TODO I don't have the slightest idea of what I should be iterating on
+  for (auto it : llscan.GetMapsToInstances()) {
+    if (i++ > 0) {
+      writer_ << ',';
+    }
+
+    auto function_id = 0;  // info->function_id
+    auto name = 0;  // GetStringId(info->name)
+    auto script_name = 0;  // GetStringId(info->script_name)
+    auto script_id = 0;  // static_cast<unsigned>(info->script_id)
+    auto line = 0;  // info->line
+    auto column = 0;  // info->column
+
+    writer_ << function_id << "," << name << "," << script_name << "," <<
+        script_id << "," << line << "," << column << std::endl;
+  }
 }
 
 

@@ -43,6 +43,40 @@ class ListCmd : public CommandBase {
                  lldb::SBCommandReturnObject& result) override;
 };
 
+class V8SnapshotCmd : public CommandBase {
+ public:
+  ~V8SnapshotCmd() override {}
+
+  bool DoExecute(lldb::SBDebugger d, char** cmd,
+                 lldb::SBCommandReturnObject& result) override;
+
+  bool SerializeImpl(v8::Error &err);
+
+  void SerializeSnapshot(v8::Error &err);
+
+  void SerializeNodes(v8::Error &err);
+  void SerializeNode(v8::Error &err, bool first_node);
+
+  void SerializeEdges(v8::Error &err);
+  void SerializeEdge(v8::Error &err, bool first_edge);
+
+  // TODO
+  void SerializeTraceNodeInfos(v8::Error &err);
+
+  // TODO
+  void SerializeTraceTree(v8::Error &err);
+  void SerializeTraceNode(v8::Error &err);
+
+  // TODO
+  void SerializeSamples(v8::Error &err);
+
+  // TODO
+  void SerializeStrings(v8::Error &err);
+
+ private:
+  std::ofstream writer_;
+};
+
 }  // namespace llnode
 
 #endif  // SRC_LLNODE_H_

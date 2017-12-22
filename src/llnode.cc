@@ -2,6 +2,8 @@
 #include <getopt.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sstream>
+#include <fstream>
 
 #include <cinttypes>
 
@@ -396,6 +398,9 @@ bool PluginInitialize(SBDebugger d) {
       " * -s, --string string  - all properties that refer to the specified "
       "JavaScript string value\n"
       "\n");
+
+  v8.AddCommand("snapshot", new llnode::V8SnapshotCmd(),
+              "Converts the core file being debugged into a V8 snapshot\n");
 
   return true;
 }
