@@ -33,6 +33,7 @@ else
 exports.llnodePath = path.join(exports.projectDir, pluginName);
 exports.saveCoreTimeout = 180 * 1000;
 exports.loadCoreTimeout = 20 * 1000;
+exports.versionMark = /^lldb-|^lldb version/;
 
 function SessionOutput(session, stream, timeout) {
   EventEmitter.call(this);
