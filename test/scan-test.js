@@ -2,6 +2,7 @@
 
 const tape = require('tape');
 const common = require('./common');
+const versionMark = common.versionMark;
 
 tape('v8 findrefs and friends', (t) => {
   t.timeoutAfter(common.saveCoreTimeout);
@@ -28,7 +29,7 @@ function saveCoreAndTest(t) {
     sess.send('version');
   });
 
-  sess.wait(/lldb-/, (err) => {
+  sess.wait(versionMark, (err) => {
     t.error(err);
     t.ok(true, 'Saved core');
     sess.send('target delete 0');
@@ -63,14 +64,14 @@ function test(executable, core, t) {
     }
   });
 
-  sess.wait(/lldb-/, (err) => {
+  sess.wait(versionMark, (err) => {
     t.error(err);
     sess.send('v8 findjsobjects');
     // Just a separator
     sess.send('version');
   });
 
-  sess.linesUntil(/lldb-/, (err, lines) => {
+  sess.linesUntil(versionMark, (err, lines) => {
     t.error(err);
     t.ok(/\d+ Zlib/.test(lines.join('\n')), 'Zlib should be in findjsobjects');
 
@@ -79,7 +80,7 @@ function test(executable, core, t) {
     sess.send('version');
   });
 
-  sess.linesUntil(/lldb-/, (err, lines) => {
+  sess.linesUntil(versionMark, (err, lines) => {
     t.error(err);
     // Find refs to every Zlib instance
     let found = false;
@@ -97,7 +98,7 @@ function test(executable, core, t) {
     sess.send('version');
   });
 
-  sess.linesUntil(/lldb-/, (err, lines) => {
+  sess.linesUntil(versionMark, (err, lines) => {
     t.error(err);
 
     // `class Deflate extends Zlib` makes instances show up as
