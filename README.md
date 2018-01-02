@@ -3,142 +3,118 @@
 [![npm](https://img.shields.io/npm/v/llnode.svg?style=flat-square)](https://npmjs.org/package/llnode)
 [![Build Status](https://img.shields.io/travis/nodejs/llnode.svg?style=flat-square)](https://travis-ci.org/nodejs/llnode)
 
-Node.js v4.x-v8.x C++ plugin for the [LLDB](http://lldb.llvm.org) debugger.
+Node.js v4.x+ C++ plugin for the [LLDB](http://lldb.llvm.org) debugger.
 
 The llnode plugin adds the ability to inspect JavaScript stack frames, objects,
 source code and more to the standard C/C++ debugging facilities when working
 with Node.js processes or core dumps in LLDB.
 
+## Demo
+
+https://asciinema.org/a/29589
+
 ### Quick start
 
-Start an lldb session with the llnode plugin pre-loaded:
+Start an LLDB session with the llnode plugin automatically loaded:
 
 ```bash
 npm install -g llnode
-llnode node -c core
+llnode `which node` -c /path/to/core/dump
 ```
 
 - For more details on starting llnode see the [Usage](#usage) section.
 - To get started with the llnode commands see the [Commands](#commands) section.
 
-## Demo
-
-https://asciinema.org/a/29589
-
 ## Install Instructions
 
-To use llnode you need to have the LLDB debugger installed.
+### Prerequisites: Install LLDB and its Library
 
-- On OS X lldb is installed as part of Xcode. You will need Xcode both to build and run llnode.
-- On Linux install the lldb package using your distributions package manager.
+To use llnode you need to have the LLDB debugger installed. The recommended
+version is LLDB 3.9 and above.
 
-### Global install with npm
+- OS X/macOS
+  - You can install [Xcode](https://developer.apple.com/xcode/) and use the
+    LLDB that comes with it.
+  - Optionally, you can install newer versions of lldb using Homebrew with
+
+    ```bash
+    brew update && brew install --with-lldb --with-toolchain llvm
+    ```
+    
+    and make sure `/usr/local/opt/llvm/bin` gets searched before `/usr/bin/`
+    on your `PATH`. llnode will link to the LLDB installation returned by
+    `llvm-config` if available.
+- Linux
+  - You can install the lldb package using the package manager of your
+    distribution. You may need to install additional packages for `liblldb`
+    as well.
+  - For example, on Ubuntu 16.04 you can install the prerequisites with
+
+    ```bash
+    apt-get install lldb-4.0 liblldb-4.0-dev
+    ```
+- FreeBSD
+
+  ```bash
+  # Install llvm with lldb and headers
+  pkg install llvm39
+  rm -f /usr/bin/lldb
+  ln -s /usr/local/bin/lldb39 /usr/bin/lldb
+  ```
+
+### Install the Plugin
+
+#### Install llnode globally via npm
+
+If you have `lldb` available on your `PATH`, simply run:
 
 ```bash
 npm install -g llnode
 ```
 
-To use a particular build of lldb, use the `--lldb_exe` option:
+To use a particular build of lldb, use the `--lldb_exe` option. For example,
+on Linux the executable on the `PATH` might be `lldb-3.9`:
 
 ```bash
 npm install --lldb_exe=`which lldb-3.9` -g llnode
 ```
 
-### Install with Homebrew (OS X)
+After installing with npm, `llnode` should be available on your `PATH` as a
+shortcut for running LLDB with the llnode plugin.
+
+#### Optional: Install with Homebrew (OS X/macOS)
 
 ```bash
 brew install llnode
 ```
 
-## Build Instructions
+## Loading the llnode Plugin
 
-### OS X
+There are several ways to load the llnode plugin:
 
-```bash
-# Clone this repo
-git clone https://github.com/nodejs/llnode.git && cd llnode
+### 1. Using the llnode shortcut
 
-# Check out source code of the LLDB that is compatible with OS X's default
-# lldb
-git clone --depth=1 -b release_39 https://github.com/llvm-mirror/lldb.git lldb
+If you install llnode globally via npm (`npm install -g llnode`), you can use
+the `llnode` shortcut script. This starts `lldb` and automatically issues
+the `plugin load` command. All parameters to the llnode script are passed
+directly to lldb. If you it's not a local installation, the shortcut will be in
+`node_modules/.bin/llnode`.
 
-# Initialize GYP
-git clone https://chromium.googlesource.com/external/gyp.git tools/gyp
+### 2. Using `~/.lldbinit` to load the Plugin Automatically
 
-# Configure
-./gyp_llnode
+To tell LLDB to load llnode automatically regardless of the
+version of lldb that you are running, add this line to `~/.lldbinit`:
 
-# Build
-make -C out/ -j9
-
-# Install
-make install-osx
+```
+plugin load /path/to/the/llnode/plugin
 ```
 
-### Linux
+The path to the llnode plugin should be printed when the installation
+is finished. On OS X/macOS the plugin is typically
+`node_modules/llnode/llnode.dylib`, on Linux it's
+`node_modules/llnode/llnode.so`.
 
-```bash
-# Clone this repo
-git clone https://github.com/nodejs/llnode.git && cd llnode
-
-# Install lldb and headers
-sudo apt-get install lldb-3.9 liblldb-3.9-dev
-
-# Initialize GYP
-git clone https://chromium.googlesource.com/external/gyp.git tools/gyp
-
-# Configure
-./gyp_llnode -Dlldb_dir=/usr/lib/llvm-3.9/
-
-# Build
-make -C out/ -j9
-
-# Install
-sudo make install-linux
-```
-
-### FreeBSD
-
-```bash
-# Clone this repo
-git clone https://github.com/nodejs/llnode.git && cd llnode
-
-# Install llvm with lldb and headers
-pkg install llvm39
-rm -f /usr/bin/lldb
-ln -s /usr/local/bin/lldb39 /usr/bin/lldb
-
-# Initialize GYP
-git clone https://chromium.googlesource.com/external/gyp.git tools/gyp
-
-# Configure
-./gyp_llnode -Dlldb_dir=/usr/local/llvm39/
-
-# Build
-gmake -C out/ -j9
-```
-
-(The LLDB function ComputeSystemPluginsDirectory is not implemented on FreeBSD.
-The plugin library must be loaded manually.)
-
-
-## Loading the lldb plugin library.
-
-The simplest method is:
-```bash
-npm install -g llnode
-llnode
-```
-
-If you do a global install (npm install -g llnode) you can use the `llnode`
-shortcut script. This starts `lldb` and automatically issues the `plugin load` command.
-All parameters to the llnode script are passed directly to lldb. If you do not do a
-local install the shortcut will be in `node_modules/.bin/llnode`
-
-If you run either `make install-linux` or `make install-osx` the plugin will installed
-in the LLDB system plugin directory, in which case LLDB will load the plugin
-automatically on start-up. Using this may require additional permissions to be able to
-copy the plugin libary to the system plugin directory.
+### 3. Loading the Plugin Manually
 
 The llnode plugin can also be manually loaded into LLDB using the
 `plugin load` command within lldb.
@@ -146,39 +122,19 @@ The llnode plugin can also be manually loaded into LLDB using the
 It does not matter whether the `plugin load` command is issued before or after
 loading a core dump or attaching to a process.
 
-### OS X
+### 4. Install the Plugin to the LLDB System Plugin Directory
 
-```
-lldb
+Similar to the `~/.lldbinit` approach, this way LLDB will also load the plugin
+automatically on start-up. Doing this may require additional permissions
+to be able to copy the plugin libary to the system plugin directory.
 
-(lldb) plugin load ./node_modules/llnode/llnode.dylib
-```
+On Linux, run `make install-linux` in the project directory, or if
+installing with npm, copy `node_modules/llnode/llnode.so`
+to `/usr/lib/lldb/plugins` or create a link there.
 
-To install the plugin in the LLDB system plugin directory, use the
-`make install-osx` build step above, or if installing
-with npm copy `node_modules/llnode/llnode.dylib` to
-` ~/Library/Application\ Support/LLDB/PlugIns/`.
-
-### Linux
-
-```
-lldb
-
-(lldb) plugin load ./node_modules/llnode/llnode.so
-```
-To install the plugin in the LLDB system plugin directory, use the
-`make install-linux` build step above, or if installing with
-npm copy `node_modules/llnode/llnode.so` to
-`/usr/lib/lldb/plugins`.
-
-### FreeBSD
-
-```
-lldb
-
-(lldb) plugin load ./node_modules/llnode/llnode.so
-```
-LLDB does not support the system plugin directory on FreeBSD.
+On OS X/macOS, run `make install-osx` in the project directory, or if
+installing with npm, copy `node_modules/llnode/llnode.dylib`
+to `~/Library/Application\ Support/LLDB/PlugIns/` or create a link there.
 
 # Usage
 
@@ -259,7 +215,6 @@ The following subcommands are supported:
 
 For more help on any particular subcommand, type 'help <command> <subcommand>'.
 ```
-
 
 ## LICENSE
 
