@@ -1,6 +1,7 @@
 # llnode
 
-[![Build Status](https://travis-ci.org/nodejs/llnode.svg?branch=master)](https://travis-ci.org/nodejs/llnode)
+[![npm](https://img.shields.io/npm/v/llnode.svg?style=flat-square)](https://npmjs.org/package/llnode)
+[![Build Status](https://img.shields.io/travis/nodejs/llnode.svg?style=flat-square)](https://travis-ci.org/nodejs/llnode)
 
 Node.js v4.x-v8.x C++ plugin for the [LLDB](http://lldb.llvm.org) debugger.
 
