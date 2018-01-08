@@ -73,7 +73,7 @@ class FindReferencesCmd : public CommandBase {
   void PrintReferences(lldb::SBCommandReturnObject& result,
                        ReferencesVector* references, ObjectScanner* scanner);
 
-  void ScanForReferences(ObjectScanner* scanner);
+  static void ScanForReferences(ObjectScanner* scanner);
 
   class ReferenceScanner : public ObjectScanner {
    public:

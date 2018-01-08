@@ -474,21 +474,21 @@ class Types : public Module {
 
   int64_t kFirstNonstringType;
 
-  int64_t kHeapNumberType;
+  int64_t kHeapNumberType;  //
   int64_t kMapType;
   int64_t kGlobalObjectType;
   int64_t kGlobalProxyType;
   int64_t kOddballType;
-  int64_t kJSObjectType;
-  int64_t kJSAPIObjectType;
-  int64_t kJSSpecialAPIObjectType;
-  int64_t kJSArrayType;
-  int64_t kCodeType;
+  int64_t kJSObjectType;  //
+  int64_t kJSAPIObjectType;  //
+  int64_t kJSSpecialAPIObjectType;  //
+  int64_t kJSArrayType;  //
+  int64_t kCodeType;  //
   int64_t kJSFunctionType;
-  int64_t kFixedArrayType;
-  int64_t kJSArrayBufferType;
-  int64_t kJSTypedArrayType;
-  int64_t kJSRegExpType;
+  int64_t kFixedArrayType;  //
+  int64_t kJSArrayBufferType;  //
+  int64_t kJSTypedArrayType;  //
+  int64_t kJSRegExpType;  //
   int64_t kJSDateType;
   int64_t kSharedFunctionInfoType;
   int64_t kScriptType;

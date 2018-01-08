@@ -1074,16 +1074,257 @@ bool V8SnapshotCmd::DoExecute(SBDebugger d, char** cmd,
     return false;
   }
 
+  // Load V8 constants from postmortem data
+  llv8.Load(target);
+
   /* Ensure we have a map of objects. */
   if (!llscan.ScanHeapForObjects(target, result)) {
     result.SetStatus(eReturnStatusFailed);
     return false;
   }
 
+  PrepareData(err);
+  if (err.Fail()) {
+    std::cout << "wow" << std::endl;
+    return false;
+  }
+
   SerializeImpl(err);
+  if (err.Fail()) {
+    std::cout << "WOW" << std::endl;
+  }
 
   writer_.close();
-  return true;
+  return !err.Fail();
+}
+
+
+V8SnapshotCmd::Node::Type V8SnapshotCmd::GetInstanceType(
+    v8::Error &err, uint64_t word) {
+
+  v8::Value v8_value(&llv8, word);
+
+  // Test if this is SMI
+  v8::Smi smi(v8_value);
+  if (smi.Check()) return Node::Type::kSimdValue;
+
+  v8::HeapObject heap_object(v8_value);
+  if (!heap_object.Check()) return Node::Type::kInvalid;
+
+  int64_t type = heap_object.GetType(err);
+
+  if(type < llv8.types()->kFirstNonstringType) {
+    return Node::Type::kString;
+  }
+  if (type == llv8.types()->kFixedArrayType ||
+      type == llv8.types()->kJSArrayType ||
+      type == llv8.types()->kJSArrayBufferType ||
+      type == llv8.types()->kJSTypedArrayType) {
+    return Node::Type::kArray;
+  }
+  if (v8::JSObject::IsObjectType(&llv8, type)) {
+    return Node::Type::kObject;
+  }
+  if (type == llv8.types()->kCodeType) {
+    return Node::Type::kCode;
+  }
+  if (type == llv8.types()->kJSRegExpType) {
+    return Node::Type::kRegExp;
+  }
+  if (type == llv8.types()->kHeapNumberType) {
+
+  }
+  return Node::Type::kInvalid;
+}
+
+uint64_t V8SnapshotCmd::GetStringId(
+    v8::Error &err, std::string name) {
+  auto pos = std::distance(
+      strings_.begin(), find(strings_.begin(), strings_.end(), name));
+
+  uint64_t index;
+  if(pos >= strings_.size()) {
+    index = strings_.size();
+    strings_.push_back(name);
+  } else {
+    index = pos;
+  }
+
+  return index + 1;  // +1 because of the dummy string
+}
+
+uint64_t V8SnapshotCmd::GetSelfSize(
+    v8::Error &err, uint64_t word) {
+  v8::Value v8_value(&llv8, word);
+
+  // Test if this is SMI
+  v8::Smi smi(v8_value);
+  if (smi.Check()) return 4;
+
+  v8::HeapObject heap_object(v8_value);
+  if (!heap_object.Check()) return -1;
+
+  v8::HeapObject map_object = heap_object.GetMap(err);
+  if (err.Fail() || !map_object.Check()) return -1;
+
+  v8::Map map(map_object);
+
+  return map.InstanceSize(err);
+}
+
+uint64_t V8SnapshotCmd::ChildrenCount(
+    v8::Error &err, uint64_t word) {
+  uint64_t children = 0;
+  v8::Value v8_value(&llv8, word);
+
+  // Test if this is SMI
+  v8::Smi smi(v8_value);
+  if (smi.Check()) return 0;
+
+  v8::HeapObject heap_object(v8_value);
+  if (!heap_object.Check()) return 0;
+
+  v8::HeapObject map_object = heap_object.GetMap(err);
+  if (err.Fail() || !map_object.Check()) return 0;
+
+  v8::Map map(map_object);
+  v8::HeapObject descriptors_obj = map.InstanceDescriptors(err);
+  if (err.Fail()) return 0;
+
+  v8::DescriptorArray descriptors(descriptors_obj);
+  int64_t own_descriptors_count = map.NumberOfOwnDescriptors(err);
+  if (err.Fail()) return 0;
+
+  int64_t in_object_count = map.InObjectProperties(err);
+  if (err.Fail()) return 0;
+
+  int64_t instance_size = map.InstanceSize(err);
+  if (err.Fail()) return 0;
+
+  v8::JSObject js_obj(heap_object);
+  v8::HeapObject extra_properties_obj = js_obj.Properties(err);
+  if (err.Fail()) return 0;
+
+  v8::FixedArray extra_properties(extra_properties_obj);
+
+  for (int64_t i = 0; i < own_descriptors_count; i++) {
+    v8::Value value;
+    v8::Smi details = descriptors.GetDetails(i, err);
+    if (err.Fail()) continue;
+
+    v8::Value key = descriptors.GetKey(i, err);
+    if (err.Fail()) continue;
+
+    if (descriptors.IsConstFieldDetails(details)) {
+      value = descriptors.GetValue(i, err);
+      if (err.Fail()) continue;
+    } else if (!descriptors.IsFieldDetails(details)) {
+    // Skip non-fields for now
+      v8::Error::PrintInDebugMode("Unknown field Type %" PRId64,
+                              details.GetValue());
+      continue;
+    } else {
+      int64_t index = descriptors.FieldIndex(details) - in_object_count;
+      if (descriptors.IsDoubleField(details)) {
+        // NOTE (mmarchini) should we consider double fields too?
+        #if 0
+        double value;
+        if (index < 0)
+          value = js_obj.GetInObjectValue<double>(instance_size, index, err);
+        else
+          value = extra_properties.Get<double>(index, err);
+
+        if (err.Fail()) return -1;
+
+        addr = value
+        #endif
+        continue;
+      } else {
+        if (index < 0)
+          value = js_obj.GetInObjectValue<v8::Value>(instance_size, index, err);
+        else
+          value = extra_properties.Get<v8::Value>(index, err);
+
+        if (err.Fail()) continue;
+      }
+    }
+
+    if (err.Fail()) continue;
+
+    v8::Smi smi(value);
+    if (smi.Check()) {
+      continue;
+    };
+
+    v8::HeapObject obj(value);
+    if (!obj.Check()) {
+      std::cout << "Not object and not smi" << std::endl;
+      continue;
+    }
+
+    auto scanner = new FindReferencesCmd::ReferenceScanner(value);
+    if (!scanner->AreReferencesLoaded()) {
+      FindReferencesCmd::ScanForReferences(scanner);
+    }
+
+    auto references = llscan.GetReferencesByValue(obj.raw());
+    auto pos = std::distance(references->begin(),
+        std::find(references->begin(), references->end(), word));
+
+    if (pos >= references->size()) {
+      // If the reference couldn't be found in the heap, skip
+      continue;
+    }
+
+    Edge edge;
+    edge.type = Edge::Type::kProperty;
+    edge.index_or_property = GetStringId(err, key.ToString(err));
+    edge.to_addr = obj.raw();
+    edges_.push_back(edge);
+    children++;
+  }
+
+  return children;
+}
+
+void V8SnapshotCmd::PrepareData(v8::Error &err) {
+  std::map<uint64_t, Node*> visited;
+
+  // Prepare Nodes
+  for(auto type_record : llscan.GetMapsToInstances()) {
+    for(auto instance : type_record.second->GetInstances()) {
+      Node node;
+      node.addr = instance;
+      node.type = GetInstanceType(err, instance);
+      if(node.type == Node::Type::kInvalid) {
+        std::cout << "kInvalid: " << instance << std::endl;
+        continue;
+      }
+      node.name_id = GetStringId(err, type_record.second->GetTypeName());
+      node.node_id = nodes_.size();
+      node.self_size = GetSelfSize(err, instance);
+      node.children = ChildrenCount(err, instance);
+      if (node.children == -1) {
+        std::cout << "-1 children: " << instance << std::endl;
+        continue;
+      }
+      node.trace_node_id = 0;  // TODO (mmarchini) traces
+      nodes_.push_back(node);
+      visited.insert(
+          std::pair<uint64_t, Node*>(instance, &nodes_.back()));
+    }
+  }
+
+  std::cout << edges_.size() << std::endl;
+  // Prepare Edges
+  for(auto edge : edges_) {
+    if (visited.count(edge.to_addr) < 1) {
+      std::cout << "screw this: " << std::hex << edge.to_addr << std::endl;
+      edge.to_id = -1;
+      continue;
+    }
+    edge.to_id = visited.at(edge.to_addr)->node_id;
+  }
 }
 
 
@@ -1197,84 +1438,64 @@ void V8SnapshotCmd::SerializeSnapshot(v8::Error &err) {
 #undef JSON_O
 #undef JSON_A
   writer_ << ",\"node_count\":";
-  // TODO (mmarchini): entries size
-  // snapshot_ << static_cast<unsigned>(snapshot_->entries().size());
-  writer_ << 0;
-  writer_ << ",\"edge_count\":";
+  writer_ << nodes_.size();
+
   // TODO (mmarchini): edges size
   // snapshot_ << static_cast<double>(snapshot_->edges().size());
-  writer_ << 0;
-  writer_ << ",\"trace_function_count\":";
-  uint32_t count = 0;
+  writer_ << ",\"edge_count\":";
+  writer_ << edges_.size();
+
   // TODO (mmarchini): allocator tracker
   // AllocationTracker* tracker = snapshot_->profiler()->allocation_tracker();
   // if (tracker) {
   //   count = static_cast<uint32_t>(tracker->function_info_list().size());
   // }
+  writer_ << ",\"trace_function_count\":";
+  uint32_t count = 0;
   writer_ << count;
 }
 
 void V8SnapshotCmd::SerializeNodes(v8::Error &err) {
   bool first_node = true;
-  for(auto type_record : llscan.GetMapsToInstances()) {
-    for(auto instance : type_record.second->GetInstances()) {
-      // SerializeNode(&entry);
-      SerializeNode(err, first_node);
-      if (err.Fail()) return;
-      first_node = false;
-    }
+  for(auto node : nodes_) {
+    SerializeNode(err, &node, first_node);
+    if (err.Fail()) return;
+    first_node = false;
   }
-  // std::vector<HeapEntry>& entries = snapshot_->entries();
-  // for (const HeapEntry& entry : entries) {
 }
 
 
-// void V8SnapshotCmd::SerializeNode(v8::Error &err, const HeapEntry* entry) {
-void V8SnapshotCmd::SerializeNode(v8::Error &err, bool first_node) {
+void V8SnapshotCmd::SerializeNode(v8::Error &err, Node* node, bool first_node) {
   if (!first_node) {
     writer_ <<  ',';
   }
-  // TODO get info from entries
-  auto type_id = 0;  // entry->type()
-  auto name_id = 0;  // GetStringId(entry->name())
-  auto entry_id = 0;  // entry->id()
-  auto entry_self_size = 0;  // entry->self_size()
-  auto entry_children_count = 0;  // entry->children_count()
-  auto trace_node_id = 0;  // entry->trace_node_id()
-  writer_ << type_id << "," << name_id << "," << entry_id << "," <<
-      entry_self_size << "," << entry_children_count << "," << trace_node_id
+  writer_ << node->type << "," << node->name_id << "," << node->node_id << ","
+      << node->self_size << "," << node->children << "," << node->trace_node_id
       << std::endl;
 }
 
 
 void V8SnapshotCmd::SerializeEdges(v8::Error &err) {
   bool first_edge = true;
-  for(auto type_record : llscan.GetMapsToInstances()) {
-    for(auto instance : type_record.second->GetInstances()) {
-      // TODO we're supposed to take edges here
-      SerializeEdge(err, first_edge);
-      if (err.Fail()) return;
-      first_edge = false;
-    }
+  for(auto edge : edges_) {
+    SerializeEdge(err, edge, first_edge);
+    if (err.Fail()) return;
+    first_edge = false;
   }
 }
 
 
-void V8SnapshotCmd::SerializeEdge(v8::Error &err, bool first_edge) {
-// void V8SnapshotCmd::SerializeEdge(v8::Error &err, HeapGraphEdge* edge, bool first_edge) {
-  // The buffer needs space for 3 unsigned ints, 3 commas, \n and \0
+void V8SnapshotCmd::SerializeEdge(v8::Error &err, Edge edge, bool first_edge) {
   if (!first_edge) {
     writer_ <<  ',';
   }
-  auto edge_type = 0;  // edge->type()
-  auto edge_name_or_index = 0;  // edge_name_or_index
-  auto entry_to = 0;  // entry_index(edge->to())
-  writer_ << edge_type << "," << edge_name_or_index << "," << entry_to
+  writer_ << edge.type << "," << edge.index_or_property << "," << edge.to_id
       << std::endl;
 }
 
 
 void V8SnapshotCmd::SerializeTraceNodeInfos(v8::Error &err) {
+  #if 0
   int i = 0;
   // TODO I don't have the slightest idea of what I should be iterating on
   for (auto it : llscan.GetMapsToInstances()) {
@@ -1292,19 +1513,23 @@ void V8SnapshotCmd::SerializeTraceNodeInfos(v8::Error &err) {
     writer_ << function_id << "," << name << "," << script_name << "," <<
         script_id << "," << line << "," << column << std::endl;
   }
+  #endif
 }
 
 
 void V8SnapshotCmd::SerializeTraceTree(v8::Error &err) {
+  #if 0
   // AllocationTracker* tracker = snapshot_->profiler()->allocation_tracker();
   // if (!tracker) return;
   // AllocationTraceTree* traces = tracker->trace_tree();
   SerializeTraceNode(err);
+  #endif
 }
 
 
 // void HeapSnapshotJSONSerializer::SerializeTraceNode(AllocationTraceNode* node) {
 void V8SnapshotCmd::SerializeTraceNode(v8::Error &err) {
+  #if 0
   auto node_id = 0;  // node->id()
   auto node_function_info_index = 0;  // node->function_info_index()
   auto node_allocation_count = 0;  // node->allocation_count()
@@ -1322,10 +1547,12 @@ void V8SnapshotCmd::SerializeTraceNode(v8::Error &err) {
   //   SerializeTraceNode(child);
   // }
   writer_ << ']';
+  #endif
 }
 
 
 void V8SnapshotCmd::SerializeSamples(v8::Error &err) {
+  #if 0
   // const std::vector<HeapObjectsMap::TimeInterval>& samples =
   //     snapshot_->profiler()->heap_object_map()->samples();
   // if (samples.empty()) return;
@@ -1348,21 +1575,13 @@ void V8SnapshotCmd::SerializeSamples(v8::Error &err) {
 
     writer_ << time_delta << "," << sample_last_assigned_id << std::endl;
   }
+  #endif
 }
 
 
 void V8SnapshotCmd::SerializeStrings(v8::Error &err) {
-  std::vector<std::string> sorted_strings;
-  sorted_strings.push_back("lala");
-  sorted_strings.push_back("lele");
-  sorted_strings.push_back("lili");
-  // for (base::HashMap::Entry* entry = strings_.Start(); entry != NULL;
-  //      entry = strings_.Next(entry)) {
-  //   int index = static_cast<int>(reinterpret_cast<uintptr_t>(entry->value));
-  //   sorted_strings[index] = reinterpret_cast<const unsigned char*>(entry->key);
-  // }
   writer_ << "\"<dummy>\"";
-  for (auto s : sorted_strings) {
+  for (auto s : strings_) {
     writer_ << ',';
     SerializeString(err, s.c_str());
     if (err.Fail()) return;
@@ -1370,10 +1589,11 @@ void V8SnapshotCmd::SerializeStrings(v8::Error &err) {
 }
 
 
-void V8SnapshotCmd::SerializeString(v8::Error &err, const char* s) {
+void V8SnapshotCmd::SerializeString(v8::Error &err, std::string s) {
   writer_ << '\n';
   writer_ << '\"';
-  std::cout << "string: " << s << std::endl;
+  writer_ << s;
+  #if 0
   for ( ; *s != '\0'; ++s) {
     switch (*s) {
       case '\b':
@@ -1417,6 +1637,7 @@ void V8SnapshotCmd::SerializeString(v8::Error &err, const char* s) {
         }
     }
   }
+  #endif
   writer_ << '\"';
 }
 

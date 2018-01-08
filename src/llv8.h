@@ -12,6 +12,7 @@ namespace llnode {
 
 class FindJSObjectsVisitor;
 class FindReferencesCmd;
+class V8SnapshotCmd;
 
 namespace v8 {
 
@@ -280,9 +281,9 @@ class JSObject : public HeapObject {
 
   static inline bool IsObjectType(LLV8* v8, int64_t type);
 
- protected:
   template <class T>
   T GetInObjectValue(int64_t size, int index, Error& err);
+ protected:
   void ElementKeys(std::vector<std::string>& keys, Error& err);
   void DictionaryKeys(std::vector<std::string>& keys, Error& err);
   void DescriptorKeys(std::vector<std::string>& keys, Map map, Error& err);
@@ -551,6 +552,7 @@ class LLV8 {
   friend class CodeMap;
   friend class llnode::FindJSObjectsVisitor;
   friend class llnode::FindReferencesCmd;
+  friend class llnode::V8SnapshotCmd;
 };
 
 #undef V8_VALUE_DEFAULT_METHODS
