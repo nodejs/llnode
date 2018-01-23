@@ -75,6 +75,17 @@ function test(executable, core, t) {
     t.error(err);
     t.ok(/\d+ Zlib/.test(lines.join('\n')), 'Zlib should be in findjsobjects');
 
+    sess.send('v8 findjsobjects -d');
+    // Just a separator
+    sess.send('version');
+  });
+
+  sess.linesUntil(versionMark, (err, lines) => {
+    t.error(err);
+    t.ok(/0 +0 Zlib/.test(lines.join('\n')), 'Zlib should be in findjsobjects -d');
+    t.ok(/1 +0 Zlib: onerror/.test(lines.join('\n')),
+         '"Zlib: onerror" should be in findjsobjects -d');
+
     sess.send('v8 findjsinstances Zlib');
     // Just a separator
     sess.send('version');
