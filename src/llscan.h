@@ -211,6 +211,14 @@ typedef std::map<std::string, DetailedTypeRecord*> DetailedTypeRecordMap;
 
 class FindJSObjectsVisitor : MemoryVisitor {
  public:
+  FindJSObjectsVisitor(lldb::SBTarget& target, LLScan* llscan);
+  ~FindJSObjectsVisitor() {}
+
+  uint64_t Visit(uint64_t location, uint64_t word);
+
+  uint32_t FoundCount() { return found_count_; }
+
+ private:
   struct MapCacheEntry {
     enum ShowArrayLength { kShowArrayLength, kDontShowArrayLength };
 
@@ -228,16 +236,8 @@ class FindJSObjectsVisitor : MemoryVisitor {
     bool Load(v8::Map map, v8::HeapObject heap_object, v8::Error& err);
   };
 
-  FindJSObjectsVisitor(lldb::SBTarget& target, LLScan* llscan);
-  ~FindJSObjectsVisitor() {}
-
-  uint64_t Visit(uint64_t location, uint64_t word);
-
-  uint32_t FoundCount() { return found_count_; }
-
   static bool IsAHistogramType(v8::Map& map, v8::Error& err);
 
- private:
   void InsertOnMapsToInstances(uint64_t word, v8::Map map,
                                FindJSObjectsVisitor::MapCacheEntry map_info,
                                v8::Error& err);
