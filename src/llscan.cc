@@ -49,7 +49,6 @@ bool FindObjectsCmd::DoExecute(SBDebugger d, char** cmd,
   }
 
   v8::Value::InspectOptions inspect_options;
-  inspect_options.detailed;
   ParseInspectOptions(cmd, &inspect_options);
 
   if (inspect_options.detailed) {
@@ -99,8 +98,8 @@ void FindObjectsCmd::SimpleOutput(SBCommandReturnObject& result) {
 
 void FindObjectsCmd::DetailedOutput(SBCommandReturnObject& result) {
   std::vector<DetailedTypeRecord*> sorted_by_count;
-  for (auto it : llscan.GetDetailedMapsToInstances()) {
-    sorted_by_count.push_back(it.second);
+  for (auto kv : llscan.GetDetailedMapsToInstances()) {
+    sorted_by_count.push_back(kv.second);
   }
 
   std::sort(sorted_by_count.begin(), sorted_by_count.end(),
@@ -109,13 +108,13 @@ void FindObjectsCmd::DetailedOutput(SBCommandReturnObject& result) {
   uint64_t total_size = 0;
 
   result.Printf(
-      "   Repr. Obj.  Instances  Total Size  Properties  Array Size Name\n");
+      "   Sample Obj.  Instances  Total Size  Properties  Elements  Name\n");
   result.Printf(
-      " ------------ ---------- ----------- ----------- ----------- ----\n");
+      " ------------- ---------- ----------- ----------- --------- -----\n");
 
   for (auto t : sorted_by_count) {
-    result.Printf(" %12" PRIx64 " %10" PRId64 " %11" PRId64 " %11" PRId64
-                  " %11" PRId64 " %s\n",
+    result.Printf(" %13" PRIx64 " %10" PRId64 " %11" PRId64 " %11" PRId64
+                  " %9" PRId64 " %s\n",
                   *(t->GetInstances().begin()), t->GetInstanceCount(),
                   t->GetTotalInstanceSize(), t->GetOwnDescriptorsCount(),
                   t->GetIndexedPropertiesCount(), t->GetTypeName().c_str());
@@ -1137,7 +1136,10 @@ uint64_t FindJSObjectsVisitor::Visit(uint64_t location, uint64_t word) {
 
   MapCacheEntry map_info;
   if (map_cache_.count(map.raw()) == 0) {
-    if (!map_info.Load(map, heap_object, err)) return address_byte_size_;
+    map_info.Load(map, heap_object, err);
+    if (err.Fail()) {
+      return address_byte_size_;
+    }
     // Cache result
     map_cache_.emplace(map.raw(), map_info);
 
@@ -1289,7 +1291,7 @@ FindJSObjectsVisitor::MapCacheEntry::GetTypeNameWithProperties(
         "[" + std::to_string(indexed_properties_count_) + "]");
   }
 
-  int i = 0;
+  size_t i = 0;
   max_properties = max_properties ? std::min(max_properties, properties_.size())
                                   : properties_.size();
   for (auto it = properties_.begin(); i < max_properties; ++it, i++) {
@@ -1314,9 +1316,7 @@ bool FindJSObjectsVisitor::MapCacheEntry::Load(v8::Map map,
   if (is_histogram) type_name = heap_object.GetTypeName(err);
 
   v8::HeapObject descriptors_obj = map.InstanceDescriptors(err);
-  if (err.Fail()) {
-    return false;
-  }
+  if (err.Fail()) return false;
 
   v8::DescriptorArray descriptors(descriptors_obj);
   own_descriptors_count_ = map.NumberOfOwnDescriptors(err);
@@ -1331,7 +1331,7 @@ bool FindJSObjectsVisitor::MapCacheEntry::Load(v8::Map map,
     if (err.Fail()) return false;
   }
 
-  for (int64_t i = 0; i < own_descriptors_count_; i++) {
+  for (uint64_t i = 0; i < own_descriptors_count_; i++) {
     v8::Value key = descriptors.GetKey(i, err);
     if (err.Fail()) continue;
     properties_.emplace_back(key.ToString(err));

@@ -181,7 +181,7 @@ class TypeRecord {
 
 
  private:
-  friend DetailedTypeRecord;
+  friend class DetailedTypeRecord;
   std::string type_name_;
   uint64_t instance_count_;
   uint64_t total_instance_size_;
@@ -195,8 +195,8 @@ class DetailedTypeRecord : public TypeRecord {
       : TypeRecord(type_name),
         own_descriptors_count_(own_descriptors_count),
         indexed_properties_count_(indexed_properties_count) {}
-  const uint64_t GetOwnDescriptorsCount() { return own_descriptors_count_; };
-  const uint64_t GetIndexedPropertiesCount() {
+  uint64_t GetOwnDescriptorsCount() const { return own_descriptors_count_; };
+  uint64_t GetIndexedPropertiesCount() const {
     return indexed_properties_count_;
   };
 
