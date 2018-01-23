@@ -221,7 +221,7 @@ class FindJSObjectsVisitor : MemoryVisitor {
     uint64_t own_descriptors_count_ = 0;
     uint64_t indexed_properties_count_ = 0;
 
-    std::unique_ptr<std::string> GetTypeNameWithProperties(
+    std::string GetTypeNameWithProperties(
         ShowArrayLength show_array_length = kShowArrayLength,
         size_t max_properties = 0);
 

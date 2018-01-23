@@ -1192,14 +1192,16 @@ void FindJSObjectsVisitor::InsertOnDetailedMapsToInstances(
 
   auto type_name_with_properties = map_info.GetTypeNameWithProperties();
 
-  auto entry = std::make_pair(*type_name_with_properties, nullptr);
+  auto entry = std::make_pair(type_name_with_properties, nullptr);
   auto pp = &llscan_->GetDetailedMapsToInstances().insert(entry).first->second;
   // No entry in the map, create a new one.
-  if (*pp == nullptr)
-    *pp = new DetailedTypeRecord(*map_info.GetTypeNameWithProperties(
-                                     MapCacheEntry::kDontShowArrayLength, 3),
+  if (*pp == nullptr) {
+    auto type_name_with_three_properties = map_info.GetTypeNameWithProperties(
+        MapCacheEntry::kDontShowArrayLength, 3);
+    *pp = new DetailedTypeRecord(type_name_with_three_properties,
                                  map_info.own_descriptors_count_,
                                  map_info.indexed_properties_count_);
+  }
   t = *pp;
 
   // Determine if this is a new instance.
@@ -1280,26 +1282,24 @@ bool LLScan::ScanHeapForObjects(lldb::SBTarget target,
   return true;
 }
 
-std::unique_ptr<std::string>
+std::string
 FindJSObjectsVisitor::MapCacheEntry::GetTypeNameWithProperties(
     ShowArrayLength show_array_length, size_t max_properties) {
-  std::unique_ptr<std::string> type_name_with_properties(
-      new std::string(type_name));
+  std::string type_name_with_properties(type_name);
 
   if (show_array_length == kShowArrayLength) {
-    type_name_with_properties->append(
-        "[" + std::to_string(indexed_properties_count_) + "]");
+    type_name_with_properties +=
+        "[" + std::to_string(indexed_properties_count_) + "]";
   }
 
   size_t i = 0;
   max_properties = max_properties ? std::min(max_properties, properties_.size())
                                   : properties_.size();
   for (auto it = properties_.begin(); i < max_properties; ++it, i++) {
-    std::string property = *it;
-    type_name_with_properties->append((i ? ", " : ": ") + property);
+    type_name_with_properties += (i ? ", " : ": ") + *it;
   }
   if (max_properties < properties_.size()) {
-    type_name_with_properties->append(", ...");
+    type_name_with_properties += ", ...";
   }
 
   return type_name_with_properties;
