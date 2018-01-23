@@ -1197,7 +1197,8 @@ void FindJSObjectsVisitor::InsertOnDetailedMapsToInstances(
   // No entry in the map, create a new one.
   if (*pp == nullptr) {
     auto type_name_with_three_properties = map_info.GetTypeNameWithProperties(
-        MapCacheEntry::kDontShowArrayLength, 3);
+        MapCacheEntry::kDontShowArrayLength,
+        kNumberOfPropertiesForDetailedOutput);
     *pp = new DetailedTypeRecord(type_name_with_three_properties,
                                  map_info.own_descriptors_count_,
                                  map_info.indexed_properties_count_);

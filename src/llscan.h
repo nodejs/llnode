@@ -219,6 +219,9 @@ class FindJSObjectsVisitor : MemoryVisitor {
   uint32_t FoundCount() { return found_count_; }
 
  private:
+  // TODO (mmarchini): this could be an option for findjsobjects
+  static const size_t kNumberOfPropertiesForDetailedOutput = 3;
+
   struct MapCacheEntry {
     enum ShowArrayLength { kShowArrayLength, kDontShowArrayLength };
 
@@ -249,7 +252,7 @@ class FindJSObjectsVisitor : MemoryVisitor {
   uint32_t address_byte_size_;
   uint32_t found_count_;
 
-  LLScan* llscan_;
+  LLScan* const llscan_;
   std::map<int64_t, MapCacheEntry> map_cache_;
 };
 
