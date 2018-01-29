@@ -1258,7 +1258,27 @@ uint64_t V8SnapshotCmd::ChildrenCount(
 
     v8::HeapObject obj(value);
     if (!obj.Check()) {
-      std::cout << "Not object and not smi" << std::endl;
+      // std::cout << "Not object and not smi" << std::endl;
+      continue;
+    }
+
+    int64_t type = obj.GetType(err);
+    if (err.Fail()) return false;
+
+    if (type == llv8.types()->kOddballType) {
+      // std::cout << "Oddball" << std::endl;
+      continue;
+    }
+
+    if (type == llv8.types()->kJSFunctionType) {
+      // std::cout << "Function" << std::endl;
+      continue;
+    }
+
+    v8::Value::InspectOptions options;
+    options.detailed = false;
+    if (obj.Inspect(&options, err).find("<unknown>") != std::string::npos) {
+      // std::cout << "unknown" << std::endl;
       continue;
     }
 
@@ -1280,6 +1300,7 @@ uint64_t V8SnapshotCmd::ChildrenCount(
     edge.type = Edge::Type::kProperty;
     edge.index_or_property = GetStringId(err, key.ToString(err));
     edge.to_addr = obj.raw();
+    // edge.to_addr = obj.raw();
     edges_.push_back(edge);
     children++;
   }
@@ -1288,11 +1309,44 @@ uint64_t V8SnapshotCmd::ChildrenCount(
 }
 
 void V8SnapshotCmd::PrepareData(v8::Error &err) {
-  std::map<uint64_t, Node*> visited;
+  std::map<uint64_t, Node> visited;
+  uint64_t next_id = 1;
+  const int step = 2;
+
+  // AddRootEntry
+  {
+    Node node;
+    node.addr = 0;
+    node.type = Node::Type::kSynthetic;
+    node.name_id = GetStringId(err, "");
+    node.node_id = 1;
+    next_id += step;
+    node.self_size = 0;
+    node.children = 0;
+  }
+
+  // AddGCRootsEntry
+  {
+    Node node;
+    node.addr = 0;
+    node.type = Node::Type::kSynthetic;
+    node.name_id = GetStringId(err, "(GC roots)");
+    node.node_id = next_id;
+    next_id += step;
+    node.self_size = 0;
+    node.children = 0;
+  }
+
+  // AddGcSubrootEntries
 
   // Prepare Nodes
   for(auto type_record : llscan.GetMapsToInstances()) {
     for(auto instance : type_record.second->GetInstances()) {
+      if (visited.count(instance) != 0) {
+        std::cout << "bad" << std::endl;
+        return;
+      }
+
       Node node;
       node.addr = instance;
       node.type = GetInstanceType(err, instance);
@@ -1301,7 +1355,8 @@ void V8SnapshotCmd::PrepareData(v8::Error &err) {
         continue;
       }
       node.name_id = GetStringId(err, type_record.second->GetTypeName());
-      node.node_id = nodes_.size();
+      node.node_id = next_id;
+      next_id += step;
       node.self_size = GetSelfSize(err, instance);
       node.children = ChildrenCount(err, instance);
       if (node.children == -1) {
@@ -1311,20 +1366,33 @@ void V8SnapshotCmd::PrepareData(v8::Error &err) {
       node.trace_node_id = 0;  // TODO (mmarchini) traces
       nodes_.push_back(node);
       visited.insert(
-          std::pair<uint64_t, Node*>(instance, &nodes_.back()));
+          std::pair<uint64_t, Node>(instance, nodes_.back()));
     }
   }
 
+  int problems = 0;
   std::cout << edges_.size() << std::endl;
   // Prepare Edges
-  for(auto edge : edges_) {
-    if (visited.count(edge.to_addr) < 1) {
-      std::cout << "screw this: " << std::hex << edge.to_addr << std::endl;
+  for(auto& edge : edges_) {
+    if (visited.count(edge.to_addr) != 1) {
+      std::cout << "Edge was not visited: " << std::hex << edge.to_addr << std::endl;
       edge.to_id = -1;
+      problems++;
       continue;
     }
-    edge.to_id = visited.at(edge.to_addr)->node_id;
+    Node node = visited.at(edge.to_addr);
+
+    if (node.addr != edge.to_addr) {
+      std::cout << "Invalid edge: " << std::hex << edge.to_addr << " != ";
+      std::cout << std::hex << node.addr << std::endl;
+      edge.to_id = -1;
+      problems++;
+      continue;
+    }
+    // std::cout << "worked" << std::endl;
+    edge.to_id = node.node_id * 6;
   }
+  std::cout << "Problems found: " << std::dec << problems << std::endl;
 }
 
 
@@ -1440,8 +1508,6 @@ void V8SnapshotCmd::SerializeSnapshot(v8::Error &err) {
   writer_ << ",\"node_count\":";
   writer_ << nodes_.size();
 
-  // TODO (mmarchini): edges size
-  // snapshot_ << static_cast<double>(snapshot_->edges().size());
   writer_ << ",\"edge_count\":";
   writer_ << edges_.size();
 
@@ -1469,9 +1535,12 @@ void V8SnapshotCmd::SerializeNode(v8::Error &err, Node* node, bool first_node) {
   if (!first_node) {
     writer_ <<  ',';
   }
-  writer_ << node->type << "," << node->name_id << "," << node->node_id << ","
-      << node->self_size << "," << node->children << "," << node->trace_node_id
-      << std::endl;
+  writer_ << node->type << "," <<
+      node->name_id << "," <<
+      node->node_id << "," <<
+      node->self_size << "," <<
+      node->children << "," <<
+      node->trace_node_id << std::endl;
 }
 
 

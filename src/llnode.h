@@ -103,6 +103,7 @@ class V8SnapshotCmd : public CommandBase {
   Node::Type GetInstanceType(v8::Error &err, uint64_t word);
   uint64_t GetStringId(v8::Error &err, std::string name);
   uint64_t GetSelfSize(v8::Error &err, uint64_t word);
+  Edge CreateEdgeFromValue(v8::Error &err, v8::HeapObject &obj, v8::Value value);
   uint64_t ChildrenCount(v8::Error &err, uint64_t word);
 
   bool SerializeImpl(v8::Error &err);
