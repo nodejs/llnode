@@ -1114,7 +1114,16 @@ V8SnapshotCmd::Node::Type V8SnapshotCmd::GetInstanceType(
   int64_t type = heap_object.GetType(err);
 
   if(type < llv8.types()->kFirstNonstringType) {
-    return Node::Type::kString;
+    v8::String str(heap_object);
+    int64_t repr = str.Representation(err);
+
+    if (repr == llv8.string()->kSlicedStringTag) {
+      return Node::Type::kSlicedString;
+    } else if (repr == llv8.string()->kConsStringTag) {
+      return Node::Type::kConsString;
+    } else {
+      return Node::Type::kString;
+    }
   }
   if (type == llv8.types()->kFixedArrayType ||
       type == llv8.types()->kJSArrayType ||
@@ -1207,6 +1216,86 @@ uint64_t V8SnapshotCmd::ChildrenCount(
 
   v8::FixedArray extra_properties(extra_properties_obj);
 
+  // Iterate over elements
+  v8::HeapObject elements_obj = js_obj.Elements(err);
+  v8::FixedArray elements(elements_obj);
+  uint64_t length = js_obj.GetArrayLength(err);
+
+  for (int64_t i = 0; i < length; i++) {
+    v8::Value value = elements.Get<v8::Value>(i, err);
+    if (err.Fail()) return 0;
+
+    bool is_hole = value.IsHole(err);
+    if (err.Fail()) return 0;
+
+    // Skip holes
+    if (is_hole) continue;
+
+    // TODO (mmarchini): duplicated code
+    v8::Smi smi(value);
+    if (smi.Check()) {
+      continue;
+    };
+
+    v8::HeapObject obj(value);
+    if (!obj.Check()) {
+      // std::cout << "Not object and not smi" << std::endl;
+      continue;
+    }
+
+    int64_t type = obj.GetType(err);
+    if (err.Fail()) return false;
+
+    if (type == llv8.types()->kOddballType) {
+      // std::cout << "Oddball" << std::endl;
+      continue;
+    }
+
+    if (type == llv8.types()->kJSFunctionType) {
+      // std::cout << "Function" << std::endl;
+      continue;
+    }
+
+    v8::Value::InspectOptions options;
+    options.detailed = false;
+    if (obj.Inspect(&options, err).find("<unknown>") != std::string::npos) {
+      // std::cout << "unknown" << std::endl;
+      continue;
+    }
+
+    auto scanner = new FindReferencesCmd::ReferenceScanner(value);
+    if (!scanner->AreReferencesLoaded()) {
+      FindReferencesCmd::ScanForReferences(scanner);
+    }
+
+    auto references = llscan.GetReferencesByValue(obj.raw());
+    auto pos = std::distance(references->begin(),
+        std::find(references->begin(), references->end(), word));
+
+    if (pos >= references->size()) {
+      // If the reference couldn't be found in the heap, skip
+      continue;
+    }
+
+    Edge edge;
+    edge.type = Edge::Type::kElement;
+    edge.index_or_property = i;
+    edge.to_addr = value.raw();
+    // edge.to_addr = obj.raw();
+    edges_.push_back(edge);
+    children++;
+
+    // if (!res.empty()) res += ",\n";
+
+    // char tmp[64];
+    // snprintf(tmp, sizeof(tmp), "    [%d]=", static_cast<int>(i));
+    // res += tmp;
+
+    // res += value.Inspect(&options, err);
+    // if (err.Fail()) return std::string();
+  }
+
+  // Iterate over properties
   for (int64_t i = 0; i < own_descriptors_count; i++) {
     v8::Value value;
     v8::Smi details = descriptors.GetDetails(i, err);
