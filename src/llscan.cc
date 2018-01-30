@@ -1083,16 +1083,22 @@ bool V8SnapshotCmd::DoExecute(SBDebugger d, char** cmd,
     return false;
   }
 
+
   PrepareData(err);
   if (err.Fail()) {
-    std::cout << "wow" << std::endl;
+    result.Printf("Error while generating snapshot\n");
+    writer_.close();
     return false;
   }
 
   SerializeImpl(err);
   if (err.Fail()) {
-    std::cout << "WOW" << std::endl;
+    result.Printf("Error while generating snapshot\n");
+    writer_.close();
+    return false;
   }
+
+  result.Printf("Snapshot generated at ./core.heapsnapshot\n");
 
   writer_.close();
   return !err.Fail();
@@ -1432,7 +1438,7 @@ void V8SnapshotCmd::PrepareData(v8::Error &err) {
   for(auto type_record : llscan.GetMapsToInstances()) {
     for(auto instance : type_record.second->GetInstances()) {
       if (visited.count(instance) != 0) {
-        std::cout << "bad" << std::endl;
+        // std::cout << "bad" << std::endl;
         return;
       }
 
@@ -1440,7 +1446,7 @@ void V8SnapshotCmd::PrepareData(v8::Error &err) {
       node.addr = instance;
       node.type = GetInstanceType(err, instance);
       if(node.type == Node::Type::kInvalid) {
-        std::cout << "kInvalid: " << instance << std::endl;
+        // std::cout << "kInvalid: " << instance << std::endl;
         continue;
       }
       node.name_id = GetStringId(err, type_record.second->GetTypeName());
@@ -1449,7 +1455,7 @@ void V8SnapshotCmd::PrepareData(v8::Error &err) {
       node.self_size = GetSelfSize(err, instance);
       node.children = ChildrenCount(err, instance);
       if (node.children == -1) {
-        std::cout << "-1 children: " << instance << std::endl;
+        // std::cout << "-1 children: " << instance << std::endl;
         continue;
       }
       node.trace_node_id = 0;  // TODO (mmarchini) traces
@@ -1460,11 +1466,11 @@ void V8SnapshotCmd::PrepareData(v8::Error &err) {
   }
 
   int problems = 0;
-  std::cout << edges_.size() << std::endl;
+  // std::cout << edges_.size() << std::endl;
   // Prepare Edges
   for(auto& edge : edges_) {
     if (visited.count(edge.to_addr) != 1) {
-      std::cout << "Edge was not visited: " << std::hex << edge.to_addr << std::endl;
+      // std::cout << "Edge was not visited: " << std::hex << edge.to_addr << std::endl;
       edge.to_id = -1;
       problems++;
       continue;
@@ -1472,8 +1478,8 @@ void V8SnapshotCmd::PrepareData(v8::Error &err) {
     Node node = visited.at(edge.to_addr);
 
     if (node.addr != edge.to_addr) {
-      std::cout << "Invalid edge: " << std::hex << edge.to_addr << " != ";
-      std::cout << std::hex << node.addr << std::endl;
+      // std::cout << "Invalid edge: " << std::hex << edge.to_addr << " != ";
+      // std::cout << std::hex << node.addr << std::endl;
       edge.to_id = -1;
       problems++;
       continue;
@@ -1481,7 +1487,7 @@ void V8SnapshotCmd::PrepareData(v8::Error &err) {
     // std::cout << "worked" << std::endl;
     edge.to_id = node.node_id * 6;
   }
-  std::cout << "Problems found: " << std::dec << problems << std::endl;
+  // std::cout << "Problems found: " << std::dec << problems << std::endl;
 }
 
 
