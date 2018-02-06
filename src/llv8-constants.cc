@@ -179,7 +179,8 @@ void HeapObject::Load() {
 
 
 void Map::Load() {
-  kInstanceAttrsOffset = LoadConstant("class_Map__instance_attributes__int");
+  kInstanceAttrsOffset = LoadConstant("class_Map__instance_attributes__int",
+                                      "class_Map__instance_type__uint16_t");
   kMaybeConstructorOffset =
       LoadConstant("class_Map__constructor_or_backpointer__Object",
                    "class_Map__constructor__Object");
