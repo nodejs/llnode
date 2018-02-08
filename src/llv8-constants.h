@@ -5,10 +5,14 @@
 
 namespace llnode {
 namespace v8 {
+
+class Error;
+
 namespace constants {
 
 // Forward declarations
 class Common;
+
 
 class Module {
  public:
@@ -20,6 +24,7 @@ class Module {
 
  protected:
   int64_t LoadRawConstant(const char* name, int64_t def = -1);
+  int64_t LoadConstant(const char* name, Error& err, int64_t def = -1);
   int64_t LoadConstant(const char* name, int64_t def = -1);
   int64_t LoadConstant(const char* name, const char* fallback,
                        int64_t def = -1);
@@ -83,6 +88,7 @@ class Map : public Module {
  public:
   MODULE_DEFAULT_METHODS(Map);
 
+  int64_t kMapTypeMask;
   int64_t kInstanceAttrsOffset;
   int64_t kMaybeConstructorOffset;
   int64_t kInstanceDescriptorsOffset;
