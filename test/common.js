@@ -209,8 +209,7 @@ exports.saveCore = function saveCore(options, cb) {
   const core = options.core || exports.core;
 
   // Create a core and test
-  let sess = Session.create(scenario);
-  let ranges;
+  const sess = Session.create(scenario);
   sess.timeoutAfter(exports.saveCoreTimeout);
 
   sess.waitBreak(() => {
