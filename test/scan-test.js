@@ -87,7 +87,7 @@ function test(executable, core, t) {
     t.ok(/Object\.holder/.test(lines.join('\n')), 'Should find reference #2');
     t.ok(/\(Array\)\[1\]/.test(lines.join('\n')), 'Should find reference #3');
 
-    sess.quitWithCore();
+    sess.quit();
     t.end();
   });
 }

@@ -224,11 +224,11 @@ exports.saveCore = function saveCore(options, cb) {
     }
     sess.quit();
 
-    if (!process.env.LLNODE_NO_RANGES) {
-      const ranges = core + '.ranges';
-      exports.generateRanges(core, ranges, cb);
-    } else {
+    if (process.env.LLNODE_NO_RANGES) {
       cb(null);
+    } else {
+      const ranges = core + '.ranges';
+      exports.generateRanges(core, ranges, cb); 
     }
   });
 }
@@ -267,11 +267,6 @@ Session.prototype.quit = function quit() {
 
   this.send('quit');
 };
-
-Session.prototype.quitWithCore = function quitWithCore() {
-  this.send('target delete 0');
-  this.quit();
-}
 
 Session.prototype.send = function send(line, callback) {
   debug(`[SEND][${this.lldb.pid}]`, line);
