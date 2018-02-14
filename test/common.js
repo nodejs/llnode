@@ -98,7 +98,7 @@ SessionOutput.prototype.wait = function wait(regexp, callback, allLines) {
 
   function onLine(line) {
     lines.push(line);
-    debug('[LINE]', line);
+    debug(`[LINE][${self.session.lldb.pid}]`, line);
 
     if (!regexp.test(line))
       return;
@@ -204,12 +204,48 @@ Session.create = function create(scenario) {
   return new Session({ scenario: scenario });
 };
 
-Session.loadCore = function loadCore(executable, core, ranges) {
-  return new Session({
+exports.saveCore = function saveCore(options, cb) {
+  const scenario = options.scenario;
+  const core = options.core || exports.core;
+
+  // Create a core and test
+  const sess = Session.create(scenario);
+  sess.timeoutAfter(exports.saveCoreTimeout);
+
+  sess.waitBreak(() => {
+    sess.send(`process save-core ${core}`);
+    // Just a separator
+    sess.send('version');
+  });
+
+  sess.wait(/lldb-/, (err) => {
+    if (err) {
+      return cb(err);
+    }
+    sess.quit();
+
+    if (process.env.LLNODE_NO_RANGES) {
+      cb(null);
+    } else {
+      const ranges = core + '.ranges';
+      exports.generateRanges(core, ranges, cb); 
+    }
+  });
+}
+
+// Load the core dump with the executable
+Session.loadCore = function loadCore(executable, core, cb) {
+  const ranges = process.env.LLNODE_NO_RANGES ? undefined : core + '.ranges';
+  const sess = new Session({
     executable: executable,
     core: core,
     ranges: ranges
   });
+
+  sess.timeoutAfter(exports.loadCoreTimeout);
+  sess.waitCoreLoad(cb);
+
+  return sess;
 };
 
 Session.prototype.waitCoreLoad = function waitCoreLoad(callback) {
@@ -233,7 +269,7 @@ Session.prototype.quit = function quit() {
 };
 
 Session.prototype.send = function send(line, callback) {
-  debug('[SEND]', line);
+  debug(`[SEND][${this.lldb.pid}]`, line);
   this.lldb.stdin.write(line + '\n', callback);
 };
 
@@ -252,6 +288,7 @@ exports.generateRanges = function generateRanges(core, dest, cb) {
   proc.stdout.pipe(fs.createWriteStream(dest));
 
   proc.on('exit', (status) => {
+    debug('[RANGES]', `Generated ${dest}`);
     cb(status === 0 ? null : new Error('Failed to generate ranges'));
   });
 };

@@ -14,58 +14,22 @@ tape('v8 findrefs and friends', (t) => {
     t.skip('No `process save-core` on linux');
     t.end();
   } else {
-    saveCoreAndTest(t);
+    common.saveCore({
+      scenario: 'inspect-scenario.js'
+    }, (err) => {
+      t.error(err);
+      t.ok(true, 'Saved core');
+
+      test(process.execPath, common.core, t);
+    });
   }
 });
 
-function saveCoreAndTest(t) {
-  // Create a core and test
-  const sess = common.Session.create('inspect-scenario.js');
-  sess.timeoutAfter(common.saveCoreTimeout);
-
-  sess.waitBreak(() => {
-    sess.send(`process save-core ${common.core}`);
-    // Just a separator
-    sess.send('version');
-  });
-
-  sess.wait(versionMark, (err) => {
-    t.error(err);
-    t.ok(true, 'Saved core');
-    sess.send('target delete 0');
-    sess.quit();
-
-    test(process.execPath, common.core, t);
-  });
-}
-
 function test(executable, core, t) {
-  let sess, ranges;
-  if (process.env.LLNODE_NO_RANGES) {
-    sess = common.Session.loadCore(executable, core);
-  } else {
-    ranges = core + '.ranges';
-    sess = common.Session.loadCore(executable, core, ranges);
-  }
-  sess.timeoutAfter(common.loadCoreTimeout);
-
-  sess.waitCoreLoad((err) => {
+  const sess = common.Session.loadCore(executable, core, (err) => {
     t.error(err);
     t.ok(true, 'Loaded core');
 
-    if (ranges) {
-      common.generateRanges(core, ranges, (err) => {
-        t.error(err);
-        t.ok(true, 'Generated ranges');
-        sess.send('version');
-      });
-    } else {
-      sess.send('version');
-    }
-  });
-
-  sess.wait(versionMark, (err) => {
-    t.error(err);
     sess.send('v8 findjsobjects');
     // Just a separator
     sess.send('version');
@@ -123,7 +87,6 @@ function test(executable, core, t) {
     t.ok(/Object\.holder/.test(lines.join('\n')), 'Should find reference #2');
     t.ok(/\(Array\)\[1\]/.test(lines.join('\n')), 'Should find reference #3');
 
-    sess.send('target delete 0');
     sess.quit();
     t.end();
   });
