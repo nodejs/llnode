@@ -89,7 +89,7 @@ inline int64_t Map::GetType(Error& err) {
       v8()->LoadUnsigned(LeaField(v8()->map()->kInstanceAttrsOffset), 2, err);
   if (err.Fail()) return -1;
 
-  return type & 0xff;
+  return type & v8()->map()->kMapTypeMask;
 }
 
 

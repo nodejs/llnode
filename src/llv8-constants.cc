@@ -93,35 +93,39 @@ int64_t Module::LoadRawConstant(const char* name, int64_t def) {
   Error err;
   int64_t v = LookupConstant(target_, name, def, err);
   if (err.Fail()) {
-    Error::PrintInDebugMode("Failed to load raw constant %s", name);
+    Error::PrintInDebugMode(
+        "Failed to load raw constant %s, default to %" PRId64, name, def);
   }
 
   return v;
 }
 
+int64_t Module::LoadConstant(const char* name, Error& err, int64_t def) {
+  int64_t v =
+      LookupConstant(target_, (kConstantPrefix + name).c_str(), def, err);
+  return v;
+}
 
 int64_t Module::LoadConstant(const char* name, int64_t def) {
   Error err;
-  int64_t v =
-      LookupConstant(target_, (kConstantPrefix + name).c_str(), def, err);
+  int64_t v = LoadConstant(name, err, def);
   if (err.Fail()) {
-    Error::PrintInDebugMode("Failed to load constant %s", name);
+    Error::PrintInDebugMode("Failed to load constant %s, default to %" PRId64,
+                            name, def);
   }
 
   return v;
 }
-
 
 int64_t Module::LoadConstant(const char* name, const char* fallback,
                              int64_t def) {
   Error err;
-  int64_t v =
-      LookupConstant(target_, (kConstantPrefix + name).c_str(), def, err);
-  if (err.Fail())
-    v = LookupConstant(target_, (kConstantPrefix + fallback).c_str(), def, err);
+  int64_t v = LoadConstant(name, err, def);
+  if (err.Fail()) v = LoadConstant(fallback, err, def);
   if (err.Fail()) {
-    Error::PrintInDebugMode("Failed to load constant %s, fallback %s", name,
-                            fallback);
+    Error::PrintInDebugMode(
+        "Failed to load constant %s, fallback %s, default to %" PRId64, name,
+        fallback, def);
   }
 
   return v;
@@ -179,7 +183,16 @@ void HeapObject::Load() {
 
 
 void Map::Load() {
-  kInstanceAttrsOffset = LoadConstant("class_Map__instance_attributes__int");
+  Error err;
+  kInstanceAttrsOffset =
+      LoadConstant("class_Map__instance_attributes__int", err);
+  if (err.Fail()) {
+    kInstanceAttrsOffset = LoadConstant("class_Map__instance_type__uint16_t");
+    kMapTypeMask = 0xffff;
+  } else {
+    kMapTypeMask = 0xff;
+  }
+
   kMaybeConstructorOffset =
       LoadConstant("class_Map__constructor_or_backpointer__Object",
                    "class_Map__constructor__Object");
