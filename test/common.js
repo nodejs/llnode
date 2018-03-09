@@ -155,7 +155,7 @@ function Session(options) {
 
   debug('lldb binary:', lldbBin);
   if (options.scenario) {
-    this.needToKill = true;
+    this.needToKill = true;  // need to send 'kill' when quitting
     // lldb -- node scenario.js
     const args = [
       '--',
@@ -173,7 +173,7 @@ function Session(options) {
     this.lldb.stdin.write(`plugin load "${exports.llnodePath}"\n`);
     this.lldb.stdin.write('run\n');
   } else if (options.core) {
-    this.needToKill = false;
+    this.needToKill = false;  // need to send 'target delete 0' when quitting
     debug('loading core', options.core);
     // lldb node -c core
     this.lldb = spawn(lldbBin, [], {
@@ -262,8 +262,11 @@ Session.prototype.kill = function kill() {
 };
 
 Session.prototype.quit = function quit() {
-  if (this.needToKill)
+  if (this.needToKill) {
     this.send('kill'); // kill the process launched in lldb
+  } else {
+    this.send('target delete 0');  // Delete the loaded core dump
+  }
 
   this.send('quit');
 };
