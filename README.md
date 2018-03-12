@@ -1,4 +1,12 @@
-# llnode
+<p align="left">
+  <a href="https://github.com/nodejs/llnode">
+    <img
+      alt="llnode"
+      src="logo.svg"
+      width="400"
+    />
+  </a>
+</p>
 
 [![npm](https://img.shields.io/npm/v/llnode.svg?style=flat-square)](https://npmjs.org/package/llnode)
 [![Build Status](https://img.shields.io/travis/nodejs/llnode.svg?style=flat-square)](https://travis-ci.org/nodejs/llnode)
@@ -40,7 +48,7 @@ version is LLDB 3.9 and above.
     ```bash
     brew update && brew install --with-lldb --with-toolchain llvm
     ```
-    
+
     and make sure `/usr/local/opt/llvm/bin` gets searched before `/usr/bin/`
     on your `PATH`. llnode will link to the LLDB installation returned by
     `llvm-config` if available.
@@ -273,7 +281,7 @@ TEST_LLDB_BINARY=`which lldb-4.0` npm run test
 
 ### Useful Environment Variables
 
-* `LLNODE_DEBUG=true` to see additional debug info from llnode 
+* `LLNODE_DEBUG=true` to see additional debug info from llnode
 * `TEST_LLNODE_DEBUG=true` to see additional debug info coming from the tests
 * `LLNODE_CORE=/path/to/core/dump LLNODE_NODE_EXE=/path/to/node LLNODE_NO_RANGES=true`
   to use a prepared core dump instead of generating one on-the-fly when running
