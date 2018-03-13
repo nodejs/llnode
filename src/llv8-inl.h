@@ -537,6 +537,28 @@ inline Value Context::Previous(Error& err) {
   return FixedArray::Get<Value>(v8()->context()->kPreviousIndex, err);
 }
 
+inline Value Context::Native(Error& err) {
+  return FixedArray::Get<Value>(v8()->context()->kNativeIndex, err);
+}
+
+inline bool Context::IsNative(Error& err) {
+  Value native = Native(err);
+  if (err.Fail()) {
+    return false;
+  }
+  return native.raw() == raw();
+}
+
+template <class T>
+inline T Context::GetEmbedderData(int64_t index, Error& err) {
+  FixedArray embedder_data = FixedArray(*this).Get<FixedArray>(
+      v8()->context()->kEmbedderDataIndex, err);
+  if (err.Fail()) {
+    return T();
+  }
+  return embedder_data.Get<T>(index, err);
+}
+
 inline Value Context::ContextSlot(int index, Error& err) {
   return FixedArray::Get<Value>(v8()->context()->kMinContextSlots + index, err);
 }

@@ -58,10 +58,13 @@
     "target_name": "plugin",
     "type": "shared_library",
     "sources": [
+      "src/constants.cc",
+      "src/error.cc",
       "src/llnode.cc",
       "src/llv8.cc",
       "src/llv8-constants.cc",
       "src/llscan.cc",
+      "src/node-constants.cc",
     ]
   }],
 }

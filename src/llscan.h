@@ -4,6 +4,8 @@
 #include <lldb/API/LLDB.h>
 #include <map>
 #include <set>
+
+#include "src/error.h"
 #include "src/llnode.h"
 
 namespace llnode {
@@ -78,13 +80,13 @@ class FindReferencesCmd : public CommandBase {
 
     virtual ReferencesVector* GetReferences() { return nullptr; };
 
-    virtual void ScanRefs(v8::JSObject& js_obj, v8::Error& err){};
-    virtual void ScanRefs(v8::String& str, v8::Error& err){};
+    virtual void ScanRefs(v8::JSObject& js_obj, Error& err){};
+    virtual void ScanRefs(v8::String& str, Error& err){};
 
     virtual void PrintRefs(lldb::SBCommandReturnObject& result,
-                           v8::JSObject& js_obj, v8::Error& err) {}
+                           v8::JSObject& js_obj, Error& err) {}
     virtual void PrintRefs(lldb::SBCommandReturnObject& result, v8::String& str,
-                           v8::Error& err) {}
+                           Error& err) {}
 
     static const char* const property_reference_template;
     static const char* const array_reference_template;
@@ -104,13 +106,13 @@ class FindReferencesCmd : public CommandBase {
 
     ReferencesVector* GetReferences() override;
 
-    void ScanRefs(v8::JSObject& js_obj, v8::Error& err) override;
-    void ScanRefs(v8::String& str, v8::Error& err) override;
+    void ScanRefs(v8::JSObject& js_obj, Error& err) override;
+    void ScanRefs(v8::String& str, Error& err) override;
 
     void PrintRefs(lldb::SBCommandReturnObject& result, v8::JSObject& js_obj,
-                   v8::Error& err) override;
+                   Error& err) override;
     void PrintRefs(lldb::SBCommandReturnObject& result, v8::String& str,
-                   v8::Error& err) override;
+                   Error& err) override;
 
    private:
     LLScan* llscan_;
@@ -126,12 +128,12 @@ class FindReferencesCmd : public CommandBase {
 
     ReferencesVector* GetReferences() override;
 
-    void ScanRefs(v8::JSObject& js_obj, v8::Error& err) override;
+    void ScanRefs(v8::JSObject& js_obj, Error& err) override;
 
     // We only scan properties on objects not Strings, use default no-op impl
     // of PrintRefs for Strings.
     void PrintRefs(lldb::SBCommandReturnObject& result, v8::JSObject& js_obj,
-                   v8::Error& err) override;
+                   Error& err) override;
 
    private:
     LLScan* llscan_;
@@ -148,13 +150,13 @@ class FindReferencesCmd : public CommandBase {
 
     ReferencesVector* GetReferences() override;
 
-    void ScanRefs(v8::JSObject& js_obj, v8::Error& err) override;
-    void ScanRefs(v8::String& str, v8::Error& err) override;
+    void ScanRefs(v8::JSObject& js_obj, Error& err) override;
+    void ScanRefs(v8::String& str, Error& err) override;
 
     void PrintRefs(lldb::SBCommandReturnObject& result, v8::JSObject& js_obj,
-                   v8::Error& err) override;
+                   Error& err) override;
     void PrintRefs(lldb::SBCommandReturnObject& result, v8::String& str,
-                   v8::Error& err) override;
+                   Error& err) override;
 
     static const char* const property_reference_template;
     static const char* const array_reference_template;
@@ -264,17 +266,17 @@ class FindJSObjectsVisitor : MemoryVisitor {
         size_t max_properties = 0);
 
     bool Load(v8::Map map, v8::HeapObject heap_object, v8::LLV8* llv8,
-              v8::Error& err);
+              Error& err);
   };
 
-  static bool IsAHistogramType(v8::Map& map, v8::Error& err);
+  static bool IsAHistogramType(v8::Map& map, Error& err);
 
   void InsertOnMapsToInstances(uint64_t word, v8::Map map,
                                FindJSObjectsVisitor::MapCacheEntry map_info,
-                               v8::Error& err);
+                               Error& err);
   void InsertOnDetailedMapsToInstances(
       uint64_t word, v8::Map map, FindJSObjectsVisitor::MapCacheEntry map_info,
-      v8::Error& err);
+      Error& err);
 
   lldb::SBTarget& target_;
   uint32_t address_byte_size_;
