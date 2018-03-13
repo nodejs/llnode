@@ -139,7 +139,7 @@ fs.mkdirSync('tools');
 console.log(`Linking tools/gyp to ${gypDir}/gyp`);
 fs.symlinkSync(`${gypDir}/gyp`, 'tools/gyp');
 
-fs.writeFileSync(`${buildDir}/scripts/llnode.sh`, scriptText(lldbExe));
+fs.writeFileSync(`${buildDir}/llnode.sh`, scriptText(lldbExe));
 
 // Exit with success.
 process.exit(0);
@@ -320,7 +320,7 @@ function scriptText(lldbExe) {
 
   return `#!/bin/sh
 
-LLNODE_SCRIPT=\`node -p "path.resolve('$0')"\`
+LLNODE_SCRIPT=\`node -p "require('path').resolve('$0')"\`
 
 SCRIPT_PATH=\`dirname $LLNODE_SCRIPT\`
 if [ \`basename $SCRIPT_PATH\` = ".bin" ]; then
