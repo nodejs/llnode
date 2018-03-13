@@ -7,7 +7,7 @@ all:
 .PHONY: install-osx
 install-osx:
 	mkdir -p ~/Library/Application\ Support/LLDB/PlugIns/
-	cp -rf ./out/Release/llnode.dylib \
+	cp -rf ./llnode.dylib \
 		~/Library/Application\ Support/LLDB/PlugIns/
 
 .PHONY: uninstall-osx
@@ -17,7 +17,7 @@ uninstall-osx:
 .PHONY: install-linux
 install-linux:
 	mkdir -p /usr/lib/lldb/plugins
-	cp -rf ./out/Release/lib.target/llnode.so /usr/lib/lldb/plugins
+	cp -rf ./llnode.so /usr/lib/lldb/plugins
 
 .PHONY: uninstall-linux
 uninstall-linux:
