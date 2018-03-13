@@ -3,49 +3,29 @@
 
 #include <lldb/API/LLDB.h>
 
+#include "constants.h"
+
 namespace llnode {
 namespace v8 {
-
-class Error;
-
 namespace constants {
 
 // Forward declarations
 class Common;
 
 
-class Module {
+class Module : public Constants {
  public:
-  Module() : loaded_(false) {}
-
-  inline bool is_loaded() const { return loaded_; }
-
   void Assign(lldb::SBTarget target, Common* common = nullptr);
 
+  inline std::string constant_prefix() override { return "v8dbg_"; }
+
  protected:
-  int64_t LoadRawConstant(const char* name, int64_t def = -1);
-  int64_t LoadConstant(const char* name, Error& err, int64_t def = -1);
-  int64_t LoadConstant(const char* name, int64_t def = -1);
-  int64_t LoadConstant(const char* name, const char* fallback,
-                       int64_t def = -1);
-
-  lldb::SBTarget target_;
   Common* common_;
-  bool loaded_;
 };
-
-#define MODULE_DEFAULT_METHODS(NAME) \
-  NAME() {}                          \
-  inline NAME* operator()() {        \
-    if (loaded_) return this;        \
-    loaded_ = true;                  \
-    Load();                          \
-    return this;                     \
-  }
 
 class Common : public Module {
  public:
-  MODULE_DEFAULT_METHODS(Common);
+  CONSTANTS_DEFAULT_METHODS(Common);
 
   int64_t kPointerSize;
   int64_t kVersionMajor;
@@ -61,7 +41,7 @@ class Common : public Module {
 
 class Smi : public Module {
  public:
-  MODULE_DEFAULT_METHODS(Smi);
+  CONSTANTS_DEFAULT_METHODS(Smi);
 
   int64_t kTag;
   int64_t kTagMask;
@@ -73,7 +53,7 @@ class Smi : public Module {
 
 class HeapObject : public Module {
  public:
-  MODULE_DEFAULT_METHODS(HeapObject);
+  CONSTANTS_DEFAULT_METHODS(HeapObject);
 
   int64_t kTag;
   int64_t kTagMask;
@@ -86,7 +66,7 @@ class HeapObject : public Module {
 
 class Map : public Module {
  public:
-  MODULE_DEFAULT_METHODS(Map);
+  CONSTANTS_DEFAULT_METHODS(Map);
 
   int64_t kMapTypeMask;
   int64_t kInstanceAttrsOffset;
@@ -106,7 +86,7 @@ class Map : public Module {
 
 class JSObject : public Module {
  public:
-  MODULE_DEFAULT_METHODS(JSObject);
+  CONSTANTS_DEFAULT_METHODS(JSObject);
 
   int64_t kPropertiesOffset;
   int64_t kElementsOffset;
@@ -118,7 +98,7 @@ class JSObject : public Module {
 
 class HeapNumber : public Module {
  public:
-  MODULE_DEFAULT_METHODS(HeapNumber);
+  CONSTANTS_DEFAULT_METHODS(HeapNumber);
 
   int64_t kValueOffset;
 
@@ -128,7 +108,7 @@ class HeapNumber : public Module {
 
 class JSArray : public Module {
  public:
-  MODULE_DEFAULT_METHODS(JSArray);
+  CONSTANTS_DEFAULT_METHODS(JSArray);
 
   int64_t kLengthOffset;
 
@@ -138,7 +118,7 @@ class JSArray : public Module {
 
 class JSFunction : public Module {
  public:
-  MODULE_DEFAULT_METHODS(JSFunction);
+  CONSTANTS_DEFAULT_METHODS(JSFunction);
 
   int64_t kSharedInfoOffset;
   int64_t kContextOffset;
@@ -149,7 +129,7 @@ class JSFunction : public Module {
 
 class JSRegExp : public Module {
  public:
-  MODULE_DEFAULT_METHODS(JSRegExp);
+  CONSTANTS_DEFAULT_METHODS(JSRegExp);
 
   int64_t kSourceOffset;
 
@@ -159,7 +139,7 @@ class JSRegExp : public Module {
 
 class JSDate : public Module {
  public:
-  MODULE_DEFAULT_METHODS(JSDate);
+  CONSTANTS_DEFAULT_METHODS(JSDate);
 
   int64_t kValueOffset;
 
@@ -169,7 +149,7 @@ class JSDate : public Module {
 
 class SharedInfo : public Module {
  public:
-  MODULE_DEFAULT_METHODS(SharedInfo);
+  CONSTANTS_DEFAULT_METHODS(SharedInfo);
 
   int64_t kNameOffset;
   int64_t kInferredNameOffset;
@@ -190,7 +170,7 @@ class SharedInfo : public Module {
 
 class Code : public Module {
  public:
-  MODULE_DEFAULT_METHODS(Code)
+  CONSTANTS_DEFAULT_METHODS(Code)
 
   int64_t kStartOffset;
   int64_t kSizeOffset;
@@ -201,7 +181,7 @@ class Code : public Module {
 
 class ScopeInfo : public Module {
  public:
-  MODULE_DEFAULT_METHODS(ScopeInfo);
+  CONSTANTS_DEFAULT_METHODS(ScopeInfo);
 
   int64_t kParameterCountOffset;
   int64_t kStackLocalCountOffset;
@@ -214,11 +194,13 @@ class ScopeInfo : public Module {
 
 class Context : public Module {
  public:
-  MODULE_DEFAULT_METHODS(Context);
+  CONSTANTS_DEFAULT_METHODS(Context);
 
   int64_t kClosureIndex;
   int64_t kGlobalObjectIndex;
   int64_t kPreviousIndex;
+  int64_t kNativeIndex;
+  int64_t kEmbedderDataIndex;
   int64_t kMinContextSlots;
 
  protected:
@@ -227,7 +209,7 @@ class Context : public Module {
 
 class Script : public Module {
  public:
-  MODULE_DEFAULT_METHODS(Script);
+  CONSTANTS_DEFAULT_METHODS(Script);
 
   int64_t kNameOffset;
   int64_t kLineOffsetOffset;
@@ -240,7 +222,7 @@ class Script : public Module {
 
 class String : public Module {
  public:
-  MODULE_DEFAULT_METHODS(String);
+  CONSTANTS_DEFAULT_METHODS(String);
 
   int64_t kEncodingMask;
   int64_t kRepresentationMask;
@@ -264,7 +246,7 @@ class String : public Module {
 
 class OneByteString : public Module {
  public:
-  MODULE_DEFAULT_METHODS(OneByteString);
+  CONSTANTS_DEFAULT_METHODS(OneByteString);
 
   int64_t kCharsOffset;
 
@@ -274,7 +256,7 @@ class OneByteString : public Module {
 
 class TwoByteString : public Module {
  public:
-  MODULE_DEFAULT_METHODS(TwoByteString);
+  CONSTANTS_DEFAULT_METHODS(TwoByteString);
 
   int64_t kCharsOffset;
 
@@ -284,7 +266,7 @@ class TwoByteString : public Module {
 
 class ConsString : public Module {
  public:
-  MODULE_DEFAULT_METHODS(ConsString);
+  CONSTANTS_DEFAULT_METHODS(ConsString);
 
   int64_t kFirstOffset;
   int64_t kSecondOffset;
@@ -295,7 +277,7 @@ class ConsString : public Module {
 
 class SlicedString : public Module {
  public:
-  MODULE_DEFAULT_METHODS(SlicedString);
+  CONSTANTS_DEFAULT_METHODS(SlicedString);
 
   int64_t kParentOffset;
   int64_t kOffsetOffset;
@@ -306,7 +288,7 @@ class SlicedString : public Module {
 
 class ThinString : public Module {
  public:
-  MODULE_DEFAULT_METHODS(ThinString);
+  CONSTANTS_DEFAULT_METHODS(ThinString);
 
   int64_t kActualOffset;
 
@@ -316,7 +298,7 @@ class ThinString : public Module {
 
 class FixedArrayBase : public Module {
  public:
-  MODULE_DEFAULT_METHODS(FixedArrayBase);
+  CONSTANTS_DEFAULT_METHODS(FixedArrayBase);
 
   int64_t kLengthOffset;
 
@@ -326,7 +308,7 @@ class FixedArrayBase : public Module {
 
 class FixedArray : public Module {
  public:
-  MODULE_DEFAULT_METHODS(FixedArray);
+  CONSTANTS_DEFAULT_METHODS(FixedArray);
 
   int64_t kDataOffset;
 
@@ -336,7 +318,7 @@ class FixedArray : public Module {
 
 class FixedTypedArrayBase : public Module {
  public:
-  MODULE_DEFAULT_METHODS(FixedTypedArrayBase);
+  CONSTANTS_DEFAULT_METHODS(FixedTypedArrayBase);
 
   int64_t kBasePointerOffset;
   int64_t kExternalPointerOffset;
@@ -347,7 +329,7 @@ class FixedTypedArrayBase : public Module {
 
 class Oddball : public Module {
  public:
-  MODULE_DEFAULT_METHODS(Oddball);
+  CONSTANTS_DEFAULT_METHODS(Oddball);
 
   int64_t kKindOffset;
 
@@ -365,7 +347,7 @@ class Oddball : public Module {
 
 class JSArrayBuffer : public Module {
  public:
-  MODULE_DEFAULT_METHODS(JSArrayBuffer);
+  CONSTANTS_DEFAULT_METHODS(JSArrayBuffer);
 
   int64_t kKindOffset;
 
@@ -382,7 +364,7 @@ class JSArrayBuffer : public Module {
 
 class JSArrayBufferView : public Module {
  public:
-  MODULE_DEFAULT_METHODS(JSArrayBufferView);
+  CONSTANTS_DEFAULT_METHODS(JSArrayBufferView);
 
   int64_t kBufferOffset;
   int64_t kByteOffsetOffset;
@@ -394,7 +376,7 @@ class JSArrayBufferView : public Module {
 
 class DescriptorArray : public Module {
  public:
-  MODULE_DEFAULT_METHODS(DescriptorArray);
+  CONSTANTS_DEFAULT_METHODS(DescriptorArray);
 
   int64_t kDetailsOffset;
   int64_t kKeyOffset;
@@ -438,7 +420,7 @@ class DescriptorArray : public Module {
 
 class NameDictionary : public Module {
  public:
-  MODULE_DEFAULT_METHODS(NameDictionary);
+  CONSTANTS_DEFAULT_METHODS(NameDictionary);
 
   int64_t kKeyOffset;
   int64_t kValueOffset;
@@ -453,7 +435,7 @@ class NameDictionary : public Module {
 
 class Frame : public Module {
  public:
-  MODULE_DEFAULT_METHODS(Frame);
+  CONSTANTS_DEFAULT_METHODS(Frame);
 
   int64_t kContextOffset;
   int64_t kFunctionOffset;
@@ -476,7 +458,7 @@ class Frame : public Module {
 
 class Types : public Module {
  public:
-  MODULE_DEFAULT_METHODS(Types);
+  CONSTANTS_DEFAULT_METHODS(Types);
 
   int64_t kFirstNonstringType;
 
@@ -502,8 +484,6 @@ class Types : public Module {
  protected:
   void Load();
 };
-
-#undef MODULE_DEFAULT_METHODS
 
 }  // namespace constants
 }  // namespace v8

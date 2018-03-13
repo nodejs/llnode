@@ -458,6 +458,10 @@ inline Value Context::Previous(Error& err) {
   return FixedArray::Get<Value>(v8()->context()->kPreviousIndex, err);
 }
 
+inline Value Context::Native(Error& err) {
+  return FixedArray::Get<Value>(v8()->context()->kNativeIndex, err);
+}
+
 inline Value Context::ContextSlot(int index, Error& err) {
   return FixedArray::Get<Value>(v8()->context()->kMinContextSlots + index, err);
 }

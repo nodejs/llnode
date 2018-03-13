@@ -7,6 +7,7 @@
 
 #include <lldb/API/SBExpressionOptions.h>
 
+#include "src/error.h"
 #include "src/llnode.h"
 #include "src/llscan.h"
 #include "src/llv8.h"
@@ -121,7 +122,7 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
     const uint64_t pc = frame.GetPC();
 
     if (!frame.GetSymbol().IsValid()) {
-      v8::Error err;
+      Error err;
       v8::JSFrame v8_frame(llv8_, static_cast<int64_t>(frame.GetFP()));
       std::string res = v8_frame.Inspect(true, err);
       if (err.Success()) {
@@ -197,7 +198,7 @@ bool PrintCmd::DoExecute(SBDebugger d, char** cmd,
   llv8_->Load(target);
 
   v8::Value v8_value(llv8_, value.GetValueAsSigned());
-  v8::Error err;
+  Error err;
   std::string res = v8_value.Inspect(&inspect_options, err);
   if (err.Fail()) {
     result.SetError(err.GetMessage());
@@ -276,7 +277,7 @@ bool ListCmd::DoExecute(SBDebugger d, char** cmd,
   }
 
   // V8 frame
-  v8::Error err;
+  Error err;
   v8::JSFrame v8_frame(llv8_, static_cast<int64_t>(frame.GetFP()));
 
   const static uint32_t kDisplayLines = 4;
@@ -307,7 +308,7 @@ void InitDebugMode() {
     is_debug_mode = true;
   }
 
-  v8::Error::SetDebugMode(is_debug_mode);
+  Error::SetDebugMode(is_debug_mode);
 }
 
 }  // namespace llnode
