@@ -89,12 +89,14 @@ SessionOutput.prototype.timeoutAfter = function timeoutAfter(timeout) {
   this.timeout = timeout;
 };
 
-SessionOutput.prototype.wait = function wait(regexp, callback, allLines) {
+SessionOutput.prototype.wait = function wait(regexp, callback, allLines,
+                                             outputOnTimeout) {
   if (!this._queueWait(() => { this.wait(regexp, callback, allLines); }))
     return;
 
   const self = this;
   const lines = [];
+  outputOnTimeout = outputOnTimeout == undefined ? true : outputOnTimeout;
 
   function onLine(line) {
     lines.push(line);
@@ -117,9 +119,11 @@ SessionOutput.prototype.wait = function wait(regexp, callback, allLines) {
 
     self.removeListener('line', onLine);
     self._unqueueWait();
-    console.error(`${'='.repeat(10)} lldb output ${'='.repeat(10)}`);
-    console.error(lines.join('\n'));
-    console.error('='.repeat(33));
+    if (outputOnTimeout) {
+      console.error(`${'='.repeat(10)} lldb output ${'='.repeat(10)}`);
+      console.error(lines.join('\n'));
+      console.error('='.repeat(33));
+    }
     const message = `Test timeout in ${this.timeout} ` +
       `waiting for ${regexp}`;
     callback(new Error(message));
@@ -193,6 +197,7 @@ function Session(options) {
 
   // Map these methods to stdout for compatibility with legacy tests.
   this.wait = SessionOutput.prototype.wait.bind(this.stdout);
+  this.waitError = SessionOutput.prototype.wait.bind(this.stderr);
   this.waitBreak = SessionOutput.prototype.waitBreak.bind(this.stdout);
   this.linesUntil = SessionOutput.prototype.linesUntil.bind(this.stdout);
   this.timeoutAfter = SessionOutput.prototype.timeoutAfter.bind(this.stdout);
@@ -228,7 +233,7 @@ exports.saveCore = function saveCore(options, cb) {
       cb(null);
     } else {
       const ranges = core + '.ranges';
-      exports.generateRanges(core, ranges, cb); 
+      exports.generateRanges(core, ranges, cb);
     }
   });
 }
