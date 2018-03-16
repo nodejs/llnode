@@ -19,7 +19,8 @@ void Environment::Load() {
   kHandleWrapQueueOffset = LoadConstant(
       "offset_Environment__handle_wrap_queue___Environment_HandleWrapQueue");
   kEnvContextEmbedderDataIndex =
-      LoadConstant("const_Environment__kContextEmbedderDataIndex__int");
+      LoadConstant("const_Environment__kContextEmbedderDataIndex__int",
+                   "const_ContextEmbedderIndex__kEnvironment__int");
 
   Error err;
   kCurrentEnvironment = LoadCurrentEnvironment(err);

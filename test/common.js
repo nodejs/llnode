@@ -193,6 +193,7 @@ function Session(options) {
 
   // Map these methods to stdout for compatibility with legacy tests.
   this.wait = SessionOutput.prototype.wait.bind(this.stdout);
+  this.waitError = SessionOutput.prototype.wait.bind(this.stderr);
   this.waitBreak = SessionOutput.prototype.waitBreak.bind(this.stdout);
   this.linesUntil = SessionOutput.prototype.linesUntil.bind(this.stdout);
   this.timeoutAfter = SessionOutput.prototype.timeoutAfter.bind(this.stdout);
@@ -228,7 +229,7 @@ exports.saveCore = function saveCore(options, cb) {
       cb(null);
     } else {
       const ranges = core + '.ranges';
-      exports.generateRanges(core, ranges, cb); 
+      exports.generateRanges(core, ranges, cb);
     }
   });
 }
