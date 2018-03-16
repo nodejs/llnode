@@ -16,6 +16,7 @@
       "<(lldb_include_dir)",
     ],
 
+
     "cflags" : [ "-std=c++11" ],
 
     "conditions": [
@@ -64,6 +65,7 @@
       "src/llv8.cc",
       "src/llv8-constants.cc",
       "src/llscan.cc",
+      "src/node.cc",
       "src/node-constants.cc",
     ]
   }],

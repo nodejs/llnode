@@ -4,6 +4,8 @@
 #include <string.h>
 
 #include <cinttypes>
+#include <sstream>
+#include <string>
 
 #include <lldb/API/SBExpressionOptions.h>
 
@@ -11,6 +13,7 @@
 #include "src/llnode.h"
 #include "src/llscan.h"
 #include "src/llv8.h"
+#include "src/node-inl.h"
 
 namespace llnode {
 
@@ -20,6 +23,7 @@ using lldb::SBDebugger;
 using lldb::SBError;
 using lldb::SBExpressionOptions;
 using lldb::SBFrame;
+using lldb::SBProcess;
 using lldb::SBStream;
 using lldb::SBSymbol;
 using lldb::SBTarget;
@@ -300,6 +304,112 @@ bool ListCmd::DoExecute(SBDebugger d, char** cmd,
   return true;
 }
 
+bool WorkqueueCmd::DoExecute(SBDebugger d, char** cmd,
+                             SBCommandReturnObject& result) {
+  SBTarget target = d.GetSelectedTarget();
+  SBProcess process = target.GetProcess();
+  SBThread thread = process.GetSelectedThread();
+  std::string result_message;
+  Error err;
+
+  llv8_->Load(target);
+  node_->Load(target);
+
+  if (!thread.IsValid()) {
+    result.SetError("No valid process, please start something\n");
+    return false;
+  }
+
+  node::Environment env = node::Environment::GetCurrent(node_, err);
+  if (err.Fail()) {
+    result.SetError(err.GetMessage());
+    return false;
+  }
+
+  result_message = GetResultMessage(&env, err);
+
+  if (err.Fail()) {
+    result.SetError(err.GetMessage());
+    return false;
+  }
+
+  result.Printf("%s", result_message.c_str());
+  return true;
+}
+
+std::string GetActiveHandlesCmd::GetResultMessage(node::Environment* env,
+                                                  Error& err) {
+  int active_handles = 0;
+  v8::Value::InspectOptions inspect_options;
+  inspect_options.detailed = true;
+  std::ostringstream result_message;
+
+  for (auto w : env->handle_wrap_queue()) {
+    addr_t persistent_addr = w.persistent_addr(err);
+    if (err.Fail()) {
+      break;
+    }
+    if (persistent_addr == 0) {
+      continue;
+    }
+
+    addr_t v8_object_addr = w.v8_object_addr(err);
+    if (err.Fail()) {
+      break;
+    }
+    v8::JSObject v8_object(llv8(), v8_object_addr);
+    std::string res = v8_object.Inspect(&inspect_options, err);
+    if (err.Fail()) {
+      Error::PrintInDebugMode("Failed to load object at address %" PRIx64,
+                              v8_object_addr);
+      break;
+    }
+
+    active_handles++;
+    result_message << res.c_str() << std::endl;
+  }
+
+  result_message << "Total: " << active_handles << std::endl;
+  return result_message.str();
+}
+
+
+std::string GetActiveRequestsCmd::GetResultMessage(node::Environment* env,
+                                                   Error& err) {
+  int active_handles = 0;
+  v8::Value::InspectOptions inspect_options;
+  inspect_options.detailed = true;
+  std::ostringstream result_message;
+
+  for (auto w : env->req_wrap_queue()) {
+    addr_t persistent_addr = w.persistent_addr(err);
+    if (err.Fail()) {
+      break;
+    }
+    if (persistent_addr == 0) {
+      continue;
+    }
+
+    addr_t v8_object_addr = w.v8_object_addr(err);
+    if (err.Fail()) {
+      break;
+    }
+    v8::JSObject v8_object(llv8(), v8_object_addr);
+    std::string res = v8_object.Inspect(&inspect_options, err);
+    if (err.Fail()) {
+      Error::PrintInDebugMode("Failed to load object at address %" PRIx64,
+                              v8_object_addr);
+      break;
+    }
+
+    active_handles++;
+    result_message << res.c_str() << std::endl;
+  }
+
+  result_message << "Total: " << active_handles << std::endl;
+  return result_message.str();
+}
+
 
 void InitDebugMode() {
   bool is_debug_mode = false;
@@ -319,6 +429,7 @@ bool PluginInitialize(SBDebugger d) {
   llnode::InitDebugMode();
 
   static llnode::v8::LLV8 llv8;
+  static llnode::node::Node node(&llv8);
   static llnode::LLScan llscan = llnode::LLScan(&llv8);
 
   SBCommandInterpreter interpreter = d.GetCommandInterpreter();
@@ -403,6 +514,16 @@ bool PluginInitialize(SBDebugger d) {
       " * -s, --string string  - all properties that refer to the specified "
       "JavaScript string value\n"
       "\n");
+
+  v8.AddCommand("getactivehandles",
+                new llnode::GetActiveHandlesCmd(&llv8, &node),
+                "Print all pending handles in the queue. Equivalent to running "
+                "process._getActiveHandles() on the living process.\n");
+
+  v8.AddCommand(
+      "getactiverequests", new llnode::GetActiveRequestsCmd(&llv8, &node),
+      "Print all pending requests in the queue. Equivalent to "
+      "running process._getActiveRequests() on the living process.\n");
 
   return true;
 }
