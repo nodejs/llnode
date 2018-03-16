@@ -217,7 +217,10 @@ const hashMapTests = {
                     'backingStore=0x[0-9a-f]+, byteOffset=\\d+, ' +
                     'byteLength=6>'),
     desc: '.uint8-array JSArrayBufferView property',
-    optional: 'might be neutered',
+    optional: {
+      re: /.uint8-array=0x[0-9a-f]+:<ArrayBufferView \[neutered\]>/,
+      reason: 'can be neutered'
+    },
     validators: [(t, sess, addresses, name, cb) => {
       const address = addresses[name];
       sess.send(`v8 inspect ${address}`);
@@ -493,8 +496,8 @@ function collectMembers(t, lines, tests, parent) {
       t.pass(`${parent}${test.desc} should exist `);
       addresses[name] = match[1];
     } else {
-      if (test.optional) {
-        t.skip(`${test.desc}: ${test.optional}`);
+      if (test.optional && test.optional.re.test(lines)) {
+        t.skip(`${parent}${test.desc} ${test.optional.reason}`);
       } else {
         t.fail(`${parent}${test.desc} should exist `);
       }
