@@ -1280,8 +1280,7 @@ bool LLScan::ScanHeapForObjects(lldb::SBTarget target,
   return true;
 }
 
-std::string
-FindJSObjectsVisitor::MapCacheEntry::GetTypeNameWithProperties(
+std::string FindJSObjectsVisitor::MapCacheEntry::GetTypeNameWithProperties(
     ShowArrayLength show_array_length, size_t max_properties) {
   std::string type_name_with_properties(type_name);
 
@@ -1306,8 +1305,7 @@ FindJSObjectsVisitor::MapCacheEntry::GetTypeNameWithProperties(
 
 bool FindJSObjectsVisitor::MapCacheEntry::Load(v8::Map map,
                                                v8::HeapObject heap_object,
-                                               v8::LLV8* llv8,
-                                               v8::Error& err) {
+                                               v8::LLV8* llv8, v8::Error& err) {
   // Check type first
   is_histogram = FindJSObjectsVisitor::IsAHistogramType(map, err);
 

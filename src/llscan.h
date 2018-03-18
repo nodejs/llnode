@@ -257,8 +257,8 @@ class FindJSObjectsVisitor : MemoryVisitor {
         ShowArrayLength show_array_length = kShowArrayLength,
         size_t max_properties = 0);
 
-    bool Load(v8::Map map, v8::HeapObject heap_object,
-              v8::LLV8* llv8, v8::Error& err);
+    bool Load(v8::Map map, v8::HeapObject heap_object, v8::LLV8* llv8,
+              v8::Error& err);
   };
 
   static bool IsAHistogramType(v8::Map& map, v8::Error& err);

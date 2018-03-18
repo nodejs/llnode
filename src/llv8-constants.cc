@@ -32,8 +32,8 @@ void Module::Assign(SBTarget target, Common* common) {
 
 
 template <typename T>
-T ReadSymbolFromTarget(SBTarget& target, SBAddress& start,
-                       const char* name, Error& err) {
+T ReadSymbolFromTarget(SBTarget& target, SBAddress& start, const char* name,
+                       Error& err) {
   SBError sberr;
   T res = 0;
   target.ReadMemory(start, &res, sizeof(T), sberr);
