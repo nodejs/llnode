@@ -13,8 +13,10 @@ function main() {
   const osName = os.type();
   const installation = configureInstallation(osName, buildDir);
   linkHeadersDir(installation.prefix);
-  const gypDir = getGypDir(buildDir);
-  linkGyp(gypDir);
+  const nodeGypDir = getNodeGyp(buildDir);
+  if (nodeGypDir !== undefined) {  // otherwise use tools/gyp
+    linkNodeGyp(nodeGypDir);
+  }
   writeLlnodeScript(buildDir, installation.executable, osName);
   // Exit with success.
   process.exit(0);
@@ -94,10 +96,15 @@ function linkHeadersDir(lldbInstallDir) {
 }
 
 /**
- * Get the path to the GYP installation
- * @param {string} buildDir  Path of the project directory
+ * Get the path to node-gyp installation. Return undefined if tools/gyp
+ * exists (possibly already checked out from the gyp source).
+ * @param {string|undefined} buildDir  Path of the project directory
  */
-function getGypDir(buildDir) {
+function getNodeGyp(buildDir) {
+  if (fs.existsSync(path.join(buildDir, 'tools', 'gyp'))) {
+    console.log('Found tools/gyp, skip creating the symlink.')
+    return undefined;
+  }
   // npm explore has a different root folder when using -g
   // So we are tacking on the extra the additional subfolders
   let gypSubDir = 'node-gyp';
@@ -125,13 +132,15 @@ function getGypDir(buildDir) {
 
 /**
  * Link tools/gyp to the GYP installation
- * @param {string} gypDir path to the GYP installation
+ * @param {string} nodeGypDir path to node-gyp
  */
-function linkGyp(gypDir) {
-  child_process.execSync('rm -rf tools');
-  fs.mkdirSync('tools');
-  console.log(`Linking tools/gyp to ${gypDir}/gyp`);
-  fs.symlinkSync(`${gypDir}/gyp`, 'tools/gyp');
+function linkNodeGyp(nodeGypDir) {
+  if (nodeGypDir !== undefined) {
+    child_process.execSync('rm -rf tools');
+    fs.mkdirSync('tools');
+    console.log(`Linking tools/gyp to ${nodeGypDir}/gyp`);
+    fs.symlinkSync(`${nodeGypDir}/gyp`, 'tools/gyp');
+  }
 }
 
 /**
