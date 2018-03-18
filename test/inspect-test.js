@@ -4,318 +4,399 @@ const tape = require('tape');
 
 const common = require('./common');
 
-tape('v8 inspect', (t) => {
-  t.timeoutAfter(15000);
+// <Object: Object elements {
+const hashMapTests = {
+  // [0]=0x000039e38cc82201:<null>,
+  'null': {
+    re: /\[0\]=(0x[0-9a-f]+):<null>/,
+    desc: '[0] null element'
+  },
+  // [4]=0x000039e38cc822d1:<undefined>,
+  'undefined': {
+    re: /\[4\]=(0x[0-9a-f]+):<undefined>/,
+    desc: '[4] undefined element'
+  },
+  // [23]=0x000003df9cbe83d9:<JSRegExp source=/regexp/>,
+  'regexp': {
+    re:/\[23\]=(0x[0-9a-f]+):<(?:Object: RegExp|JSRegExp source=\/regexp\/)>/,
+    desc: '[23] RegExp element',
+    validator(t, sess, addresses, name, cb) {
+      const address = addresses[name];
+      sess.send(`v8 inspect ${address}`);
 
-  const sess = common.Session.create('inspect-scenario.js');
+      sess.linesUntil(/}>/, (err, lines) => {
+        if (err) return cb(err);
+        lines = lines.join('\n');
+        t.ok(/source=\/regexp\//.test(lines) ||
+            /\.source=[^\n]*<String: "regexp">/.test(lines),
+            'hashmap[23] should have the correct regexp.source');
+        cb(null);
+      });
+    }
+  },
+  // [25]=0x000036eccf7c0b79:<function: c.hashmap.(anonymous function) at /foo/bar.js:63:19>}
+  'arrow': {
+    re: /\[25\]=(0x[0-9a-f]+):<(function: c.hashmap).*>/,
+    desc: '[25] Arrow Function element',
+    validator: (t, sess, addresses, name, cb) => {
+      const address = addresses[name];
+      sess.send(`v8 inspect -s ${address}`);
 
-  sess.waitBreak((err) => {
-    t.error(err);
-    sess.send('v8 bt');
-  });
+      sess.linesUntil(/^>/, (err, lines) => {
+        if (err) return cb(err);
+        lines = lines.join('\n');
+        // Include 'source:' and '>' to act as boundaries. (Avoid
+        // passing if the whole file it displayed instead of just
+        // the function we want.)
+        const arrowSource = 'source:\n' +
+            'function c.hashmap.(anonymous function)(a,b)=>{a+b}\n' +
+            '>';
+    
+        t.ok(lines.includes(arrowSource),
+            'hashmap[25] should have the correct function source');
+        cb(null);
+      });
+    }
+  },
+  // properties {
+  // .some-key=<Smi: 42>,
+  'smi': {
+    re: /.some-key=<Smi: 42>/,
+    desc: '.some-key property'
+  },
+  // .other-key=0x000036eccf7bd9c1:<String: "ohai">,
+  'string': {
+    re: /.other-key=[^\n]*<String: "ohai">/,
+    desc: '.other-key property'
+  },
+  // .cons-string=0x000003df9cbe7579:<String: "this could be a ...">,
+  'cons-string': {
+    re: /.cons-string=(0x[0-9a-f]+):<String: "this could be a ...">/,
+    desc: '.cons-string ConsString property',
+    validators: [(t, sess, addresses, name, cb) => {
+      const address = addresses[name];
+      sess.send(`v8 inspect -F ${address}`);
 
-  let that = null;
-  let fn = null;
+      sess.linesUntil(/">/, (err, lines) => {
+        if (err) return cb(err);
+        lines = lines.join('\n');
+        const expected = 'this could be a bit smaller, but v8 wants big str.' +
+                         'this could be a bit smaller, but v8 wants big str.';
+        t.ok(lines.includes(expected),
+            'hashmap.cons-string should have the right content');
+        cb(null);
+      });
+    }, (t, sess, addresses, name, cb) => {
+      const address = addresses[name];
+      sess.send(`v8 inspect --string-length 20 ${address}`);
 
+      sess.linesUntil(/">/, (err, lines) => {
+        if (err) return cb(err);
+        lines = lines.join('\n');
+        const expected = 'this could be a bit ...';
+        t.ok(lines.includes(expected),
+            '--string-length should truncate the string');
+        cb(null);
+      });
+    }]
+  },
+  // .internalized-string=0x000036eccf7bda89:<String: "foobar">,
+  'internalized-string': {
+    re: /.internalized-string=(0x[0-9a-f]+):<String: "foobar">/,
+    desc: '.internalized-string Internalized String property'
+  },
+  // .thin-string=0x000003df9cbe7621:<String: "foobar">,
+  'thin-string': {
+    re: /.thin-string=(0x[0-9a-f]+):<String: "foobar">/,
+    desc: '.thin-string ThinString property',
+    validator(t, sess, addresses, name, cb) {
+      const address = addresses[name];
+      sess.send(`v8 inspect ${address}`);
+
+      sess.linesUntil(/">/, (err, lines) => {
+        if (err) return cb(err);
+        lines = lines.join('\n');
+        t.ok(
+            /0x[0-9a-f]+:<String: "foobar">/.test(lines),
+            'hashmap.thin-string should have the right content');
+        cb(null);
+      });
+    }
+  },
+  // .externalized-string=0x000036eccf7bdb41:<String: "(external)">,
+  'externalized-string': {
+    re: /.externalized-string=(0x[0-9a-f]+):<String: "\(external\)">/,
+    desc: '.externalized-string ExternalString property'
+  },
+  // .sliced-externalized-string=0x000003df9cbe77e9:<String: "(external)">,
+  'sliced-externalized-string': {
+    re: /.sliced-externalized-string=(0x[0-9a-f]+):<String: "\(external\)">/,
+    desc: '.sliced-externalized-string Sliced ExternalString property'
+  },
+  // .array=0x000003df9cbe7919:<Array: length=6>,
+  'array': {
+    re: /.array=(0x[0-9a-f]+):<Array: length=6>/,
+    desc: '.array JSArray property',
+    validator(t, sess, addresses, name, cb) {
+      const address = addresses[name];
+      sess.send(`v8 inspect ${address}`);
+
+      sess.linesUntil(/}>/, (err, lines) => {
+        if (err) return cb(err);
+        lines = lines.join('\n');
+        t.ok(lines.includes('<Array: length=6'),
+            'length of hashmap.array should be 6');
+        cb(null);
+      });
+    }
+  },
+  // .long-array=0x000003df9cbe7aa9:<Array: length=20>,
+  'long-array': {
+    re: /.long-array=(0x[0-9a-f]+):<Array: length=20>/,
+    desc: '.long-array JSArray property',
+    validator(t, sess, addresses, name, cb) {
+      const address = addresses[name];
+      sess.send(`v8 inspect --array-length 10 ${address}`);
+
+      sess.linesUntil(/}>/, (err, lines) => {
+        if (err) return cb(err);
+        lines = lines.join('\n');
+        t.ok(lines.includes('<Array: length=20'),
+            'length of hashmap.long-array should be 6');
+        t.ok(/\[9\]=<Smi: 5>}>$/.test(lines),
+            'hashmap.long-array should have the right content');
+        cb(null);
+      });
+    }
+  },
+  // .array-buffer=0x000003df9cbe7df1:<ArrayBuffer: backingStore=0x00000000022509b0, byteLength=5>,
+  'array-buffer': {
+    re: new RegExp('.array-buffer=(0x[0-9a-f]+):' +
+                    '<ArrayBuffer: backingStore=0x[0-9a-f]+, byteLength=5>'),
+    desc: '.array-buffer JSArrayBuffer property',
+    validators: [(t, sess, addresses, name, cb) => {
+      const address = addresses[name];
+      sess.send(`v8 inspect ${address}`);
+
+      sess.linesUntil(/\]>/, (err, lines) => {
+        if (err) return cb(err);
+        lines = lines.join('\n');
+        const re = new RegExp(
+            '0x[0-9a-f]+:' +
+            '<ArrayBuffer: backingStore=0x[0-9a-f]+, byteLength=5: \\[\n' +
+            '  01, 02, 03, 04, 05\n' +
+            ']>');
+        t.ok(re.test(lines),
+            'hashmap.array-buffer should have the right content');
+        cb(null);
+      });
+    }, (t, sess, addresses, name, cb) => {
+      const address = addresses[name];
+      sess.send(`v8 inspect --array-length 1 ${address}`);
+
+      sess.linesUntil(/\]>/, (err, lines) => {
+        if (err) return cb(err);
+        lines = lines.join('\n');
+        const re = new RegExp(
+            '0x[0-9a-f]+:' +
+            '<ArrayBuffer: backingStore=0x[0-9a-f]+, byteLength=5: \\[\n' +
+            '  01 ...\n' +
+            ']>');
+        t.ok(re.test(lines),
+            'hashmap.array-buffer should have the right content with ' +
+            '--array-length 1');
+        cb(null);
+      });
+    }]
+  },
+  // .uint8-array=0x0000393071133e59:<ArrayBufferView: backingStore=0x000000000195b230, byteOffset=0, byteLength=6>,
+  // OR
+  // .uint8-array=0x000003df9cbe7eb9:<ArrayBufferView [neutered]>,
+  'uint8-array': {
+    re: new RegExp('.uint8-array=(0x[0-9a-f]+):<ArrayBufferView: ' +
+                    'backingStore=0x[0-9a-f]+, byteOffset=\\d+, ' +
+                    'byteLength=6>'),
+    desc: '.uint8-array JSArrayBufferView property',
+    optional: {
+      re: /.uint8-array=0x[0-9a-f]+:<ArrayBufferView \[neutered\]>/,
+      reason: 'can be neutered'
+    },
+    validators: [(t, sess, addresses, name, cb) => {
+      const address = addresses[name];
+      sess.send(`v8 inspect ${address}`);
+
+      sess.linesUntil(/\]>/, (err, lines) => {
+        if (err) return cb(err);
+        lines = lines.join('\n');
+        const re = new RegExp(
+            '0x[0-9a-f]+:' +
+            '<ArrayBufferView: backingStore=0x[0-9a-f]+, byteOffset=\\d+, ' +
+            'byteLength=6: \\[\n' +
+            '  01, 40, 60, 80, f0, ff\n' +
+            ']>');
+        t.ok(re.test(lines),
+            'hashmap.uint8-array should have the right content');
+        cb(null);
+      });
+    }, (t, sess, addresses, name, cb) => {
+      const address = addresses[name];
+      sess.send(`v8 inspect --array-length 1 ${address}`);
+
+      sess.linesUntil(/\]>/, (err, lines) => {
+        if (err) return cb(err);
+        lines = lines.join('\n');
+        const re = new RegExp(
+            '0x[0-9a-f]+:' +
+            '<ArrayBufferView: backingStore=0x[0-9a-f]+, byteOffset=\\d+, ' +
+            'byteLength=6: \\[\n' +
+            '  01 ...\n' +
+            ']>');
+        t.ok(re.test(lines),
+            'hashmap.uint8-array should have the right content with ' +
+            '--array-length 1');
+        cb(null);
+      });
+    }]
+  },
+  // .buffer=0x000003df9cbe8231:<ArrayBufferView: backingStore=0x0000000002238570, byteOffset=2048, byteLength=6>
+  'buffer': {
+    re: new RegExp('.buffer=(0x[0-9a-f]+):<ArrayBufferView: ' +
+                    'backingStore=0x[0-9a-f]+, byteOffset=\\d+, ' +
+                    'byteLength=6>'),
+    desc: '.buffer JSArrayBufferView property',
+    validators: [(t, sess, addresses, name, cb) => {
+      const address = addresses[name];
+      sess.send(`v8 inspect ${address}`);
+
+      sess.linesUntil(/\]>/, (err, lines) => {
+        if (err) return cb(err);
+        lines = lines.join('\n');
+        const re = new RegExp(
+            '0x[0-9a-f]+:' +
+            '<ArrayBufferView: backingStore=0x[0-9a-f]+, byteOffset=\\d+, ' +
+            'byteLength=6: \\[\n' +
+            '  ff, f0, 80, 0f, 01, 00\n' +
+            ']>');
+        t.ok(re.test(lines),
+            'hashmap.uint8-array should have the right content');
+        cb(null);
+      });
+    }, (t, sess, addresses, name, cb) => {
+      const address = addresses[name];
+      sess.send(`v8 inspect --array-length 1 ${address}`);
+
+      sess.linesUntil(/\]>/, (err, lines) => {
+        if (err) return cb(err);
+        lines = lines.join('\n');
+        const re = new RegExp(
+            '0x[0-9a-f]+:' +
+            '<ArrayBufferView: backingStore=0x[0-9a-f]+, byteOffset=\\d+, ' +
+            'byteLength=6: \\[\n' +
+            '  ff ...\n' +
+            ']>');
+        t.ok(re.test(lines),
+            'hashmap.buffer should have the right content with ' +
+            '--array-length 1');
+        cb(null);
+      });
+    }]
+  }
+};
+
+const contextTests = {
+  'previous': {
+    re: /\(previous\)/,
+    desc: '.(previous)'
+  },
+  'closure': {
+    re: /\(closure\)=(0x[0-9a-f]+)[^\n]+function: closure/i,
+    desc: '.(closure)',
+    validator(t, sess, addresses, name, cb) {
+      const address = addresses[name];
+      sess.send(`v8 inspect ${address}`);
+      sess.linesUntil(/}>/, (err, lines) => {
+        if (err) return cb(err);
+        lines = lines.join('\n');
+        t.ok(/outerVar[^\n]+"outer variable"/.test(lines),
+            'method[[context]].closure.outerVar should exist');
+        cb(null);
+      });
+    }
+  },
+  'scoped-var': {
+    re: /scopedVar[^\n]+"scoped value"/i,
+    desc: '.scopedVar',
+  },
+  'scoped-api': {
+    re: /scopedAPI=(0x[0-9a-f]+)[^\n]+Zlib/i,
+    desc: '.scopedAPI',
+    validator(t, sess, addresses, name, cb) {
+      const address = addresses[name];
+      sess.send(`v8 inspect ${address}`);
+      sess.linesUntil(/}>/, (err, lines) => {
+        if (err) return cb(err);
+        lines = lines.join('\n');
+        t.ok(/internal fields/.test(lines),
+            'method[[context]].closure.scopedAPI should have internal fields');
+        cb(null);
+      });
+    }
+  },
+  'scoped-array': {
+    re: /scopedArray=(0x[0-9a-f]+):<Array: length=2>/i,
+    desc: '.scopedArray',
+    validator(t, sess, addresses, name, cb) {
+      const address = addresses[name];
+      sess.send(`v8 inspect ${address}`);
+      sess.linesUntil(/}>/, (err, lines) => {
+        if (err) return cb(err);
+        lines = lines.join('\n');
+        t.ok(/\[0\]=<Smi: 0>/.test(lines),
+            'method[[context]].scopedArray[0] should be `<Smi: 0>`');
+        t.ok(/\[1\]=(0x[0-9a-f]+)[^\n]+Zlib>}>/i.test(lines),
+            'method[[context]].scopedArray[1] should be a Zlib');
+        cb(null);
+      });
+    }
+  }
+}
+
+function verifyBacktrace(t, sess) {
+  sess.send('v8 bt');
   sess.wait(/inspect-scenario.js/, (err, line) => {
-    t.error(err);
+    if (err) {
+      return teardown(t, sess, err);
+    }
     let match = line.match(/method\(this=(0x[0-9a-f]+)[^\n]+fn=(0x[0-9a-f]+)/i);
-    t.ok(match, 'method should have `this`');
-
-    that = match[1];
-    fn = match[2];
-
-    sess.send(`v8 inspect ${that}`);
+    t.ok(match, 'method should have `this` and `fn`');
+    if (!match) {
+      return teardown(t, sess);
+    }
+    verifyMethod(t, sess, match[1], match[2]);
   });
+}
 
-  let hashmap = null;
+function verifyMethod(t, sess, that, fn) {
+  const major = parseInt(process.version.match(/v(\d+)\./)[1]);
+  // No Context debugging for older node.js
+  // FIXME: this may not work if it's testing a prepared core generated by
+  // another version of Node.js
+  if (major >= 5) {
+    verifyMethod(t, sess, that, fn);
+  } else {
+    verifyMethodSource(t, sess, that, fn);
+  }
+}
 
-  sess.wait(/Class/, (err, line) => {
-    t.error(err);
-    t.notEqual(line.indexOf(that), -1, 'addr of `Class` should match');
-  });
-
-  sess.linesUntil(/}>/, (err, lines) => {
-    t.error(err);
-    lines = lines.join('\n');
-    t.ok(/x=<Smi: 1>/.test(lines), '.x smi property');
-    t.ok(/y=123.456/.test(lines), '.y heap number property');
-
-    const match = lines.match(/hashmap=(0x[0-9a-f]+):<Object: Object>/i);
-    t.ok(match, '.hashmap object property');
-
-    hashmap = match[1];
-
-    sess.send(`v8 inspect ${hashmap}`);
-  });
-
-  let regexp = null;
-  let cons = null;
-  let thin = null;
-  let ext = null;
-  let extSliced = null;
-  let arrowFunc = null;
-  let array = null;
-  let longArray = null;
-  let arrayBuffer = null;
-  let uint8Array = null;
-  let buffer = null;
-
-  sess.wait(/Object/, (err, line) => {
-    t.error(err);
-    t.notEqual(line.indexOf(hashmap), -1, 'addr of `Object` should match');
-  });
-
-  sess.linesUntil(/}>/, (err, lines) => {
-    t.error(err);
-    lines = lines.join('\n');
-    t.ok(/\[0\]=[^\n]*null/.test(lines), '[0] null element');
-    t.ok(/\[4\]=[^\n]*undefined/.test(lines), '[4] undefined element');
-
-    const reMatch = lines.match(
-        /\[23\]=(0x[0-9a-f]+):<(?:Object: RegExp|JSRegExp source=\/regexp\/)>/);
-    t.ok(reMatch, '[23] RegExp element');
-    regexp = reMatch[1];
-
-    const arrowMatch = lines.match(
-    /\[25\]=(0x[0-9a-f]+):<(function: c.hashmap).*>/);
-    t.ok(arrowMatch, '[25] Arrow Function element');
-    arrowFunc = arrowMatch[1];
-
-    t.ok(/.some-key=<Smi: 42>/.test(lines), '.some-key property');
-    t.ok(/.other-key=[^\n]*<String: "ohai">/.test(lines),
-         '.other-key property');
-
-    const arrayMatch =
-        lines.match(/.array=(0x[0-9a-f]+):<Array: length=6>/);
-    t.ok(arrayMatch, '.array JSArray property');
-    array = arrayMatch[1];
-
-    const longArrayMatch =
-        lines.match(/.long-array=(0x[0-9a-f]+):<Array: length=20>/);
-    t.ok(longArrayMatch, '.array JSArray property');
-    longArray = longArrayMatch[1];
-
-    const arrayBufferRe = new RegExp('.array-buffer=(0x[0-9a-f]+):' +
-      '<ArrayBuffer: backingStore=0x[0-9a-f]+, byteLength=5>');
-    const arrayBufferMatch = lines.match(arrayBufferRe);
-    t.ok(arrayBufferMatch, '.array-buffer JSArrayBuffer property');
-    arrayBuffer = arrayBufferMatch[1];
-
-    const uint8ArrayRe = new RegExp('.uint8-array=(0x[0-9a-f]+):' +
-      '<ArrayBufferView: backingStore=0x[0-9a-f]+, byteOffset=\\d+, ' +
-      'byteLength=6>');
-    const uint8ArrayMatch = lines.match(uint8ArrayRe);
-    t.ok(uint8ArrayMatch, '.uint8-array JSArrayBufferView property');
-    uint8Array = uint8ArrayMatch[1];
-
-    const bufferRe = new RegExp('.buffer=(0x[0-9a-f]+):' +
-      '<ArrayBufferView: backingStore=0x[0-9a-f]+, byteOffset=\\d+, ' +
-      'byteLength=6>');
-    const bufferMatch = lines.match(bufferRe);
-    t.ok(bufferMatch, '.buffer JSArrayBufferView property');
-    buffer = bufferMatch[1];
-
-    const consMatch = lines.match(
-        /.cons-string=(0x[0-9a-f]+):<String: "this could be a ...">/);
-    t.ok(consMatch, '.cons-string ConsString property');
-    cons = consMatch[1];
-
-    const thinMatch = lines.match(
-        /.thin-string=(0x[0-9a-f]+):<String: "foobar">/);
-    t.ok(thinMatch, '.thin-string ThinString property');
-    thin = thinMatch[1];
-
-    const extMatch = lines.match(
-        /.externalized-string=(0x[0-9a-f]+):<String: "\(external\)">/);
-    t.ok(extMatch, '.externalized-string ExternalString property');
-    ext = extMatch[1];
-
-    const extSlicedMatch = lines.match(
-        /.sliced-externalized-string=(0x[0-9a-f]+):<String: "\(external\)">/);
-    t.ok(extSlicedMatch,
-         '.sliced-externalized-string Sliced ExternalString property');
-    extSliced = extSlicedMatch[1];
-
-    sess.send(`v8 inspect ${regexp}`);
-    sess.send(`v8 inspect -F ${cons}`);
-  });
-
-  sess.linesUntil(/}>/, (err, lines) => {
-    t.error(err);
-    lines = lines.join('\n');
-    t.ok(/source=\/regexp\//.test(lines) ||
-             /\.source=[^\n]*<String: "regexp">/.test(lines),
-         'regexp.source');
-  });
-
-  sess.linesUntil(/">/, (err, lines) => {
-    t.error(err);
-    lines = lines.join('\n');
-    t.notEqual(
-        lines.indexOf('this could be a bit smaller, but v8 wants big str.' +
-                      'this could be a bit smaller, but v8 wants big str.'),
-        -1,
-        'cons string content');
-
-    sess.send(`v8 inspect --string-length 20 ${cons}`);
-  });
-
-  sess.linesUntil(/">/, (err, lines) => {
-    t.error(err);
-    lines = lines.join('\n');
-    t.notEqual(
-        lines.indexOf('this could be a bit ...'),
-        -1,
-        '--string-length truncates the string');
-
-    sess.send(`v8 inspect ${thin}`);
-  });
-
-  sess.linesUntil(/">/, (err, lines) => {
-    t.error(err);
-    lines = lines.join('\n');
-    t.ok(
-      /0x[0-9a-f]+:<String: "foobar">/.test(lines),
-      'thin string content');
-
-    sess.send(`v8 inspect ${array}`);
-  });
-
-  sess.linesUntil(/}>/, (err, lines) => {
-    t.error(err);
-    lines = lines.join('\n');
-    t.notEqual(
-        lines.indexOf('<Array: length=6'),
-        -1,
-        'array length');
-    t.ok(
-        lines.match(/\[5\]=0x[0-9a-f]+:<function: Class at .+\.js:\d+:\d+>}>$/),
-        'array content');
-    sess.send(`v8 inspect --array-length 10 ${longArray}`);
-  });
-
-  sess.linesUntil(/}>/, (err, lines) => {
-    t.error(err);
-    lines = lines.join('\n');
-    t.notEqual(
-        lines.indexOf('<Array: length=20'),
-        -1,
-        'long array length');
-    t.ok(lines.match(/\[9\]=<Smi: 5>}>$/), 'long array content');
-    sess.send(`v8 inspect ${arrayBuffer}`);
-  });
-
-  sess.linesUntil(/\]>/, (err, lines) => {
-    t.error(err);
-    lines = lines.join('\n');
-    const re = new RegExp(
-      '0x[0-9a-f]+:' +
-      '<ArrayBuffer: backingStore=0x[0-9a-f]+, byteLength=5: \\[\n' +
-      '  01, 02, 03, 04, 05\n' +
-      ']>');
-    t.ok(
-        re.test(lines),
-        'array buffer content');
-    sess.send(`v8 inspect --array-length 1 ${arrayBuffer}`);
-  });
-
-  sess.linesUntil(/]>/, (err, lines) => {
-    t.error(err);
-    lines = lines.join('\n');
-    const re = new RegExp(
-      '0x[0-9a-f]+:' +
-      '<ArrayBuffer: backingStore=0x[0-9a-f]+, byteLength=5: \\[\n' +
-      '  01 ...\n' +
-      ']>');
-    t.ok(
-        re.test(lines),
-        'array buffer content with maximum length 1');
-    sess.send(`v8 inspect ${uint8Array}`);
-  });
-
-  sess.linesUntil(/]>/, (err, lines) => {
-    t.error(err);
-    lines = lines.join('\n');
-    const re = new RegExp(
-      '0x[0-9a-f]+:' +
-      '<ArrayBufferView: backingStore=0x[0-9a-f]+, byteOffset=\\d+, ' +
-      'byteLength=6: \\[\n' +
-      '  01, 40, 60, 80, f0, ff\n' +
-      ']>');
-    t.ok(
-        re.test(lines),
-        'typed array content');
-    sess.send(`v8 inspect --array-length 1 ${uint8Array}`);
-  });
-
-  sess.linesUntil(/]>/, (err, lines) => {
-    t.error(err);
-    lines = lines.join('\n');
-    const re = new RegExp(
-      '0x[0-9a-f]+:' +
-      '<ArrayBufferView: backingStore=0x[0-9a-f]+, byteOffset=\\d+, ' +
-      'byteLength=6: \\[\n' +
-      '  01 ...\n' +
-      ']>');
-    t.ok(
-        re.test(lines),
-        'typed array content with maximum length 1');
-    sess.send(`v8 inspect ${buffer}`);
-  });
-
-  sess.linesUntil(/]>/, (err, lines) => {
-    t.error(err);
-    lines = lines.join('\n');
-    const re = new RegExp(
-      '0x[0-9a-f]+:' +
-      '<ArrayBufferView: backingStore=0x[0-9a-f]+, byteOffset=\\d+, ' +
-      'byteLength=6: \\[\n' +
-      '  ff, f0, 80, 0f, 01, 00\n' +
-      ']>');
-    t.ok(
-        re.test(lines),
-        'buffer content');
-    sess.send(`v8 inspect --array-length 1 ${buffer}`);
-  });
-
-  sess.linesUntil(/]>/, (err, lines) => {
-    t.error(err);
-    lines = lines.join('\n');
-    const re = new RegExp(
-      '0x[0-9a-f]+:' +
-      '<ArrayBufferView: backingStore=0x[0-9a-f]+, byteOffset=\\d+, ' +
-      'byteLength=6: \\[\n' +
-      '  ff ...\n' +
-      ']>');
-    t.ok(
-        re.test(lines),
-        'buffer content with maximum length 1');
-    sess.send(`v8 inspect -s ${arrowFunc}`);
-  });
-
-
+function verifyMethodSource(t, sess, that, fn) {
+  sess.send(`v8 inspect -s ${fn}`);
   sess.linesUntil(/^>/, (err, lines) => {
-    t.error(err);
-    lines = lines.join('\n');
-    // Include 'source:' and '>' to act as boundaries. (Avoid
-    // passing if the whole file it displayed instead of just
-    // the function we want.)
-    const arrowSource = 'source:\n' +
-        'function c.hashmap.(anonymous function)(a,b)=>{a+b}\n' +
-        '>';
-
-    t.ok(lines.includes(
-        arrowSource),
-        'arrow method source');
-
-    sess.send(`v8 inspect -s ${fn}`);
-  });
-
-  sess.linesUntil(/^>/, (err, lines) => {
-    t.error(err);
-    lines = lines.join('\n');
-
+    // We can still continue with this error reported
+    t.error(err, `v8 inspect -s <method> should return output`);
+    if (err) {
+      verifyClass(t, sess, that);
+      return;
+    }
     // Include 'source:' and '>' to act as boundaries. (Avoid
     // passing if the whole file it displayed instead of just
     // the function we want.)
@@ -325,47 +406,155 @@ tape('v8 inspect', (t) => {
     '  }\n' +
     '>';
 
-    t.ok(lines.includes(
-        methodSource),
-        'method source found');
-
-    if (process.version < 'v5.0.0') {
-      sess.quit();
-      t.end();
-    } else {
-      // No Context debugging for older node.js
-      t.ok(/\(previous\)/.test(lines), 'method.previous');
-      t.ok(/scopedVar[^\n]+"scoped value"/.test(lines), 'method.scopedValue');
-
-      let match = lines.match(
-          /scopedAPI=(0x[0-9a-f]+)[^\n]+Zlib/i);
-      t.ok(match, '`method` should have `scopedAPI`');
-
-      sess.send(`v8 inspect ${match[1]}`);
-
-      match = lines.match(
-          /\(closure\)=(0x[0-9a-f]+)[^\n]+function: closure/i);
-      t.ok(match, '`method` should have `closure`');
-
-      sess.send(`v8 inspect ${match[1]}`);
-    }
+    lines = lines.join('\n');
+    t.ok(lines.includes(methodSource), 'method source should match');
+    verifyClass(t, sess, that);
   });
+}
 
-  if (process.version >= 'v5.0.0') {
-    sess.linesUntil(/}>/, (err, lines) => {
-      t.error(err);
-      lines = lines.join('\n');
-      t.ok(/internal fields/.test(lines), 'method.scopedAPI.internalFields');
+function verifyMethod(t, sess, that, fn) {
+  sess.send(`v8 inspect ${fn}`);
+  sess.linesUntil(/}>/, (err, lines) => {
+    if (err) {
+      return teardown(t, sess, err);
+    }
+    const parent = 'method[[context]]';
+    const addresses = collectMembers(
+        t, lines.join('\n'), contextTests, parent
+    );
+    verifyMembers(t, sess, addresses, contextTests, parent, (t, sess) => {
+      verifyMethodSource(t, sess, that, fn);
     });
+  });
+}
 
+function verifyClass(t, sess, that) {
+  sess.send(`v8 inspect ${that}`);
+  sess.wait(/Class/, (err, line) => {
+    if (err) {
+      return teardown(t, sess, err);
+    }
+    t.ok(line.includes(that),
+        'address in the detailed view of Class should match the address ' +
+        'in the parent\'s view');
     sess.linesUntil(/}>/, (err, lines) => {
-      t.error(err);
+      if (err) {
+        return teardown(t, sess, err);
+      }
       lines = lines.join('\n');
-      t.ok(/outerVar[^\n]+"outer variable"/.test(lines),
-          'method.closure.outerVar');
-
-      sess.quit();
-      t.end();
+      t.ok(/x=<Smi: 1>/.test(lines),
+          'this.x should be <Smi: 1>');
+      t.ok(/y=123.456/.test(lines),
+          'this.y should be 123.456');
+      const match = lines.match(/hashmap=(0x[0-9a-f]+):<Object: Object>/i);
+      t.ok(match, 'this.hashmap should be an object');
+      if (!match) {
+        return teardown(t, sess);
+      }
+      verifyObject(t, sess, match[1]);
     });
+  });
+}
+
+function verifyObject(t, sess, hashmap) {
+  sess.send(`v8 inspect ${hashmap}`);
+  sess.wait(/Object/, (err, line) => {
+    if (err) {
+      return teardown(t, sess, err);
+    }
+
+    t.ok(line.includes(hashmap),
+        'address in the detailed view of Object should match the address ' +
+        'in the parent\'s view');
+    verifyHashMap(t, sess, line, hashmap);
+  });
+}
+
+function verifyHashMap(t, sess) {
+  sess.linesUntil(/}>/, (err, lines) => {
+    if (err) {
+      return teardown(t, sess, err);
+    }
+    const parent = 'hashmap';
+    const addresses = collectMembers(
+        t, lines.join('\n'), hashMapTests, parent);
+    verifyMembers(t, sess, addresses, hashMapTests, parent, teardown);
+  });
+}
+
+function teardown(t, sess, err) {
+  t.end(err);
+  sess.quit();
+}
+
+function collectMembers(t, lines, tests, parent) {
+  const addresses = {};
+  for (let name of Object.keys(tests)) {
+    const test = tests[name];
+    const match = lines.match(test.re);
+    if (match) {
+      t.pass(`${parent}${test.desc} should exist `);
+      addresses[name] = match[1];
+    } else {
+      if (test.optional && test.optional.re.test(lines)) {
+        t.skip(`${parent}${test.desc} ${test.optional.reason}`);
+      } else {
+        t.fail(`${parent}${test.desc} should exist `);
+      }
+    }
   }
+  return addresses;
+}
+
+// To avoid lldb output being mixed, we must do the validation one by one
+function verifyMembers(t, sess, addresses, tests, parent, next) {
+  const arr = Object.keys(addresses);
+
+  function verifyProperty(t, sess, addresses, index, subIndex) {
+    if (index >= arr.length) {
+      return next(t, sess);
+    }
+
+    const name = arr[index];
+    const test = tests[name];
+    // We are in the middle of in test.validators
+    if (subIndex !== undefined) {
+      const validators = test.validators;
+      if (subIndex >= validators.length) {
+        return verifyProperty(t, sess, addresses, index + 1);
+      }
+      validators[subIndex](t, sess, addresses, name, (err) => {
+        t.error(err, `${parent}${test.desc} validator #${subIndex} should complete`);
+        verifyProperty(t, sess, addresses, index, subIndex + 1);
+      });
+      return;
+    }
+
+    if (test.validator) { // Single validator
+      test.validator(t, sess, addresses, name, (err) => {
+        t.error(err, `${parent}${test.desc} validator should complete`);
+        verifyProperty(t, sess, addresses, index + 1);
+      });
+    } else if (test.validators) {  // Multiple validator
+      verifyProperty(t, sess, addresses, index, 0);
+    } else {  // No validator
+      verifyProperty(t, sess, addresses, index + 1);
+    }
+  }
+
+  // Kickoff
+  verifyProperty(t, sess, addresses, 0);
+}
+
+tape('v8 inspect', (t) => {
+  t.timeoutAfter(15000);
+
+  const sess = common.Session.create('inspect-scenario.js');
+
+  sess.waitBreak((err) => {
+    if (err) {
+      return teardown(t, sess, err);
+    }
+    verifyBacktrace(t, sess);
+  });
 });
