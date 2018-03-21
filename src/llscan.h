@@ -85,6 +85,14 @@ class FindReferencesCmd : public CommandBase {
                            v8::JSObject& js_obj, v8::Error& err) {}
     virtual void PrintRefs(lldb::SBCommandReturnObject& result, v8::String& str,
                            v8::Error& err) {}
+
+    inline std::string property_reference_template() {
+      return std::string("0x%" PRIx64 ": %s.%s=0x%" PRIx64 "\n");
+    }
+
+    inline std::string array_reference_template() {
+      return std::string("0x%" PRIx64 ": %s[%" PRId64 "]=0x%" PRIx64 "\n");
+    }
   };
 
   void PrintReferences(lldb::SBCommandReturnObject& result,
@@ -152,6 +160,14 @@ class FindReferencesCmd : public CommandBase {
                    v8::Error& err) override;
     void PrintRefs(lldb::SBCommandReturnObject& result, v8::String& str,
                    v8::Error& err) override;
+
+    inline std::string property_reference_template() {
+      return std::string("0x%" PRIx64 ": %s.%s=0x%" PRIx64 " '%s'\n");
+    }
+
+    inline std::string array_reference_template() {
+      return std::string("0x%" PRIx64 ": %s[%" PRId64 "]=0x%" PRIx64 " '%s'\n");
+    }
 
    private:
     LLScan* llscan_;
