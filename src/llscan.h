@@ -85,6 +85,9 @@ class FindReferencesCmd : public CommandBase {
                            v8::JSObject& js_obj, v8::Error& err) {}
     virtual void PrintRefs(lldb::SBCommandReturnObject& result, v8::String& str,
                            v8::Error& err) {}
+
+    static const char* const property_reference_template;
+    static const char* const array_reference_template;
   };
 
   void PrintReferences(lldb::SBCommandReturnObject& result,
@@ -152,6 +155,9 @@ class FindReferencesCmd : public CommandBase {
                    v8::Error& err) override;
     void PrintRefs(lldb::SBCommandReturnObject& result, v8::String& str,
                    v8::Error& err) override;
+
+    static const char* const property_reference_template;
+    static const char* const array_reference_template;
 
    private:
     LLScan* llscan_;
@@ -257,8 +263,8 @@ class FindJSObjectsVisitor : MemoryVisitor {
         ShowArrayLength show_array_length = kShowArrayLength,
         size_t max_properties = 0);
 
-    bool Load(v8::Map map, v8::HeapObject heap_object,
-              v8::LLV8* llv8, v8::Error& err);
+    bool Load(v8::Map map, v8::HeapObject heap_object, v8::LLV8* llv8,
+              v8::Error& err);
   };
 
   static bool IsAHistogramType(v8::Map& map, v8::Error& err);
