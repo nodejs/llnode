@@ -2,7 +2,7 @@
 
 This document will guide you through the contribution process.
 
-### Step 1: Fork
+## Step 1: Fork
 
 Fork the project [on GitHub](https://github.com/indutny/llnode) and check out
 your copy locally.
@@ -13,12 +13,12 @@ $ cd llnode
 $ git remote add upstream git://github.com/indutny/llnode.git
 ```
 
-#### Which branch?
+### Which branch?
 
 For developing new features and bug fixes, the `master` branch should be pulled
 and built upon.
 
-### Step 2: Branch
+## Step 2: Branch
 
 Create a feature branch and start hacking:
 
@@ -26,7 +26,19 @@ Create a feature branch and start hacking:
 $ git checkout -b my-feature-branch -t origin/master
 ```
 
-### Step 3: Commit
+### Step 3: Develop and Test
+
+For guidance on how to run the tests for the llnode project, see this
+[guide](./docs/develop.md).
+
+Bug fixes and features **should come with tests**. Add your tests in the
+`test/` directory.  Looking at other tests to see how they should be
+structured can also help.
+
+Make sure to install clang-format and run `make format` in the project
+directory before committing the patch.
+
+## Step 4: Commit
 
 Make sure git knows your name and email address:
 
@@ -69,10 +81,10 @@ If your patch fixes an open issue, you can add a reference to it at the end
 of the log. Use the `Fixes:` prefix and the full issue URL. For example:
 
 ```
-Fixes: https://github.com/indutny/llnode/issues/1337
+Fixes: https://github.com/nodejs/llnode/issues/1337
 ```
 
-### Step 4: Rebase
+## Step 5: Rebase
 
 Use `git rebase` (not `git merge`) to sync your work from time to time.
 
@@ -81,22 +93,7 @@ $ git fetch upstream
 $ git rebase upstream/master
 ```
 
-
-### Step 5: Test
-
-Bug fixes and features **should come with tests**. Add your tests in the
-`test/parallel/` directory. For guidance on how to write a test for the llnode
-project, see this [guide](./doc/guides/writing_tests.md). Looking at other tests
-to see how they should be structured can also help.
-
-```text
-$ npm install && npm test
-```
-
-Make sure the linter is happy and that all tests pass. Please, do not submit
-patches that fail either check.
-
-### Step 6: Push
+## Step 6: Push
 
 ```text
 $ git push origin my-feature-branch
@@ -114,7 +111,7 @@ not send out notifications when you add commits.
 
 The [Node.js Code of Conduct][] applies to this repo.
 
-[Node.js Code of Conduct]: https://github.com/nodejs/node/blob/master/CODE_OF_CONDUCT.md
+[Node.js Code of Conduct]: https://github.com/nodejs/admin/blob/master/CODE_OF_CONDUCT.md
 
 ## Code Contributions
 
