@@ -1,6 +1,6 @@
 {
   "name": "llnode",
-  "version": "1.6.3",
+  "version": "1.7.0",
   "description": "Node.js plugin for LLDB",
   "main": "no-entry-sorry.js",
   "directories": {
