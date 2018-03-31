@@ -31,11 +31,10 @@ format:
 .PHONY: configure
 configure:
 	node scripts/configure.js
-	./gyp_llnode
 
 .PHONY: plugin
 plugin: configure
-	$(MAKE) -C out/
+	node-gyp rebuild
 	node scripts/cleanup.js
 
 .PHONY: _travis
@@ -47,7 +46,7 @@ _travis:
 
 .PHONY: clean
 clean:
-	$(RM) -r out
-	$(RM) options.gypi
+	$(RM) -r build
+	$(RM) config.gypi
 	$(RM) lldb
 	$(RM) llnode.so llnode.dylib

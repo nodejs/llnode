@@ -80,8 +80,9 @@ If you have `lldb` available on your `PATH`, simply run:
 npm install -g llnode
 ```
 
-To use a particular build of lldb, use the `--lldb_exe` option. For example,
-on Linux the executable on the `PATH` might be `lldb-3.9`:
+To build llnode against a specific lldb version matching an lldb executable,
+use the `--lldb_exe` npm option. For example, on Linux the executable on the
+`PATH` might be `lldb-3.9`:
 
 ```bash
 npm install --lldb_exe=`which lldb-3.9` -g llnode
@@ -245,20 +246,20 @@ make plugin
 To configure the build yourself:
 
 ```bash
-# Detect available LLDB installation and download headers if necessary
+# Detect available lldb installation and download headers if necessary
 node scripts/configure.js
 
-# To configure with the detected LLDB installation
-./gyp_llnode
-# To configure with a specified LLDB installation on OS X/macOS
-./gyp_llnode -Dlldb_build_dir=/usr/local/Cellar/llvm/5.0.0
-# To configure with a specified LLDB installation on Linux
-./gyp_llnode -Dlldb_dir=/usr/lib/llvm-3.9/
-# To configure with a specified LLDB installation on FreeBSD
-./gyp_llnode -Dlldb_dir=/usr/local/llvm39/
+# To configure with the detected lldb installation
+node-gyp configure
+# To configure with a specified path to headers, where `$lldb_header_dir/include`
+# contains the <lldb/*/*.h> headers
+node-gyp configure -- -Dlldb_header_dir=/usr/local/Cellar/llvm/5.0.0
+# To configure with a specified path to the libraries, where `$lldb_lib_dir/lib`
+# contains `liblldb.so` or `liblldb.dylib`
+node-gyp configure -- -Dlldb_lib_dir=/usr/lib/llvm-3.9
 
-# Build
-make -C out/ -j9
+# Build the plugin
+node-gyp build
 
 # Move the built plugin to the project directory
 node scripts/cleanup.js

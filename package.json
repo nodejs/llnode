@@ -9,10 +9,9 @@
   "bin": {
     "llnode": "llnode.sh"
   },
-  "//": "(Blame C++)",
   "scripts": {
     "preinstall": "node scripts/configure.js",
-    "install": "./gyp_llnode && ( gmake -C out/ || make -C out/ )",
+    "install": "node-gyp rebuild",
     "postinstall": "node scripts/cleanup.js",
     "test": "tape test/*-test.js"
   },
@@ -22,9 +21,8 @@
   },
   "files": [
     "Makefile",
-    "llnode.gyp.json",
-    "gyp_llnode",
-    "common.gypi",
+    "binding.gyp",
+    "llnode.gypi",
     "src/",
     "scripts/"
   ],

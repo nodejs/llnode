@@ -6,15 +6,13 @@ const path = require('path');
 const child_process = require('child_process');
 
 const lldb = require('./lldb');
-
 function main() {
   const buildDir = process.cwd();
   console.log('Build dir is: ' + buildDir);
   const osName = os.type();
   const installation = configureInstallation(osName, buildDir);
+  writeConfig(installation.config);
   linkHeadersDir(installation.prefix);
-  const gypDir = getGypDir(buildDir);
-  linkGyp(gypDir);
   writeLlnodeScript(buildDir, installation.executable, osName);
   // Exit with success.
   process.exit(0);
@@ -35,6 +33,8 @@ function configureInstallation(osName, buildDir) {
   // - If we need to download the headers. (Linux may have them installed)
   let installation;
   let prefix;  // Similar to what `llvm-config --prefix` returns
+  // On Linux and BSD the config is always empty.
+  const config = {};
 
   if (osName === 'Darwin') {
     const darwin = require('./darwin');
@@ -44,28 +44,21 @@ function configureInstallation(osName, buildDir) {
       prefix = lldb.cloneHeaders(installation.version, buildDir);
     } else {  // Using custom installation
       // Need to configure with the custom prefix
-      const config = {
-        variables: { 'lldb_build_dir%': prefix }
-      };
-      writeConfig(config);
+      config.variables = { 'lldb_lib_dir%': prefix };
     }
   } else if (osName === 'Linux') {
     const linux = require('./linux');
     installation = linux.getLldbInstallation();
-    if (installation.prefix === undefined)
+    if (installation.prefix === undefined) {
       // Could not find the headers, need to download them
       prefix = lldb.cloneHeaders(installation.version, buildDir);
-    else
+    } else {
       prefix = installation.prefix;
-
-    // ./lldb will always be linked to the prefix on Linux
-    writeConfig({});
+    }
   } else if (osName === 'FreeBSD') {
     const freebsd = require('./freebsd');
     installation = freebsd.getLldbInstallation();
     prefix = installation.prefix;
-    // ./lldb will always be linked to the prefix
-    writeConfig({});
   } else {
     console.log(`Unsupported OS: ${osName}`);
     process.exit(1);
@@ -74,13 +67,14 @@ function configureInstallation(osName, buildDir) {
   return {
     executable: installation.executable,
     version: installation.version,
-    prefix
+    prefix,
+    config
   };
 }
 
 /**
- * Link to the headers file so we can run gyp_llnode directly and don't need to
- * setup parameters to pass.
+ * Link to the headers file so we can run `node-gyp configure` directly
+ * and don't need to setup parameters to pass.
  * @param {string} lldbInstallDir The destination of the symlink
  */
 function linkHeadersDir(lldbInstallDir) {
@@ -91,47 +85,6 @@ function linkHeadersDir(lldbInstallDir) {
     // File does not exist, no need to handle.
   }
   fs.symlinkSync(lldbInstallDir, 'lldb');
-}
-
-/**
- * Get the path to the GYP installation
- * @param {string} buildDir  Path of the project directory
- */
-function getGypDir(buildDir) {
-  // npm explore has a different root folder when using -g
-  // So we are tacking on the extra the additional subfolders
-  let gypSubDir = 'node-gyp';
-  if (process.env.npm_config_global)
-    gypSubDir = 'npm/node_modules/node-gyp';
-
-  // npm can be in a different location than the current
-  // location for global installs so we need find out where the npm is
-  let npmLocation = child_process.execFileSync('which', ['npm']);
-  let npmModules = path.join(
-      npmLocation.toString(), '../../lib/node_modules/npm');
-
-  // Initialize GYP
-  // We can use the node-gyp that comes with npm.
-  // We can locate it with npm -g explore npm npm explore node-gyp pwd
-  // It might have been neater to make node-gyp one of our dependencies
-  // *but* they don't get installed until after the install step has run.
-  let gypDir = child_process.execFileSync(
-      'npm',
-      ['-g', 'explore', npmModules, 'npm', 'explore', gypSubDir, 'pwd'],
-      { cwd: buildDir }
-  ).toString().trim();
-  return gypDir;
-}
-
-/**
- * Link tools/gyp to the GYP installation
- * @param {string} gypDir path to the GYP installation
- */
-function linkGyp(gypDir) {
-  child_process.execSync('rm -rf tools');
-  fs.mkdirSync('tools');
-  console.log(`Linking tools/gyp to ${gypDir}/gyp`);
-  fs.symlinkSync(`${gypDir}/gyp`, 'tools/gyp');
 }
 
 /**
@@ -153,8 +106,8 @@ function writeLlnodeScript(buildDir, lldbExe, osName) {
  */
 function writeConfig(config) {
   const options = JSON.stringify(config, null, 2);
-  fs.writeFileSync('options.gypi', options, 'utf-8');
-  console.log('Writing options.gypi:');
+  fs.writeFileSync('config.gypi', options, 'utf-8');
+  console.log('Writing config.gypi:');
   console.log(options);
 }
 
