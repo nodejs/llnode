@@ -3,17 +3,15 @@
 const os = require('os');
 const fs = require('fs');
 const path = require('path');
-const child_process = require('child_process');
 
 const lldb = require('./lldb');
 function main() {
   const buildDir = process.cwd();
   console.log('Build dir is: ' + buildDir);
   const osName = os.type();
-  const installation = configureInstallation(osName, buildDir);
-  writeConfig(installation.config);
-  linkHeadersDir(installation.prefix);
-  writeLlnodeScript(buildDir, installation.executable, osName);
+  const result = configureInstallation(osName, buildDir);
+  writeConfig(result.config);
+  writeLlnodeScript(buildDir, result.executable, osName);
   // Exit with success.
   process.exit(0);
 }
@@ -32,59 +30,41 @@ function configureInstallation(osName, buildDir) {
   // - What level of lldb we are running.
   // - If we need to download the headers. (Linux may have them installed)
   let installation;
-  let prefix;  // Similar to what `llvm-config --prefix` returns
-  // On Linux and BSD the config is always empty.
-  const config = {};
+  let includeDir;
+  const config = {
+    variables: {}
+  };
 
   if (osName === 'Darwin') {
-    const darwin = require('./darwin');
-    installation = darwin.getLldbInstallation();
-    prefix = installation.prefix;
-    if (prefix === undefined) {  // Using Xcode installation
-      prefix = lldb.cloneHeaders(installation.version, buildDir);
-    } else {  // Using custom installation
-      // Need to configure with the custom prefix
-      config.variables = { 'lldb_lib_dir%': prefix };
+    installation = require('./darwin').getLldbInstallation();
+    if (installation.libDir) {
+      config.variables['lldb_lib_dir%'] = installation.libDir;
     }
   } else if (osName === 'Linux') {
-    const linux = require('./linux');
-    installation = linux.getLldbInstallation();
-    if (installation.prefix === undefined) {
-      // Could not find the headers, need to download them
-      prefix = lldb.cloneHeaders(installation.version, buildDir);
-    } else {
-      prefix = installation.prefix;
+    installation = require('./linux').getLldbInstallation();
+    if (installation.libDir) {
+      config.variables['lldb_lib_dir%'] = installation.libDir;
     }
+    config.variables['lldb_lib%'] = installation.libName;
   } else if (osName === 'FreeBSD') {
-    const freebsd = require('./freebsd');
-    installation = freebsd.getLldbInstallation();
-    prefix = installation.prefix;
+    installation = require('./freebsd').getLldbInstallation();
+    config.variables['lldb_lib_dir%'] = installation.libDir;
   } else {
     console.log(`Unsupported OS: ${osName}`);
     process.exit(1);
   }
 
+  if (installation.includeDir === undefined) {
+    // Could not find the headers, need to download them
+    includeDir = lldb.cloneHeaders(installation.version, buildDir);
+  } else {
+    includeDir = installation.includeDir;
+  }
+  config.variables['lldb_include_dir%'] = includeDir;
   return {
     executable: installation.executable,
-    version: installation.version,
-    prefix,
     config
   };
-}
-
-/**
- * Link to the headers file so we can run `node-gyp configure` directly
- * and don't need to setup parameters to pass.
- * @param {string} lldbInstallDir The destination of the symlink
- */
-function linkHeadersDir(lldbInstallDir) {
-  console.log(`Linking lldb to installation directory ${lldbInstallDir}`);
-  try {
-    fs.unlinkSync('lldb');
-  } catch (error) {
-    // File does not exist, no need to handle.
-  }
-  fs.symlinkSync(lldbInstallDir, 'lldb');
 }
 
 /**
@@ -101,7 +81,7 @@ function writeLlnodeScript(buildDir, lldbExe, osName) {
 }
 
 /**
- * Write configuration to options.gypi
+ * Write configuration to config.gypi
  * @param {string} config
  */
 function writeConfig(config) {
@@ -113,8 +93,7 @@ function writeConfig(config) {
 
 function scriptText(osName, lldbExe) {
   let lib = 'llnode.so';
-  if (osName === 'Darwin')
-    lib = 'llnode.dylib';
+  if (osName === 'Darwin') { lib = 'llnode.dylib'; }
 
   return `#!/bin/sh
 

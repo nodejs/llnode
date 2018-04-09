@@ -3,6 +3,7 @@
 
 const child_process = require('child_process');
 const fs = require('fs');
+const path = require('path');
 const lldb = require('./lldb');
 
 /**
@@ -13,124 +14,187 @@ const lldb = require('./lldb');
  * - the higest known lldb version (`lldb-x.y`)
  * - the names of future releases are predictable for linux
  *
- * @returns {string} Name of the lldb executable
+ * @returns {string} Path to the lldb executable
  */
 function getLldbExecutable() {
-  var lldbExe = process.env.npm_config_lldb_exe;
-  if (lldbExe !== undefined)
-    return lldbExe;
+  if (process.env.npm_config_lldb_exe !== undefined) {
+    return process.env.npm_config_lldb_exe;
+  }
 
-  var lldbExeNames = [
+  const lldbExeNames = [
     'lldb', 'lldb-5.0', 'lldb-4.0',
     'lldb-3.9', 'lldb-3.8', 'lldb-3.7', 'lldb-3.6'
   ];
 
-  for (var lldbExeVersion of lldbExeNames)
+  return lldb.tryExecutables(lldbExeNames);
+}
+
+/**
+ * Try to find an executable llvm-config in the system. Returns undefined
+ * it it could not be found.
+ * @param {string} version lldb version for linux, e.g. '3.9' for lldb-3.9
+ * @returns {string|undefined}
+ */
+function getLlvmConfig(version) {
+  // On Ubuntu llvm-config is suffixed
+  let llvmConfig = lldb.tryExecutables([`llvm-config-${version}`]);
+  if (!llvmConfig) {
+    llvmConfig = lldb.tryExecutables(['llvm-config']);
+  }
+  if (llvmConfig) {
     try {
-      lldbExe = child_process.execSync('which ' +
-        lldbExeVersion).toString().trim();
-      // If the result starts with '/' `which` found a path.
-      if (lldbExe.startsWith('/'))
-        break;
+      child_process.execFileSync(llvmConfig, ['--version']);
     } catch (err) {
-      // Do nothing - we expect not to find some of these.
+      return undefined;  // Not really executable
     }
-
-  if (!lldbExe) {
-    console.log('Could not find any usable lldb binary');
-    console.log('Please see the README.md on how to install lldb');
-    process.exit(1);
   }
-  return lldbExe;
+
+  return llvmConfig;
 }
 
 /**
- * Get the lldb version from the lldb executable, exit the process with 1
- * if failed.
- * @param {string} lldbExe
- * @returns {string} Version of the executable in the form like '3.9'
+ * Get the directory containing the lldb headers. If it returns undefined,
+ * we need to download the headers to ./lldb/include/lldb.
+ * Using the installed headers will ensure we have the correct ones.
+ * @param {string|undefined} llvmConfig Path to llvm-config, if it's installed
+ * @returns {string|undefined} the lldb include directory, undefined if failed
  */
-function getLldbVersion(lldbExe) {
-  var lldbStr;
-  try {
-    lldbStr = child_process.execFileSync(lldbExe, ['-v']).toString();
-  } catch (err) {
-    console.log(err);
-    console.log(`Unable to get the version from the lldb binary ${lldbExe}`);
-    process.exit(1);
-  }
-  // Ignore minor revisions like 3.8.1
-  const versionMatch = lldbStr.match(/version (\d.\d)/);
-  if (versionMatch)
-    return versionMatch[1];
-
-  console.log(`Unable to get the version from the lldb binary ${lldbExe}`);
-  console.log(`Output from \`${lldbExe} -v\` was ${lldbStr}`);
-  process.exit(1);
-}
-
-/**
- * Get the directory to the lldb installation, if it returns undefined,
- * we need to download the headers to ./lldb/include/lldb
- * @param {string} version Version of the lldb executable
- * @returns {string|undefined} lldb installation prefix, undefined if failed
- */
-function getInstallDir(version) {
-  // Get the directory which should contain the headers and
-  // check if they are present.
-  // (Using the installed headers will ensure we have the correct ones.)
-  console.log('Checking for headers, version is ' + version);
-
-  let installDir;
-  try {
-    installDir = child_process.execFileSync(
-        `llvm-config-${version}`,
-        ['--prefix']
+function getIncludeDir(llvmConfig) {
+  if (llvmConfig) {
+    const includeDir = child_process.execFileSync(
+        llvmConfig, ['--includedir']
     ).toString().trim();
-  } catch (err) {
-    // Could not get the headers through llvm-config, try another way
+    // Include directory doesn't need include/lldb on the end but the llvm
+    // headers can be installed without the lldb headers so check for them.
+    if (includeDir && fs.existsSync(lldb.getApiHeadersPath(includeDir))) {
+      return includeDir;
+    }
   }
 
-  if (!installDir)
-    // On Redhat the headers are just installed in /usr/include
-    if (fs.existsSync('/usr/include/lldb')) {
-      return '/usr';
-    } else {
-      // We will download the headers
-      return undefined;
-    }
-
-  // Include directory doesn't need include/lldb on the end but the llvm
-  // headers can be installed without the lldb headers so check for them.
-  const headers = lldb.getHeadersPath(installDir);
-  if (fs.existsSync(headers))
-    return installDir;
+  // On RedHat the headers are just installed in /usr/include
+  if (fs.existsSync(lldb.getApiHeadersPath('/usr/include'))) {
+    return '/usr/include';
+  }
 
   // We will download the headers
   return undefined;
 }
 
 /**
+ * Get the directory containing the lldb shared libraries. If it returns
+ * undefined, the shared library will be searched from the global search paths
+ * @param {string} lldbExe Path to the corresponding lldb executable
+ * @param {string|undefined} llvmConfig Path to llvm-config, if it's installed
+ * @returns {{dir:string, name:string}}
+ */
+function getLib(lldbExe, llvmConfig) {
+  // First look for the libraries in the directory returned by
+  // llvm-config --libdir
+  if (llvmConfig) {
+    const libDir = child_process.execFileSync(
+        llvmConfig, ['--libdir']
+    ).toString().trim();
+    if (fs.existsSync(path.join(libDir, 'liblldb.so'))) {
+      return { dir: libDir, name: 'lldb' };
+    }
+  }
+
+  // Look for the libraries loaded by the executable using ldd
+  let libs;
+  try {
+    libs = child_process.execFileSync(
+        'ldd', [lldbExe]
+    ).toString().trim();
+  } catch (err) {
+    return { dir: undefined, name: 'lldb' };
+  }
+
+  const lib = libs.split(/\s/).find(
+      line => line.includes('liblldb') && line.startsWith('/'));
+  if (!lib) {
+    return { dir: undefined, name: 'lldb' };
+  }
+
+  console.log(`From ldd: ${lldbExe} loads ${lib}`);
+
+  const libDir = path.dirname(path.resolve(lib));
+  // On Ubuntu the libraries are suffixed and installed globally
+  const libName = path.basename(lib).match(/lib(lldb.*?)\.so/)[1];
+
+  // TODO(joyeecheung): on RedHat there might not be a non-versioned liblldb.so
+  // in the system. It's fine in the case of plugins since the lldb executable
+  // will load the library before loading the plugin, but we will have to link
+  // to the versioned library file for addons.
+  if (!fs.existsSync(path.join(libDir, `lib${libName}.so`))) {
+    return {
+      dir: undefined,
+      name: libName
+    };
+  }
+
+  return {
+    dir: libDir,
+    name: libName
+  };
+}
+
+/**
  * Get the lldb installation. If prefix is undefined, the headers need to
  * be downloaded.
  * The version string will be in the form like '3.9'
- * @returns {{executable: string, version: string, ?prefix: string}}
  */
 function getLldbInstallation() {
+  console.log('Looking for lldb executable...');
   const lldbExe = getLldbExecutable();
-  const lldbVersion = getLldbVersion(lldbExe);
+  if (!lldbExe) {
+    console.log('Could not find any usable lldb executable');
+    console.log('Please see the README.md on how to install lldb');
+    process.exit(1);
+  }
+  console.log(`Found lldb executable ${lldbExe}`);
 
+  console.log('\nReading lldb version...');
+  const lldbVersion = lldb.getLldbVersion(lldbExe);
+  if (!lldbVersion) {
+    console.log(`Unable to get the version from the lldb binary ${lldbExe}`);
+    process.exit(1);
+  }
   console.log(`Installing llnode for ${lldbExe}, lldb version ${lldbVersion}`);
-  const installedDir = getInstallDir(lldbVersion);
+
+  console.log(`\nLooking for llvm-config for lldb ${lldbVersion}...`);
+  const llvmConfig = getLlvmConfig(lldbVersion);
+  if (!llvmConfig) {
+    console.log('No llvm-config found');
+  } else {
+    console.log(`Using llvm-config in ${llvmConfig}`);
+  }
+
+  console.log(`\nLooking for headers for lldb ${lldbVersion}...`);
+  const includeDir = getIncludeDir(llvmConfig);
+  if (!includeDir) {
+    console.log('Could not find the headers, will download them later');
+  } else {
+    console.log(`Found lldb headers in ${includeDir}`);
+  }
+
+  console.log(`\nLooking for shared libraries for lldb ${lldbVersion}...`);
+  const lib = getLib(lldbExe, llvmConfig);
+  if (!lib.dir) {
+    console.log(`Could not find non-versioned lib${lib.name}.so in the system`);
+    console.log(`Symbols will be resolved by the lldb executable at runtime`);
+  } else {
+    console.log(`Found lib${lib.name}.so in ${lib.dir}`);
+  }
+
   return {
     executable: lldbExe,
     version: lldbVersion,
-    prefix: installedDir
+    includeDir: includeDir,
+    libDir: lib.dir,
+    libName: lib.name
   };
 }
 
 module.exports = {
-  getLldbExecutable,
-  getLldbVersion,
   getLldbInstallation
 };
