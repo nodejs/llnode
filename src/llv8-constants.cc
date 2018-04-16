@@ -203,10 +203,16 @@ void Map::Load() {
   kInObjectPropertiesOffset = LoadConstant(
       "class_Map__inobject_properties_or_constructor_function_index__int",
       "class_Map__inobject_properties__int");
-  kInstanceSizeOffset = LoadConstant("class_Map__instance_size__int");
+  if (kInObjectPropertiesOffset == -1) {
+    kInObjectPropertiesOffset = LoadConstant(
+        "class_Map__inobject_properties_start_or_constructor_function_index__"
+        "char");
+  }
 
-  kDictionaryMapShift = LoadConstant("bit_field3_dictionary_map_shift");
-
+  kInstanceSizeOffset = LoadConstant("class_Map__instance_size__int",
+                                     "class_Map__instance_size_in_words__char");
+  kDictionaryMapShift = LoadConstant("bit_field3_dictionary_map_shift",
+                                     "bit_field3_is_dictionary_map_shift");
   kNumberOfOwnDescriptorsShift =
       LoadConstant("bit_field3_number_of_own_descriptors_shift");
   kNumberOfOwnDescriptorsMask =
