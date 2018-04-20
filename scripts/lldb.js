@@ -66,18 +66,18 @@ function cloneHeaders(lldbVersion, buildDir) {
  * @returns {string|undefined}
  */
 function tryExecutables(exeNames) {
-  let exePath;
   for (let name of exeNames) {
+    let exePath;
     try {
       exePath = child_process.execFileSync(
           'which', [name], { stdio: 'pipe' }  // to suppress stderr
       ).toString().trim();
-      // If the result starts with '/' `which` found a path.
-      if (exePath.startsWith('/')) {
-        return exePath;
-      }
     } catch (err) {
       // Do nothing - we expect not to find some of these.
+    }
+    // If the result starts with '/' `which` found a path.
+    if (exePath && exePath.startsWith('/')) {
+      return exePath;
     }
   }
 }

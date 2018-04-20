@@ -23,7 +23,7 @@
         # Necessary for node v4.x
         "xcode_settings": {
           "OTHER_CPLUSPLUSFLAGS" : [ "-std=c++11", "-stdlib=libc++" ],
-          "OTHER_LDFLAGS": ["-stdlib=libc++"]
+          "OTHER_LDFLAGS": [ "-stdlib=libc++" ],
         },
 
         "conditions": [
