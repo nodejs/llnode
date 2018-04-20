@@ -9,8 +9,8 @@
     "msvs_multi_core_compile": "0",  # we do enable multicore compiles, but not using the V8 way
     "gcc_version%": "unknown",
     "clang%": 1,
-    "lldb_header_dir%": "lldb",
-    "lldb_lib%": "lldb",
+    "lldb_include_dir%": "lldb/include", # location of the lldb headers
+    "lldb_lib%": "lldb",                 # name of the -l library to link
     "conditions": [
       ["GENERATOR == 'ninja'", {
         "OBJ_DIR": "<(PRODUCT_DIR)/obj",

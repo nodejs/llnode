@@ -251,12 +251,12 @@ node scripts/configure.js
 
 # To configure with the detected lldb installation
 node-gyp configure
-# To configure with a specified path to headers, where `$lldb_header_dir/include`
+# To configure with a specified path to headers, where `$lldb_include_dir`
 # contains the <lldb/*/*.h> headers
-node-gyp configure -- -Dlldb_header_dir=/usr/local/Cellar/llvm/5.0.0
-# To configure with a specified path to the libraries, where `$lldb_lib_dir/lib`
+node-gyp configure -- -Dlldb_include_dir=/usr/local/Cellar/llvm/5.0.0/include
+# To configure with a specified path to the libraries, where `$lldb_lib_dir`
 # contains `liblldb.so` or `liblldb.dylib`
-node-gyp configure -- -Dlldb_lib_dir=/usr/lib/llvm-3.9
+node-gyp configure -- -Dlldb_lib_dir=/usr/lib/llvm-3.9/lib
 
 # Build the plugin
 node-gyp build

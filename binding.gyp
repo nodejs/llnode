@@ -10,21 +10,10 @@
       "lldb_lib_dir%": ""
   },
 
-  "targets": [{
-    "target_name": "plugin",
-    "type": "shared_library",
-    "product_prefix": "",
-
+  "target_defaults": {
     "include_dirs": [
-      ".",
-      "<(lldb_header_dir)/include",
-    ],
-
-    "sources": [
-      "src/llnode.cc",
-      "src/llv8.cc",
-      "src/llv8-constants.cc",
-      "src/llscan.cc",
+      "<(module_root_dir)",
+      "<(lldb_include_dir)",
     ],
 
     "cflags" : [ "-std=c++11" ],
@@ -54,19 +43,25 @@
           {
             "xcode_settings": {
               "OTHER_LDFLAGS": [
-                "-Wl,-rpath,<(lldb_lib_dir)/lib",
-                "-L<(lldb_lib_dir)/lib",
+                "-Wl,-rpath,<(lldb_lib_dir)",
+                "-L<(lldb_lib_dir)",
                 "-l<(lldb_lib)",
               ],
             },
           }],
         ],
-      }],
+      }]
     ]
   },
-  {
-    "target_name": "install",
-    "type":"none",
-    "dependencies" : [ "plugin" ]
+
+  "targets": [{
+    "target_name": "plugin",
+    "type": "shared_library",
+    "sources": [
+      "src/llnode.cc",
+      "src/llv8.cc",
+      "src/llv8-constants.cc",
+      "src/llscan.cc",
+    ]
   }],
 }
