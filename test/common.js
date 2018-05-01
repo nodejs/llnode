@@ -31,8 +31,8 @@ else
   pluginName = 'llnode.so';
 
 exports.llnodePath = path.join(exports.projectDir, pluginName);
-exports.saveCoreTimeout = 180 * 1000;
-exports.loadCoreTimeout = 20 * 1000;
+exports.saveCoreTimeout = 360 * 1000;
+exports.loadCoreTimeout = 60 * 1000;
 exports.versionMark = /^lldb-|^lldb version/;
 
 function SessionOutput(session, stream, timeout) {

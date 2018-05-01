@@ -40,8 +40,6 @@ plugin: configure
 .PHONY: _travis
 _travis:
 	TEST_LLDB_BINARY="$(TEST_LLDB_BINARY)" \
-	TEST_LLNODE_DEBUG=true \
-	LLNODE_DEBUG=true \
 	npm test
 
 .PHONY: clean
