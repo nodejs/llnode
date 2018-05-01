@@ -1,14 +1,82 @@
 language: node_js
-sudo: required
-dist: trusty
-before_install:
-  - sudo apt-get -qq update
-  - sudo apt-get install lldb-3.9 liblldb-3.9-dev -y
-node_js:
-  - "4"
-  - "6"
-  - "8"
-  - "9"
+matrix:
+  include:
+    # Test on Ubuntu Trusty
+    - sudo: required
+      dist: trusty
+      before_install:
+        - sudo apt-get -qq update
+        - sudo apt-get install lldb-3.9 liblldb-3.9-dev -y
+      node_js: "6"
+    - sudo: required
+      dist: trusty
+      before_install:
+        - sudo apt-get -qq update
+        - sudo apt-get install lldb-3.9 liblldb-3.9-dev -y
+      node_js: "8"
+    - sudo: required
+      dist: trusty
+      before_install:
+        - sudo apt-get -qq update
+        - sudo apt-get install lldb-3.9 liblldb-3.9-dev -y
+      node_js: "9"
+    - sudo: required
+      dist: trusty
+      before_install:
+        - sudo apt-get -qq update
+        - sudo apt-get install lldb-3.9 liblldb-3.9-dev -y
+      node_js: "10"
+    # Test Node.js master nightly build
+    - node_js: "node"
+      sudo: required
+      dist: trusty
+      before_install:
+        - sudo apt-get -qq update
+        - sudo apt-get install lldb-3.9 liblldb-3.9-dev -y
+      install:
+        - npm install --nodedir=$(dirname $(dirname $(which node)))/include/node
+      env:
+        - NVM_NODEJS_ORG_MIRROR=https://nodejs.org/download/nightly
+        - NODEJS_ORG_MIRROR=https://nodejs.org/download/nightly
+    # Test Node.js v8-canary nightly build
+    - node_js: "node"
+      sudo: required
+      dist: trusty
+      before_install:
+        - sudo apt-get -qq update
+        - sudo apt-get install lldb-3.9 liblldb-3.9-dev -y
+      install:
+        - npm install --nodedir=$(dirname $(dirname $(which node)))/include/node
+      env:
+        - NVM_NODEJS_ORG_MIRROR=https://nodejs.org/download/v8-canary
+        - NODEJS_ORG_MIRROR=https://nodejs.org/download/v8-canary
+    # Test on OS X
+    - os: osx
+      osx_image: xcode9.3
+      node_js: "6"
+    - os: osx
+      osx_image: xcode9.3
+      node_js: "8"
+    - os: osx
+      osx_image: xcode9.3
+      node_js: "9"
+    - os: osx
+      osx_image: xcode9.3
+      node_js: "10"
+  allow_failures:
+    # Allow the nightly installs to fail
+    - node_js: "node"
+      sudo: required
+      dist: trusty
+      env:
+        - NVM_NODEJS_ORG_MIRROR=https://nodejs.org/download/nightly
+        - NODEJS_ORG_MIRROR=https://nodejs.org/download/nightly
+    - node_js: "node"
+      sudo: required
+      dist: trusty
+      env:
+        - NVM_NODEJS_ORG_MIRROR=https://nodejs.org/download/v8-canary
+        - NODEJS_ORG_MIRROR=https://nodejs.org/download/v8-canary
 branches:
   only:
     - master

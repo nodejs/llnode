@@ -9,7 +9,7 @@
 </p>
 
 [![npm](https://img.shields.io/npm/v/llnode.svg?style=flat-square)](https://npmjs.org/package/llnode)
-[![Build Status](https://img.shields.io/travis/nodejs/llnode.svg?style=flat-square)](https://travis-ci.org/nodejs/llnode)
+
 
 Node.js v4.x+ C++ plugin for the [LLDB](http://lldb.llvm.org) debugger.
 
@@ -21,7 +21,18 @@ with Node.js processes or core dumps in LLDB.
 
 https://asciinema.org/a/29589
 
-### Quick start
+## Build Status
+
+| Version | v6.x                    | v8.x                    | v9.x                    | v10.x                     | master                        | v8-canary                        |
+|---------|-------------------------|-------------------------|-------------------------|---------------------------|-------------------------------|----------------------------------|
+| **Trusty**  | [![v6.x badge][v6-trusty-badge]][travis] | [![v8.x badge][v8-trusty-badge]][travis] | [![v9.x badge][v9-trusty-badge]][travis] | [![v10.x badge][v10-trusty-badge]][travis] | [![master badge][master-trusty-badge]][travis] | [![v8-canary badge][canary-trusty-badge]][travis] |
+| **OS X**  | [![v6.x badge][v6-osx-badge]][travis] | [![v8.x badge][v8-osx-badge]][travis] | [![v9.x badge][v9-osx-badge]][travis] | [![v10.x badge][v10-osx-badge]][travis] | - | - |
+
+We have nightly test runs against all Node.js active release lines. We also test
+against Node.js master and Node.js v8-canary nightly builds to help us identify
+breaking changes on Node.js and V8 before they land on an active release line.
+
+## Quick start
 
 Start an LLDB session with the llnode plugin automatically loaded:
 
@@ -331,3 +342,17 @@ NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
 DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+[travis]: https://travis-ci.org/nodejs/llnode
+[v6-trusty-badge]: https://travis-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/1
+[v8-trusty-badge]: https://travis-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/2
+[v9-trusty-badge]: https://travis-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/3
+[v10-trusty-badge]: https://travis-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/4
+
+[v6-osx-badge]: https://travis-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/5
+[v8-osx-badge]: https://travis-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/6
+[v9-osx-badge]: https://travis-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/7
+[v10-osx-badge]: https://travis-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/8
+
+[master-trusty-badge]: https://travis-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/9
+[canary-trusty-badge]: https://travis-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/10
