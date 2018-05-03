@@ -204,7 +204,7 @@ void Map::Load() {
       "class_Map__inobject_properties_or_constructor_function_index__int",
       "class_Map__inobject_properties__int");
   if (kInObjectPropertiesOffset == -1) {
-    kInObjectPropertiesOffset = LoadConstant(
+    kInObjectPropertiesStartOffset = LoadConstant(
         "class_Map__inobject_properties_start_or_constructor_function_index__"
         "char");
   }

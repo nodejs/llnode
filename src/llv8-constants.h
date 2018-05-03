@@ -94,6 +94,7 @@ class Map : public Module {
   int64_t kInstanceDescriptorsOffset;
   int64_t kBitField3Offset;
   int64_t kInObjectPropertiesOffset;
+  int64_t kInObjectPropertiesStartOffset;
   int64_t kInstanceSizeOffset;
 
   int64_t kNumberOfOwnDescriptorsMask;

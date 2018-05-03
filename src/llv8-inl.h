@@ -160,7 +160,21 @@ inline int64_t Map::BitField3(Error& err) {
 }
 
 inline int64_t Map::InObjectProperties(Error& err) {
-  return LoadField(v8()->map()->kInObjectPropertiesOffset, err) & 0xff;
+  if (v8()->map()->kInObjectPropertiesOffset != -1) {
+    return LoadField(v8()->map()->kInObjectPropertiesOffset, err) & 0xff;
+  } else {
+    // NOTE(mmarchini): V8 6.4 changed semantics for
+    // in_objects_properties_offset (see
+    // https://chromium-review.googlesource.com/c/v8/v8/+/776720). To keep
+    // changes to a minimum on llnode and to comply with V8, we're using the
+    // same implementation from
+    // https://chromium-review.googlesource.com/c/v8/v8/+/776720/9/src/objects-inl.h#3027.
+    int64_t in_objects_start =
+        LoadField(v8()->map()->kInObjectPropertiesStartOffset, err) & 0xff;
+    return v8()->LoadUnsigned(LeaField(v8()->map()->kInstanceSizeOffset), 1,
+                              err) -
+           in_objects_start;
+  }
 }
 
 inline int64_t Map::InstanceSize(Error& err) {
