@@ -159,8 +159,44 @@ inline int64_t Map::BitField3(Error& err) {
   return v8()->LoadUnsigned(LeaField(v8()->map()->kBitField3Offset), 4, err);
 }
 
+inline int64_t Map::InstanceType(Error& err) {
+  return v8()->LoadUnsigned(LeaField(v8()->map()->kInstanceTypeOffset), 2, err);
+}
+
+inline bool Map::IsJSObjectMap(Error& err) {
+  return InstanceType(err) >= v8()->types()->kFirstJSObjectType;
+}
+
+
 inline int64_t Map::InObjectProperties(Error& err) {
-  return LoadField(v8()->map()->kInObjectPropertiesOffset, err) & 0xff;
+  if (!IsJSObjectMap(err)) {
+    err = Error::Failure(
+        "Invalid call to Map::InObjectProperties with a non-JsObject type");
+    return 0;
+  }
+  if (v8()->map()->kInObjectPropertiesOffset != -1) {
+    return LoadField(v8()->map()->kInObjectPropertiesOffset, err) & 0xff;
+  } else {
+    // NOTE(mmarchini): V8 6.4 changed semantics for
+    // in_objects_properties_offset (see
+    // https://chromium-review.googlesource.com/c/v8/v8/+/776720). To keep
+    // changes to a minimum on llnode and to comply with V8, we're using the
+    // same implementation from
+    // https://chromium-review.googlesource.com/c/v8/v8/+/776720/9/src/objects-inl.h#3027.
+    int64_t in_object_properties_start_offset =
+        LoadField(v8()->map()->kInObjectPropertiesStartOffset, err) & 0xff;
+    int64_t instance_size =
+        v8()->LoadUnsigned(LeaField(v8()->map()->kInstanceSizeOffset), 1, err);
+    return instance_size - in_object_properties_start_offset;
+  }
+}
+
+inline int64_t Map::ConstructorFunctionIndex(Error& err) {
+  if (v8()->map()->kInObjectPropertiesOffset != -1) {
+    return LoadField(v8()->map()->kInObjectPropertiesOffset, err) & 0xff;
+  } else {
+    return LoadField(v8()->map()->kInObjectPropertiesStartOffset, err) & 0xff;
+  }
 }
 
 inline int64_t Map::InstanceSize(Error& err) {

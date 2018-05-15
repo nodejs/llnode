@@ -94,7 +94,9 @@ class Map : public Module {
   int64_t kInstanceDescriptorsOffset;
   int64_t kBitField3Offset;
   int64_t kInObjectPropertiesOffset;
+  int64_t kInObjectPropertiesStartOffset;
   int64_t kInstanceSizeOffset;
+  int64_t kInstanceTypeOffset;
 
   int64_t kNumberOfOwnDescriptorsMask;
   int64_t kNumberOfOwnDescriptorsShift;
@@ -479,6 +481,7 @@ class Types : public Module {
   MODULE_DEFAULT_METHODS(Types);
 
   int64_t kFirstNonstringType;
+  int64_t kFirstJSObjectType;
 
   int64_t kHeapNumberType;
   int64_t kMapType;

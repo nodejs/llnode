@@ -1278,7 +1278,16 @@ std::string Map::Inspect(InspectOptions* options, Error& err) {
   int64_t own_descriptors_count = NumberOfOwnDescriptors(err);
   if (err.Fail()) return std::string();
 
-  int64_t in_object_properties = InObjectProperties(err);
+  std::string in_object_properties_or_constructor;
+  int64_t in_object_properties_or_constructor_index;
+  if (IsJSObjectMap(err)) {
+    if (err.Fail()) return std::string();
+    in_object_properties_or_constructor_index = InObjectProperties(err);
+    in_object_properties_or_constructor = std::string("in_object_size");
+  } else {
+    in_object_properties_or_constructor_index = ConstructorFunctionIndex(err);
+    in_object_properties_or_constructor = std::string("constructor_index");
+  }
   if (err.Fail()) return std::string();
 
   int64_t instance_size = InstanceSize(err);
@@ -1286,10 +1295,11 @@ std::string Map::Inspect(InspectOptions* options, Error& err) {
 
   char tmp[256];
   snprintf(tmp, sizeof(tmp),
-           "<Map own_descriptors=%d in_object=%d instance_size=%d "
+           "<Map own_descriptors=%d %s=%d instance_size=%d "
            "descriptors=0x%016" PRIx64,
            static_cast<int>(own_descriptors_count),
-           static_cast<int>(in_object_properties),
+           in_object_properties_or_constructor.c_str(),
+           static_cast<int>(in_object_properties_or_constructor_index),
            static_cast<int>(instance_size), descriptors_obj.raw());
   if (!options->detailed) {
     return std::string(tmp) + ">";

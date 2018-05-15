@@ -137,9 +137,12 @@ class Map : public HeapObject {
   inline HeapObject InstanceDescriptors(Error& err);
   inline int64_t BitField3(Error& err);
   inline int64_t InObjectProperties(Error& err);
+  inline int64_t ConstructorFunctionIndex(Error& err);
   inline int64_t InstanceSize(Error& err);
+  inline int64_t InstanceType(Error& err);
 
   inline bool IsDictionary(Error& err);
+  inline bool IsJSObjectMap(Error& err);
   inline int64_t NumberOfOwnDescriptors(Error& err);
 
   std::string Inspect(InspectOptions* options, Error& err);

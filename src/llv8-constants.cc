@@ -204,11 +204,12 @@ void Map::Load() {
       "class_Map__inobject_properties_or_constructor_function_index__int",
       "class_Map__inobject_properties__int");
   if (kInObjectPropertiesOffset == -1) {
-    kInObjectPropertiesOffset = LoadConstant(
+    kInObjectPropertiesStartOffset = LoadConstant(
         "class_Map__inobject_properties_start_or_constructor_function_index__"
         "char");
   }
 
+  kInstanceTypeOffset = LoadConstant("class_Map__instance_type__uint16_t");
   kInstanceSizeOffset = LoadConstant("class_Map__instance_size__int",
                                      "class_Map__instance_size_in_words__char");
   kDictionaryMapShift = LoadConstant("bit_field3_dictionary_map_shift",
@@ -574,6 +575,8 @@ void Frame::Load() {
 
 void Types::Load() {
   kFirstNonstringType = LoadConstant("FirstNonstringType");
+  kFirstJSObjectType =
+      LoadConstant("type_JSGlobalObject__JS_GLOBAL_OBJECT_TYPE");
 
   kHeapNumberType = LoadConstant("type_HeapNumber__HEAP_NUMBER_TYPE");
   kMapType = LoadConstant("type_Map__MAP_TYPE");
