@@ -173,10 +173,10 @@ class SharedInfo : public Module {
  public:
   MODULE_DEFAULT_METHODS(SharedInfo);
 
+  int64_t kNameOrScopeInfoOffset;
   int64_t kNameOffset;
   int64_t kInferredNameOffset;
   int64_t kScriptOffset;
-  int64_t kCodeOffset;
   int64_t kStartPositionOffset;
   int64_t kEndPositionOffset;
   int64_t kParameterCountOffset;

@@ -159,6 +159,8 @@ class String : public HeapObject {
 
   std::string ToString(Error& err);
   std::string Inspect(InspectOptions* options, Error& err);
+
+  static inline bool IsString(LLV8* v8, HeapObject heap_object, Error& err);
 };
 
 class Script : public HeapObject {
@@ -191,7 +193,6 @@ class SharedFunctionInfo : public HeapObject {
   inline String Name(Error& err);
   inline Value InferredName(Error& err);
   inline Script GetScript(Error& err);
-  inline Code GetCode(Error& err);
   inline HeapObject GetScopeInfo(Error& err);
   inline int64_t ParameterCount(Error& err);
   inline int64_t StartPosition(Error& err);
@@ -200,6 +201,11 @@ class SharedFunctionInfo : public HeapObject {
   std::string ProperName(Error& err);
   std::string GetPostfix(Error& err);
   std::string ToString(Error& err);
+
+ private:
+  inline String name(Error& err);
+  inline HeapObject scope_info(Error& err);
+  inline HeapObject name_or_scope_info(Error& err);
 };
 
 class OneByteString : public String {
@@ -412,6 +418,7 @@ class ScopeInfo : public FixedArray {
 
   inline String ContextLocalName(int index, int param_count, int stack_count,
                                  Error& err);
+  inline HeapObject MaybeFunctionName(Error& err);
 };
 
 class Oddball : public HeapObject {
