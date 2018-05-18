@@ -128,6 +128,8 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
         result.Printf("  %c frame #%u: 0x%016" PRIx64 " %s\n", star, i, pc,
                       res.c_str());
         continue;
+      } else {
+        v8::Error::PrintInDebugMode("%s", err.GetMessage());
       }
     }
 

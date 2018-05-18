@@ -288,13 +288,14 @@ void JSDate::Load() {
 
 
 void SharedInfo::Load() {
+  kNameOrScopeInfoOffset =
+      LoadConstant("class_SharedFunctionInfo__name_or_scope_info__Object");
   kNameOffset = LoadConstant("class_SharedFunctionInfo__raw_name__Object",
                              "class_SharedFunctionInfo__name__Object");
   kInferredNameOffset =
       LoadConstant("class_SharedFunctionInfo__inferred_name__String",
                    "class_SharedFunctionInfo__function_identifier__Object");
   kScriptOffset = LoadConstant("class_SharedFunctionInfo__script__Object");
-  kCodeOffset = LoadConstant("class_SharedFunctionInfo__code__Code");
   kStartPositionOffset =
       LoadConstant("class_SharedFunctionInfo__start_position_and_type__int",
                    "class_SharedFunctionInfo__start_position_and_type__SMI");
@@ -323,7 +324,8 @@ void SharedInfo::Load() {
     kStartPositionMask = ~((1 << kStartPositionShift) - 1);
   }
 
-  if (LoadConstant("class_SharedFunctionInfo__compiler_hints__int") == -1)
+  if (LoadConstant("class_SharedFunctionInfo__compiler_hints__int") == -1 &&
+      kNameOrScopeInfoOffset == -1)
     kEndPositionShift = 1;
   else
     kEndPositionShift = 0;

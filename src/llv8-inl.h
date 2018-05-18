@@ -222,6 +222,15 @@ ACCESSOR(JSRegExp, GetSource, js_regexp()->kSourceOffset, String)
 
 ACCESSOR(JSDate, GetValue, js_date()->kValueOffset, Value)
 
+bool String::IsString(LLV8* v8, HeapObject heap_object, Error& err) {
+  if (!heap_object.Check()) return false;
+
+  int64_t type = heap_object.GetType(err);
+  if (err.Fail()) return false;
+
+  return type < v8->types()->kFirstNonstringType;
+}
+
 inline int64_t String::Representation(Error& err) {
   int64_t type = GetType(err);
   if (err.Fail()) return -1;
@@ -242,13 +251,47 @@ ACCESSOR(Script, LineOffset, script()->kLineOffsetOffset, Smi)
 ACCESSOR(Script, Source, script()->kSourceOffset, HeapObject)
 ACCESSOR(Script, LineEnds, script()->kLineEndsOffset, HeapObject)
 
-ACCESSOR(SharedFunctionInfo, Name, shared_info()->kNameOffset, String)
+ACCESSOR(SharedFunctionInfo, name, shared_info()->kNameOffset, String)
 ACCESSOR(SharedFunctionInfo, InferredName, shared_info()->kInferredNameOffset,
          Value)
 ACCESSOR(SharedFunctionInfo, GetScript, shared_info()->kScriptOffset, Script)
-ACCESSOR(SharedFunctionInfo, GetCode, shared_info()->kCodeOffset, Code)
-ACCESSOR(SharedFunctionInfo, GetScopeInfo, shared_info()->kScopeInfoOffset,
+ACCESSOR(SharedFunctionInfo, scope_info, shared_info()->kScopeInfoOffset,
          HeapObject)
+ACCESSOR(SharedFunctionInfo, name_or_scope_info,
+         shared_info()->kNameOrScopeInfoOffset, HeapObject)
+
+
+HeapObject SharedFunctionInfo::GetScopeInfo(Error& err) {
+  if (v8()->shared_info()->kNameOrScopeInfoOffset == -1) return scope_info(err);
+
+  HeapObject maybe_scope_info = name_or_scope_info(err);
+  if (!String::IsString(v8(), maybe_scope_info, err)) return maybe_scope_info;
+
+  err = Error::Failure("Couldn't get ScopeInfo");
+  return HeapObject();
+}
+
+String SharedFunctionInfo::Name(Error& err) {
+  if (v8()->shared_info()->kNameOrScopeInfoOffset == -1) return name(err);
+
+  HeapObject maybe_scope_info = name_or_scope_info(err);
+  if (err.Fail()) return String();
+
+  if (String::IsString(v8(), maybe_scope_info, err))
+    return String(maybe_scope_info);
+
+  if (err.Fail()) return String();
+
+  HeapObject maybe_function_name =
+      ScopeInfo(maybe_scope_info).MaybeFunctionName(err);
+  if (err.Fail()) return String();
+
+  if (String::IsString(v8(), maybe_function_name, err))
+    return maybe_function_name;
+
+  err = Error::Failure("Couldn't get SharedFunctionInfo's name");
+  return String();
+}
 
 inline int64_t Code::Start() { return LeaField(v8()->code()->kStartOffset); }
 
@@ -516,6 +559,32 @@ inline String ScopeInfo::ContextLocalName(int index, int param_count,
   int proper_index = index + stack_count + 1 + param_count;
   proper_index += v8()->scope_info()->kVariablePartIndex;
   return FixedArray::Get<String>(proper_index, err);
+}
+
+inline HeapObject ScopeInfo::MaybeFunctionName(Error& err) {
+  int proper_index = v8()->scope_info()->kVariablePartIndex +
+                     ParameterCount(err).GetValue() + 1 +
+                     StackLocalCount(err).GetValue() +
+                     (ContextLocalCount(err).GetValue() * 2);
+  // NOTE(mmarchini): FunctionName can be stored either in the first, second or
+  // third slot after ContextLocalCount. Since there are missing postmortem
+  // metadata to determine in which slot its being stored for the present
+  // ScopeInfo, we try to find it heuristically.
+  int tries = 3;
+  while (tries > 0) {
+    err = Error();
+
+    HeapObject maybe_function_name =
+        FixedArray::Get<HeapObject>(proper_index, err);
+    if (err.Success() && String::IsString(v8(), maybe_function_name, err))
+      return maybe_function_name;
+
+    tries--;
+    proper_index++;
+  }
+
+  err = Error::Failure("Couldn't get FunctionName from ScopeInfo");
+  return HeapObject();
 }
 
 inline bool Oddball::IsHoleOrUndefined(Error& err) {

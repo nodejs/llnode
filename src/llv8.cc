@@ -1093,7 +1093,9 @@ std::string FixedArray::InspectContents(int length, Error& err) {
 std::string Context::Inspect(Error& err) {
   std::string res;
   // Not enough postmortem information, return bare minimum
-  if (v8()->shared_info()->kScopeInfoOffset == -1) return res;
+  if (v8()->shared_info()->kScopeInfoOffset == -1 &&
+      v8()->shared_info()->kNameOrScopeInfoOffset == -1)
+    return res;
 
   Value previous = Previous(err);
   if (err.Fail()) return std::string();
