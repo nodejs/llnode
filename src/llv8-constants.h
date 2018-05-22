@@ -199,11 +199,21 @@ class Context : public Module {
   CONSTANTS_DEFAULT_METHODS(Context);
 
   int64_t kClosureIndex;
+  int64_t kScopeInfoIndex;
   int64_t kGlobalObjectIndex;
   int64_t kPreviousIndex;
   int64_t kNativeIndex;
   int64_t kEmbedderDataIndex;
   int64_t kMinContextSlots;
+
+  inline bool hasClosure() {
+    // NOTE (mmarchini): V8 6.8 replaced the closure field (which was a
+    // JSFunction) with a scope_info field (which is a ScopeInfo). The change
+    // made it easier to get the scope info for a context, but removed our
+    // ability to get the outer function for a given context. We can still get
+    // the outer context through the previous field though.
+    return kClosureIndex != -1;
+  }
 
  protected:
   void Load();

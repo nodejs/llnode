@@ -392,7 +392,7 @@ std::string JSFunction::Inspect(InspectOptions* options, Error& err) {
     std::string context_str = context.Inspect(err);
     if (err.Fail()) return std::string();
 
-    if (!context_str.empty()) res += "{\n" + context_str + "}";
+    if (!context_str.empty()) res += ":" + context_str;
 
     if (options->print_source) {
       SharedFunctionInfo info = Info(err);
@@ -1047,24 +1047,31 @@ std::string FixedArray::InspectContents(int length, Error& err) {
   return res;
 }
 
+HeapObject Context::GetScopeInfo(Error& err) {
+  if (v8()->context()->kScopeInfoIndex != -1) {
+    return FixedArray::Get<HeapObject>(v8()->context()->kScopeInfoIndex, err);
+  }
+  JSFunction closure = Closure(err);
+  if (err.Fail()) return HeapObject();
+
+  SharedFunctionInfo info = closure.Info(err);
+  if (err.Fail()) return HeapObject();
+
+  return info.GetScopeInfo(err);
+}
 
 std::string Context::Inspect(Error& err) {
-  std::string res;
   // Not enough postmortem information, return bare minimum
   if (v8()->shared_info()->kScopeInfoOffset == -1 &&
       v8()->shared_info()->kNameOrScopeInfoOffset == -1)
-    return res;
+    return std::string();
+
+  std::string res = "<Context: {\n";
 
   Value previous = Previous(err);
   if (err.Fail()) return std::string();
 
-  JSFunction closure = Closure(err);
-  if (err.Fail()) return std::string();
-
-  SharedFunctionInfo info = closure.Info(err);
-  if (err.Fail()) return std::string();
-
-  HeapObject scope_obj = info.GetScopeInfo(err);
+  HeapObject scope_obj = GetScopeInfo(err);
   if (err.Fail()) return std::string();
 
   ScopeInfo scope(scope_obj);
@@ -1082,11 +1089,14 @@ std::string Context::Inspect(Error& err) {
   if (heap_previous.Check()) {
     char tmp[128];
     snprintf(tmp, sizeof(tmp), "    (previous)=0x%016" PRIx64, previous.raw());
-    res += tmp;
+    res += std::string(tmp) + ":<Context>,";
   }
 
   if (!res.empty()) res += "\n";
-  {
+
+  if (v8()->context()->hasClosure()) {
+    JSFunction closure = Closure(err);
+    if (err.Fail()) return std::string();
     char tmp[128];
     snprintf(tmp, sizeof(tmp), "    (closure)=0x%016" PRIx64 " {",
              closure.raw());
@@ -1095,6 +1105,21 @@ std::string Context::Inspect(Error& err) {
     InspectOptions options;
     res += closure.Inspect(&options, err) + "}";
     if (err.Fail()) return std::string();
+  } else {
+    char tmp[128];
+    snprintf(tmp, sizeof(tmp), "    (scope_info)=0x%016" PRIx64,
+             scope.raw());
+
+    res += std::string(tmp) + ":<ScopeInfo";
+
+    Error function_name_error;
+    HeapObject maybe_function_name = scope.MaybeFunctionName(function_name_error);
+
+    if (function_name_error.Success()) {
+      res += ": for function " + String(maybe_function_name).ToString(err);
+    }
+
+    res += ">";
   }
 
   int param_count = param_count_smi.GetValue();
@@ -1116,7 +1141,7 @@ std::string Context::Inspect(Error& err) {
     if (err.Fail()) return std::string();
   }
 
-  return res;
+  return res + " }>";
 }
 
 
