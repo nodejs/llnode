@@ -199,6 +199,7 @@ class Context : public Module {
   CONSTANTS_DEFAULT_METHODS(Context);
 
   int64_t kClosureIndex;
+  int64_t kScopeInfoIndex;
   int64_t kGlobalObjectIndex;
   int64_t kPreviousIndex;
   int64_t kNativeIndex;

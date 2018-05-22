@@ -244,8 +244,9 @@ void ScopeInfo::Load() {
 
 
 void Context::Load() {
-  kClosureIndex =
-      LoadConstant("class_Context__closure_index__int", "context_idx_closure");
+  kClosureIndex = LoadConstant("class_Context__closure_index__int",
+                               "context_idx_closure", -1);
+  kScopeInfoIndex = LoadConstant("context_idx_scope_info", -1);
   kPreviousIndex =
       LoadConstant("class_Context__previous_index__int", "context_idx_prev");
   // TODO (mmarchini) change LoadConstant to accept variable arguments, a list

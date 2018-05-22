@@ -1047,6 +1047,18 @@ std::string FixedArray::InspectContents(int length, Error& err) {
   return res;
 }
 
+HeapObject Context::GetScopeInfo(Error& err) {
+  if (v8()->context()->kScopeInfoIndex != -1) {
+    return FixedArray::Get<HeapObject>(v8()->context()->kScopeInfoIndex, err);
+  }
+  JSFunction closure = Closure(err);
+  if (err.Fail()) return HeapObject();
+
+  SharedFunctionInfo info = closure.Info(err);
+  if (err.Fail()) return HeapObject();
+
+  return info.GetScopeInfo(err);
+}
 
 std::string Context::Inspect(Error& err) {
   std::string res;
@@ -1058,13 +1070,7 @@ std::string Context::Inspect(Error& err) {
   Value previous = Previous(err);
   if (err.Fail()) return std::string();
 
-  JSFunction closure = Closure(err);
-  if (err.Fail()) return std::string();
-
-  SharedFunctionInfo info = closure.Info(err);
-  if (err.Fail()) return std::string();
-
-  HeapObject scope_obj = info.GetScopeInfo(err);
+  HeapObject scope_obj = GetScopeInfo(err);
   if (err.Fail()) return std::string();
 
   ScopeInfo scope(scope_obj);
@@ -1086,7 +1092,11 @@ std::string Context::Inspect(Error& err) {
   }
 
   if (!res.empty()) res += "\n";
-  {
+
+  if (v8()->context()->kClosureIndex != -1) {
+    JSFunction closure;
+    closure = Closure(err);
+    if (err.Fail()) return std::string();
     char tmp[128];
     snprintf(tmp, sizeof(tmp), "    (closure)=0x%016" PRIx64 " {",
              closure.raw());

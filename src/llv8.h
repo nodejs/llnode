@@ -382,7 +382,7 @@ class Context : public FixedArray {
  public:
   V8_VALUE_DEFAULT_METHODS(Context, FixedArray)
 
-  inline JSFunction Closure(Error& err);
+  inline HeapObject GetScopeInfo(Error& err);
   inline Value Previous(Error& err);
   inline Value Native(Error& err);
   inline bool IsNative(Error& err);
@@ -391,6 +391,9 @@ class Context : public FixedArray {
   inline Value ContextSlot(int index, Error& err);
 
   std::string Inspect(Error& err);
+
+ private:
+  inline JSFunction Closure(Error& err);
 };
 
 class ScopeInfo : public FixedArray {
