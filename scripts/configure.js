@@ -75,8 +75,8 @@ function configureInstallation(osName, buildDir) {
  */
 function writeLlnodeScript(buildDir, lldbExe, osName) {
   const text = scriptText(osName, lldbExe);
-  const scriptPath = path.join(buildDir, 'llnode.sh');
-  console.log(`Writing llnode.sh shortcut to ${scriptPath}`);
+  const scriptPath = path.join(buildDir, 'llnode.js');
+  console.log(`Writing llnode.js shortcut to ${scriptPath}`);
   fs.writeFileSync(scriptPath, text);
 }
 
@@ -95,22 +95,40 @@ function scriptText(osName, lldbExe) {
   let lib = 'llnode.so';
   if (osName === 'Darwin') { lib = 'llnode.dylib'; }
 
-  return `#!/bin/sh
+  return `#!/usr/bin/env node
 
-LLNODE_SCRIPT=\`node -p "require('path').resolve('$0')"\`
+const child_process = require('child_process');
+const fs = require('fs');
+const path = require('path');
 
-SCRIPT_PATH=\`dirname $LLNODE_SCRIPT\`
-if [ \`basename $SCRIPT_PATH\` = ".bin" ]; then
-  # llnode installed locally in node_modules/.bin
-  LLNODE_PLUGIN="$SCRIPT_PATH/../llnode/${lib}"
-elif [ -e $SCRIPT_PATH/../lib/node_modules/llnode/${lib} ]; then
-  # llnode installed globally in lib/node_modules
-  LLNODE_PLUGIN="$SCRIPT_PATH/../lib/node_modules/llnode/${lib}"
-else
-  # The scrips is invoked directly
-  LLNODE_PLUGIN="$SCRIPT_PATH/${lib}"
-fi
+const scriptPath = path.dirname(__filename);
+const globalPath = path.resolve(
+  scriptPath, '..', 'lib', 'node_modules', 'llnode', '${lib}');
 
-${lldbExe} --one-line "plugin load $LLNODE_PLUGIN" --one-line "settings set prompt '(llnode) '" $@
+let llnodePlugin;
+if (path.basename(scriptPath) === '.bin') {
+  // llnode installed locally in node_modules/.bin
+  llnodePlugin = path.resolve(scriptPath, '..', 'llnode', '${lib}');
+} else if (fs.existsSync(globalPath)) {
+  // llnode installed globally in lib/node_modules
+  llnodePlugin = globalPath;
+} else {
+  // The script is invoked directly
+  llnodePlugin = path.join(scriptPath, '${lib}');
+}
+
+try {
+  child_process.execFileSync(
+    '${lldbExe}', [
+      '--one-line',
+      'plugin load \\''+llnodePlugin+'\\'',
+      '--one-line',
+      'settings set prompt \\'(llnode) \\''
+    ].concat(process.argv.slice(2)), {
+      stdio: 'inherit'
+    });
+} catch (err) {
+  process.exit(err.status);
+}
 `;
 }

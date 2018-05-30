@@ -7,7 +7,7 @@
     "test": "test"
   },
   "bin": {
-    "llnode": "llnode.sh"
+    "llnode": "llnode.js"
   },
   "scripts": {
     "preinstall": "node scripts/configure.js",
