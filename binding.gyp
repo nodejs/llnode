@@ -50,7 +50,19 @@
             },
           }],
         ],
-      }]
+      }],
+      [ "OS == 'win'", {
+        "sources": [
+          "<(lldb_include_dir)/../source/Host/common/GetOptInc.cpp",
+          "windows/llnode.def",
+        ],
+        "include_dirs": [
+          "windows/include",
+        ],
+        "libraries": [
+          "<(lldb_lib_dir)/<(lldb_lib)",
+        ],
+      }],
     ]
   },
 

@@ -81,6 +81,17 @@ version is LLDB 3.9 and above.
   ln -s /usr/local/bin/lldb39 /usr/bin/lldb
   ```
 
+- Windows
+  - You can install a [binary distribution of LLVM](http://releases.llvm.org/download.html)
+    directly or using [Chocolatey](https://chocolatey.org/install#installing-chocolatey):
+
+    ```bat
+    cinst -y visualstudio2017buildtools visualstudio2017-workload-vctools llvm git
+    ```
+
+    Visual Studio is required for MSBuild and headers when building llnode. Git
+    is required to download the lldb headers.
+
 ### Install the Plugin
 
 #### Install llnode globally via npm

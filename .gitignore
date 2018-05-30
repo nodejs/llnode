@@ -1,6 +1,7 @@
 *.dylib
 *.so
 *.dSYM
+*.dll
 tools/
 out/
 lldb/

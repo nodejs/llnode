@@ -83,6 +83,55 @@ function tryExecutables(exeNames) {
 }
 
 /**
+ * Find a directory containing a LLVM executable in Windows.
+ * The search happens in the following order:
+ * - the directory specified by the user using npm --lldb_exe=...
+ * - using 'where' to find the executable in the PATH
+ * - the default LLVM location in Program Files
+ * Returns undefined if the executable was not found.
+ * @param {string} exeName
+ * @returns {string|undefined}
+ */
+function findWindowsExeDir(exeName) {
+  // Look for exeName at the location of lldb_exe
+  if (process.env.npm_config_lldb_exe !== undefined) {
+    const exeDir = path.dirname(process.env.npm_config_lldb_exe);
+    if (fs.existsSync(path.join(exeDir, exeName))) {
+      return exeDir;
+    }
+    console.log(`Could not find ${exeName} in the directory of lldb_exe`);
+  }
+
+  // Look for exeName in the PATH
+  let exePath;
+  try {
+    exePath = child_process.execSync(
+        `where ${exeName}`,
+        { stdio: 'pipe' }  // to suppress stderr
+    ).toString().trim().split(/[\r\n]+/g)[0].trim();
+  } catch (err) { /* Do nothing. */ }
+  // Ensure the string returned by 'where' is not an error
+  if (exePath && fs.existsSync(exePath)) {
+    return path.dirname(exePath);
+  }
+  console.log(`Could not find ${exeName} in the PATH`);
+
+  // Look for exeName in Program Files
+  if (process.env['ProgramFiles']) {
+    const exeDir = path.join(process.env['ProgramFiles'], 'LLVM', 'bin');
+    if (fs.existsSync(path.join(exeDir, exeName))) {
+      return exeDir;
+    }
+  }
+  if (process.env['ProgramFiles(x86)']) {
+    const exeDir = path.join(process.env['ProgramFiles(x86)'], 'LLVM', 'bin');
+    if (fs.existsSync(path.join(exeDir, exeName))) {
+      return exeDir;
+    }
+  }
+}
+
+/**
  * Get the lldb version from the lldb executable, exit the process with 1
  * if failed.
  * @param {string} lldbExe
@@ -112,5 +161,6 @@ module.exports = {
   getLibPath,
   cloneHeaders,
   tryExecutables,
+  findWindowsExeDir,
   getLldbVersion
 };
