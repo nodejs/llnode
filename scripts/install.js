@@ -1,11 +1,36 @@
 'use strict';
 
 const child_process = require('child_process');
+const os = require('os');
+const fs = require('fs');
+const path = require('path');
+
+const lldb = require('./lldb');
 
 main();
 
 function main() {
+  const osName = os.type();
+  if (osName === 'Windows_NT') {
+    return mainWindows();
+  }
+
   runFile('node-gyp', ['rebuild']);
+}
+
+function mainWindows() {
+  const clangExe = 'clang-cl.exe';
+  const clangDir = lldb.findWindowsExeDir(clangExe);
+
+  if (!clangDir) {
+    console.log(`Could not find ${clangExe}`);
+    process.exit(1);
+  }
+  console.log(`Using ${clangExe} found at ${clangDir}`);
+
+  runShell('node-gyp clean');
+  runShell('node-gyp configure');
+  runShell(`node-gyp build /p:CLToolExe="${clangExe}" /p:CLToolPath="${clangDir}"`);
 }
 
 /**

@@ -49,6 +49,10 @@ function configureInstallation(osName, buildDir) {
   } else if (osName === 'FreeBSD') {
     installation = require('./freebsd').getLldbInstallation();
     config.variables['lldb_lib_dir%'] = installation.libDir;
+  } else if (osName === 'Windows_NT') {
+    installation = require('./windows').getLldbInstallation();
+    config.variables['lldb_lib_dir%'] = installation.libDir;
+    config.variables['lldb_lib%'] = installation.libName;
   } else {
     console.log(`Unsupported OS: ${osName}`);
     process.exit(1);
@@ -92,8 +96,15 @@ function writeConfig(config) {
 }
 
 function scriptText(osName, lldbExe) {
-  let lib = 'llnode.so';
-  if (osName === 'Darwin') { lib = 'llnode.dylib'; }
+  let lib;
+  if (osName === 'Darwin') {
+    lib = 'llnode.dylib';
+  } else if (osName === 'Windows_NT') {
+    lib = 'llnode.dll';
+    lldbExe = lldbExe.replace(/\\/g, '\\\\');
+  } else {
+    lib = 'llnode.so';
+  }
 
   return `#!/usr/bin/env node
 

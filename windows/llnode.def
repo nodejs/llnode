@@ -1,0 +1,6 @@
+LIBRARY  plugin.dll
+EXPORTS
+;
+; llnode exports
+;
+_ZN4lldb16PluginInitializeENS_10SBDebuggerE=PluginInitialize

@@ -25,7 +25,7 @@ const debug = exports.debug =
 let pluginName;
 if (process.platform === 'darwin')
   pluginName = 'llnode.dylib';
-else if (process.platform === 'windows')
+else if (process.platform === 'win32')
   pluginName = 'llnode.dll';
 else
   pluginName = 'llnode.so';
