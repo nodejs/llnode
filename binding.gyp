@@ -16,6 +16,7 @@
       "<(lldb_include_dir)",
     ],
 
+
     "cflags" : [ "-std=c++11" ],
 
     "conditions": [
@@ -58,10 +59,14 @@
     "target_name": "plugin",
     "type": "shared_library",
     "sources": [
+      "src/constants.cc",
+      "src/error.cc",
       "src/llnode.cc",
       "src/llv8.cc",
       "src/llv8-constants.cc",
       "src/llscan.cc",
+      "src/node.cc",
+      "src/node-constants.cc",
     ]
   }],
 }

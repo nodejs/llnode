@@ -6,9 +6,16 @@
 
 #include <lldb/API/LLDB.h>
 
+#include "src/error.h"
 #include "src/llv8-constants.h"
 
 namespace llnode {
+
+namespace node {
+namespace constants {
+class Environment;
+}
+}  // namespace node
 
 class FindJSObjectsVisitor;
 class FindReferencesCmd;
@@ -20,33 +27,6 @@ namespace v8 {
 class LLV8;
 class CodeMap;
 
-class Error {
- public:
-  Error() : failed_(false), msg_("") {}
-  Error(bool failed, std::string msg) : failed_(failed), msg_(msg) {}
-  Error(bool failed, const char* format, ...)
-      __attribute__((format(printf, 3, 4)));
-
-  static inline Error Ok() { return Error(false, "ok"); }
-  static Error Failure(std::string msg);
-  static Error Failure(const char* format, ...)
-      __attribute__((format(printf, 1, 2)));
-  static void PrintInDebugMode(const char* format, ...)
-      __attribute__((format(printf, 1, 2)));
-
-  inline bool Success() const { return !Fail(); }
-  inline bool Fail() const { return failed_; }
-
-  inline const char* GetMessage() { return msg_.c_str(); }
-
-  static void SetDebugMode(bool mode) { is_debug_mode = mode; }
-
- private:
-  bool failed_;
-  std::string msg_;
-  static const size_t kMaxMessageLength = 128;
-  static bool is_debug_mode;
-};
 
 #define V8_VALUE_DEFAULT_METHODS(NAME, PARENT)     \
   NAME(const NAME& v) = default;                   \
@@ -403,6 +383,7 @@ class Context : public FixedArray {
 
   inline JSFunction Closure(Error& err);
   inline Value Previous(Error& err);
+  inline Value Native(Error& err);
   inline Value ContextSlot(int index, Error& err);
 
   std::string Inspect(Error& err);
@@ -563,6 +544,7 @@ class LLV8 {
   friend class llnode::FindJSObjectsVisitor;
   friend class llnode::FindObjectsCmd;
   friend class llnode::FindReferencesCmd;
+  friend class llnode::node::constants::Environment;
 };
 
 #undef V8_VALUE_DEFAULT_METHODS
