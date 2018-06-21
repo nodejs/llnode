@@ -492,6 +492,7 @@ class LLV8 {
   std::string LoadBytes(int64_t addr, int64_t length, Error& err);
   std::string LoadString(int64_t addr, int64_t length, Error& err);
   std::string LoadTwoByteString(int64_t addr, int64_t length, Error& err);
+  std::string Utf16ToUtf8(const std::u16string& u16str);
   uint8_t* LoadChunk(int64_t addr, int64_t length, Error& err);
 
   lldb::SBTarget target_;

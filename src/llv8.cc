@@ -200,6 +200,57 @@ std::string LLV8::LoadString(int64_t addr, int64_t length, Error& err) {
   return res;
 }
 
+std::string LLV8::Utf16ToUtf8(const std::u16string& u16_str) {
+  if (u16_str.empty()) {
+    return std::string();
+  }
+  const char16_t* p = u16_str.data();
+  std::u16string::size_type len = u16_str.length();
+  if (p[0] == 0xFEFF) {
+    // bom
+    p += 1;
+    len -= 1;
+  }
+
+  std::string u8_str;
+  u8_str.reserve(len * 3);
+
+  char16_t u16_char;
+  for (std::u16string::size_type i = 0; i < len; ++i) {
+    u16_char = p[i];
+    if (u16_char < 0x0080) {
+      u8_str.push_back((char)(u16_char & 0x00FF));
+      continue;
+    }
+    if (u16_char >= 0x0080 && u16_char <= 0x07FF) {
+      u8_str.push_back((char)(((u16_char >> 6) & 0x1F) | 0xC0));
+      u8_str.push_back((char)((u16_char & 0x3F) | 0x80));
+      continue;
+    }
+    if (u16_char >= 0xD800 && u16_char <= 0xDBFF) {
+      uint32_t highSur = u16_char;
+      uint32_t lowSur = p[++i];
+      uint32_t codePoint = highSur - 0xD800;
+      codePoint <<= 10;
+      codePoint |= lowSur - 0xDC00;
+      codePoint += 0x10000;
+      u8_str.push_back((char)((codePoint >> 18) | 0xF0));
+      u8_str.push_back((char)(((codePoint >> 12) & 0x3F) | 0x80));
+      u8_str.push_back((char)(((codePoint >> 06) & 0x3F) | 0x80));
+      u8_str.push_back((char)((codePoint & 0x3F) | 0x80));
+      continue;
+    }
+    {
+      u8_str.push_back((char)(((u16_char >> 12) & 0x0F) | 0xE0));
+      u8_str.push_back((char)(((u16_char >> 6) & 0x3F) | 0x80));
+      u8_str.push_back((char)((u16_char & 0x3F) | 0x80));
+      continue;
+    }
+  }
+
+  return u8_str;
+}
+
 
 std::string LLV8::LoadTwoByteString(int64_t addr, int64_t length, Error& err) {
   if (length < 0) {
@@ -207,7 +258,7 @@ std::string LLV8::LoadTwoByteString(int64_t addr, int64_t length, Error& err) {
     return std::string();
   }
 
-  char* buf = new char[length * 2 + 1];
+  char* buf = new char[length * 2];
   SBError sberr;
   process_.ReadMemory(static_cast<addr_t>(addr), buf,
                       static_cast<size_t>(length * 2), sberr);
@@ -220,10 +271,9 @@ std::string LLV8::LoadTwoByteString(int64_t addr, int64_t length, Error& err) {
     return std::string();
   }
 
-  for (int64_t i = 0; i < length; i++) buf[i] = buf[i * 2];
-  buf[length] = '\0';
+  char16_t* u16str = (char16_t*) buf;
+  std::string res = Utf16ToUtf8(u16str);
 
-  std::string res = buf;
   delete[] buf;
   err = Error::Ok();
   return res;
@@ -1047,10 +1097,10 @@ std::string String::Inspect(InspectOptions* options, Error& err) {
   if (err.Fail()) return std::string();
 
   unsigned int len = options->length;
-
+  int total_length = val.length();
   if (len != 0 && val.length() > len) val = val.substr(0, len) + "...";
 
-  return "<String: \"" + val + "\">";
+  return "<String: \"" + val + "\", length=" + std::to_string(total_length) + ">";
 }
 
 
