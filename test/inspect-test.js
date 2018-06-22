@@ -28,7 +28,7 @@ const hashMapTests = {
         if (err) return cb(err);
         lines = lines.join('\n');
         t.ok(/source=\/regexp\//.test(lines) ||
-            /\.source=[^\n]*<String: "regexp">/.test(lines),
+            /\.source=[^\n]*<String: "regexp", length=([0-9]+)>/.test(lines),
             'hashmap[23] should have the correct regexp.source');
         cb(null);
       });
@@ -66,18 +66,18 @@ const hashMapTests = {
   },
   // .other-key=0x000036eccf7bd9c1:<String: "ohai">,
   'string': {
-    re: /.other-key=[^\n]*<String: "ohai">/,
+    re: /.other-key=[^\n]*<String: "ohai", length=([0-9]+)>/,
     desc: '.other-key property'
   },
   // .cons-string=0x000003df9cbe7579:<String: "this could be a ...">,
   'cons-string': {
-    re: /.cons-string=(0x[0-9a-f]+):<String: "this could be a ...">/,
+    re: /.cons-string=(0x[0-9a-f]+):<String: "this could be a ...", length=([0-9]+)>/,
     desc: '.cons-string ConsString property',
     validators: [(t, sess, addresses, name, cb) => {
       const address = addresses[name];
       sess.send(`v8 inspect -F ${address}`);
 
-      sess.linesUntil(/">/, (err, lines) => {
+      sess.linesUntil(/[0-9]+>/, (err, lines) => {
         if (err) return cb(err);
         lines = lines.join('\n');
         const expected = 'this could be a bit smaller, but v8 wants big str.' +
@@ -90,7 +90,7 @@ const hashMapTests = {
       const address = addresses[name];
       sess.send(`v8 inspect --string-length 20 ${address}`);
 
-      sess.linesUntil(/">/, (err, lines) => {
+      sess.linesUntil(/[0-9]+>/, (err, lines) => {
         if (err) return cb(err);
         lines = lines.join('\n');
         const expected = 'this could be a bit ...';
@@ -102,22 +102,22 @@ const hashMapTests = {
   },
   // .internalized-string=0x000036eccf7bda89:<String: "foobar">,
   'internalized-string': {
-    re: /.internalized-string=(0x[0-9a-f]+):<String: "foobar">/,
+    re: /.internalized-string=(0x[0-9a-f]+):<String: "foobar", length=([0-9]+)>/,
     desc: '.internalized-string Internalized String property'
   },
   // .thin-string=0x000003df9cbe7621:<String: "foobar">,
   'thin-string': {
-    re: /.thin-string=(0x[0-9a-f]+):<String: "foobar">/,
+    re: /.thin-string=(0x[0-9a-f]+):<String: "foobar", length=([0-9]+)>/,
     desc: '.thin-string ThinString property',
     validator(t, sess, addresses, name, cb) {
       const address = addresses[name];
       sess.send(`v8 inspect ${address}`);
 
-      sess.linesUntil(/">/, (err, lines) => {
+      sess.linesUntil(/[0-9]+>/, (err, lines) => {
         if (err) return cb(err);
         lines = lines.join('\n');
         t.ok(
-            /0x[0-9a-f]+:<String: "foobar">/.test(lines),
+            /0x[0-9a-f]+:<String: "foobar", length=([0-9]+)>/.test(lines),
             'hashmap.thin-string should have the right content');
         cb(null);
       });
@@ -125,17 +125,17 @@ const hashMapTests = {
   },
   // .externalized-string=0x000036eccf7bdb41:<String: "(external)">,
   'externalized-string': {
-    re: /.externalized-string=(0x[0-9a-f]+):<String: "\(external\)">/,
+    re: /.externalized-string=(0x[0-9a-f]+):<String: "\(external\)", length=([0-9]+)>/,
     desc: '.externalized-string ExternalString property'
   },
   // .sliced-externalized-string=0x000003df9cbe77e9:<String: "(external)">,
   'sliced-externalized-string': {
-    re: /.sliced-externalized-string=(0x[0-9a-f]+):<String: "\(external\)">/,
+    re: /.sliced-externalized-string=(0x[0-9a-f]+):<String: "\(external\)", length=([0-9]+)>/,
     desc: '.sliced-externalized-string Sliced ExternalString property'
   },
   // .array=0x000003df9cbe7919:<Array: length=6>,
   'array': {
-    re: /.array=(0x[0-9a-f]+):<Array: length=6>/,
+    re: /.array=(0x[0-9a-f]+):<Array: length=([0-9]+)>/,
     desc: '.array JSArray property',
     validator(t, sess, addresses, name, cb) {
       const address = addresses[name];
@@ -152,7 +152,7 @@ const hashMapTests = {
   },
   // .long-array=0x000003df9cbe7aa9:<Array: length=20>,
   'long-array': {
-    re: /.long-array=(0x[0-9a-f]+):<Array: length=20>/,
+    re: /.long-array=(0x[0-9a-f]+):<Array: length=([0-9]+)>/,
     desc: '.long-array JSArray property',
     validator(t, sess, addresses, name, cb) {
       const address = addresses[name];
@@ -343,7 +343,7 @@ const contextTests = {
     }
   },
   'scoped-array': {
-    re: /scopedArray=(0x[0-9a-f]+):<Array: length=2>/i,
+    re: /scopedArray=(0x[0-9a-f]+):<Array: length=([0-9]+)>/i,
     desc: '.scopedArray',
     validator(t, sess, addresses, name, cb) {
       const address = addresses[name];
