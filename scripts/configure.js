@@ -45,6 +45,9 @@ function configureInstallation(osName, buildDir) {
     if (installation.libDir) {
       config.variables['lldb_lib_dir%'] = installation.libDir;
     }
+    if (installation.libPath) {
+      config.variables['lldb_lib_so%'] = installation.libPath;
+    }
     config.variables['lldb_lib%'] = installation.libName;
   } else if (osName === 'FreeBSD') {
     installation = require('./freebsd').getLldbInstallation();
