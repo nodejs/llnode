@@ -1,8 +1,7 @@
-TEST_LLDB_BINARY ?= $(shell which lldb-3.9)
-
 .PHONY: all
-all:
-	@echo "Please take a look at README.md"
+all: configure-with-addon
+	node-gyp rebuild
+	node scripts/cleanup.js
 
 .PHONY: install-osx
 install-osx: plugin
@@ -32,19 +31,18 @@ format:
 configure:
 	node scripts/configure.js
 
+.PHONY: configure-with-addon
+configure-with-addon:
+	LLNODE_BUILD_ADDON=true node scripts/configure.js
+
 .PHONY: plugin
 plugin: configure
 	node-gyp rebuild
 	node scripts/cleanup.js
 
 .PHONY: addon
-addon: configure
+addon: configure-with-addon
 	node-gyp rebuild
-
-.PHONY: _travis
-_travis:
-	TEST_LLDB_BINARY="$(TEST_LLDB_BINARY)" \
-	npm test
 
 .PHONY: clean
 clean:

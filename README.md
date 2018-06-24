@@ -259,10 +259,20 @@ The easiest way to build the plugin:
 # Clone this repo
 git clone https://github.com/nodejs/llnode.git && cd llnode
 
-# Configure and build the plugin
+# Configure and build the plugin with npm
 npm install
-# Or run
+# To configure and build the plugin without npm
+node scripts/configure.js && node scripts/install.js && node scripts/cleanup.js
+# Or use make
 make plugin
+
+# To configure and build both the plugin and the addon
+npm install --llnode_build_addon=true
+# Without npm
+LLNODE_BUILD_ADDON=true node scripts/configure.js && node scripts/install.js && node scripts/cleanup.js
+# Or use make
+make addon # Builds the addon
+make       # Builds both the addon and the plugin
 ```
 
 To configure the build yourself:
@@ -270,6 +280,7 @@ To configure the build yourself:
 ```bash
 # Detect available lldb installation and download headers if necessary
 node scripts/configure.js
+# To build the addon, set the environment variable LLNODE_BUILD_ADDON=true
 
 # To configure with the detected lldb installation
 node-gyp configure
@@ -280,7 +291,7 @@ node-gyp configure -- -Dlldb_include_dir=/usr/local/Cellar/llvm/5.0.0/include
 # contains `liblldb.so` or `liblldb.dylib`
 node-gyp configure -- -Dlldb_lib_dir=/usr/lib/llvm-3.9/lib
 
-# Build the plugin
+# Build the plugin (and the addon if LLNODE_BUILD_ADDON=true)
 node-gyp build
 
 # Move the built plugin to the project directory
@@ -292,14 +303,16 @@ node scripts/cleanup.js
 To run the tests, if `lldb` is an executable on the `PATH`:
 
 ```bash
-npm run test
+npm run test-all    # Run both addon and plugin tests
+npm run test-plugin # Run plugin tests
+npm run test-addon    # Run addon tests
 ```
 
 If the LLDB executable is named differently, point `TEST_LLDB_BINARY`
-to it:
+to it before running the tests:
 
 ```bash
-TEST_LLDB_BINARY=`which lldb-4.0` npm run test
+TEST_LLDB_BINARY=`which lldb-4.0` npm run test-all
 ```
 
 ### Useful Environment Variables

@@ -9,14 +9,26 @@ function main() {
   const buildDir = process.cwd();
   console.log('Build dir is: ' + buildDir);
   const osName = os.type();
-  const result = configureInstallation(osName, buildDir);
-  writeConfig(result.config);
-  writeLlnodeScript(buildDir, result.executable, osName);
+  const { config, executable } = configureInstallation(osName, buildDir);
+  configureBuildOptions(config);
+  writeConfig(config);
+  writeLlnodeScript(buildDir, executable, osName);
   // Exit with success.
   process.exit(0);
 }
 
 main();
+
+// Do not build addon by default until it's less experimental
+function configureBuildOptions(config) {
+  const build_addon = (process.env.npm_config_llnode_build_addon ||
+    process.env.LLNODE_BUILD_ADDON);
+  if (build_addon) {
+    config.variables.build_addon = build_addon;
+  } else {
+    config.variables.build_addon = 'false';
+  }
+}
 
 /**
  * Get and configure the lldb installation. The returned prefix

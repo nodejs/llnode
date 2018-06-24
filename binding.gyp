@@ -8,7 +8,8 @@
       # gyp does not appear to let you test for undefined variables, so define
       # lldb_lib_dir as empty so we can test it later.
       "lldb_lib_dir%": "",
-      "lldb_lib_so%": ""
+      "lldb_lib_so%": "",
+      "build_addon": "false",
   },
 
   "target_defaults": {
@@ -85,47 +86,53 @@
         ],
       }]
     ]
-  }, {
-    "target_name": "addon",
-    "type": "loadable_module",
-    "include_dirs": [
-      "<!@(node -p \"require('node-addon-api').include\")"
-    ],
-    "defines": [ "NAPI_DISABLE_CPP_EXCEPTIONS" ],
-    "sources": [
-      "src/addon.cc",
-      "src/llnode_module.cc",
-      "src/llnode_api.cc",
-      "src/constants.cc",
-      "src/error.cc",
-      "src/llv8.cc",
-      "src/llv8-constants.cc",
-      "src/llscan.cc",
-      "src/node-constants.cc",
-    ],
-    "cflags!": [ "-fno-exceptions" ],
-    "cflags_cc!": [ "-fno-exceptions" ],
-    "conditions": [
-      [ "OS=='linux' or OS=='freebsd'", {
+  }],
+
+  "conditions": [
+    [ "build_addon == 'true'", {
+      "targets": [{
+        "target_name": "addon",
+        "type": "loadable_module",
+        "include_dirs": [
+          "<!@(node -p \"require('node-addon-api').include\")"
+        ],
+        "defines": [ "NAPI_DISABLE_CPP_EXCEPTIONS" ],
+        "sources": [
+          "src/addon.cc",
+          "src/llnode_module.cc",
+          "src/llnode_api.cc",
+          "src/constants.cc",
+          "src/error.cc",
+          "src/llv8.cc",
+          "src/llv8-constants.cc",
+          "src/llscan.cc",
+          "src/node-constants.cc",
+        ],
+        "cflags!": [ "-fno-exceptions" ],
+        "cflags_cc!": [ "-fno-exceptions" ],
         "conditions": [
-          # If we could not locate the lib dir, then we will have to search
-          # from the global search paths during linking and at runtime
-          [ "lldb_lib_dir != ''", {
-            "ldflags": [
-              "-L<(lldb_lib_dir)",
-              "-Wl,-rpath,<(lldb_lib_dir)"
+          [ "OS=='linux' or OS=='freebsd'", {
+            "conditions": [
+              # If we could not locate the lib dir, then we will have to search
+              # from the global search paths during linking and at runtime
+              [ "lldb_lib_dir != ''", {
+                "ldflags": [
+                  "-L<(lldb_lib_dir)",
+                  "-Wl,-rpath,<(lldb_lib_dir)"
+                ]
+              }],
+              # If we cannot find a non-versioned library liblldb(-x.y).so,
+              # then we will have to link to the versioned library
+              # liblldb(-x.y).so.z loaded by the detected lldb executable
+              [ "lldb_lib_so != ''", {
+                "libraries": ["<(lldb_lib_so)"]
+              }, {
+                "libraries": ["-l<(lldb_lib)"]
+              }]
             ]
-          }],
-          # If we cannot find a non-versioned library liblldb(-x.y).so,
-          # then we will have to link to the versioned library
-          # liblldb(-x.y).so.z loaded by the detected lldb executable
-          [ "lldb_lib_so != ''", {
-            "libraries": ["<(lldb_lib_so)"]
-          }, {
-            "libraries": ["-l<(lldb_lib)"]
           }]
         ]
       }]
-    ]
-  }]
+    }]
+  ]
 }

@@ -2,7 +2,7 @@
 
 const tape = require('tape');
 
-const common = require('./common');
+const common = require('../common');
 
 // <Object: Object elements {
 const hashMapTests = {

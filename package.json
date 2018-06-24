@@ -13,7 +13,10 @@
     "preinstall": "node scripts/configure.js",
     "install": "node scripts/install.js",
     "postinstall": "node scripts/cleanup.js",
-    "test": "tape test/*-test.js"
+    "test-plugin": "tape test/plugin/*-test.js",
+    "test-addon": "tape test/addon/*-test.js",
+    "test-all": "npm run test-addon && npm run test-plugin",
+    "test": "npm run test-plugin"
   },
   "repository": {
     "type": "git",

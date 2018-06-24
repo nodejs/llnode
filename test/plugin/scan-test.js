@@ -1,7 +1,7 @@
 'use strict';
 
 const tape = require('tape');
-const common = require('./common');
+const common = require('../common');
 const versionMark = common.versionMark;
 
 tape('v8 findrefs and friends', (t) => {

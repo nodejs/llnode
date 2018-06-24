@@ -1,6 +1,6 @@
 'use strict';
 const tape = require('tape');
-const common = require('./common');
+const common = require('../common');
 
 function containsLine(lines, re) {
   return lines.some(line => re.test(line.trim()));
