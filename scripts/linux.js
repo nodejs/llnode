@@ -85,7 +85,7 @@ function getIncludeDir(llvmConfig) {
  * undefined, the shared library will be searched from the global search paths
  * @param {string} lldbExe Path to the corresponding lldb executable
  * @param {string|undefined} llvmConfig Path to llvm-config, if it's installed
- * @returns {{dir:string, name:string}}
+ * @returns {{dir:string|undefined, name:string, so: string|undefined}}
  */
 function getLib(lldbExe, llvmConfig) {
   // First look for the libraries in the directory returned by
@@ -95,7 +95,7 @@ function getLib(lldbExe, llvmConfig) {
         llvmConfig, ['--libdir']
     ).toString().trim();
     if (fs.existsSync(path.join(libDir, 'liblldb.so'))) {
-      return { dir: libDir, name: 'lldb' };
+      return { dir: libDir, name: 'lldb', so: undefined };
     }
   }
 
@@ -106,13 +106,13 @@ function getLib(lldbExe, llvmConfig) {
         'ldd', [lldbExe]
     ).toString().trim();
   } catch (err) {
-    return { dir: undefined, name: 'lldb' };
+    return { dir: undefined, name: 'lldb', so: undefined };
   }
 
   const lib = libs.split(/\s/).find(
       line => line.includes('liblldb') && line.startsWith('/'));
   if (!lib) {
-    return { dir: undefined, name: 'lldb' };
+    return { dir: undefined, name: 'lldb', so: undefined };
   }
 
   console.log(`From ldd: ${lldbExe} loads ${lib}`);
@@ -121,20 +121,22 @@ function getLib(lldbExe, llvmConfig) {
   // On Ubuntu the libraries are suffixed and installed globally
   const libName = path.basename(lib).match(/lib(lldb.*?)\.so/)[1];
 
-  // TODO(joyeecheung): on RedHat there might not be a non-versioned liblldb.so
+  // On RedHat there might not be a non-versioned liblldb.so
   // in the system. It's fine in the case of plugins since the lldb executable
   // will load the library before loading the plugin, but we will have to link
   // to the versioned library file for addons.
-  if (!fs.existsSync(path.join(libDir, `lib${libName}.so`))) {
+  if (fs.existsSync(path.join(libDir, `lib${libName}.so`))) {
     return {
-      dir: undefined,
-      name: libName
+      dir: libDir,
+      name: libName,
+      so: undefined
     };
   }
 
   return {
-    dir: libDir,
-    name: libName
+    dir: undefined,
+    name: libName,
+    so: lib
   };
 }
 
@@ -181,7 +183,9 @@ function getLldbInstallation() {
   const lib = getLib(lldbExe, llvmConfig);
   if (!lib.dir) {
     console.log(`Could not find non-versioned lib${lib.name}.so in the system`);
-    console.log(`Symbols will be resolved by the lldb executable at runtime`);
+    console.log('Plugin symbols will be resolved by the lldb executable ' +
+                'at runtime');
+    console.log(`Addon will be linked to ${lib.so}`);
   } else {
     console.log(`Found lib${lib.name}.so in ${lib.dir}`);
   }
@@ -191,7 +195,8 @@ function getLldbInstallation() {
     version: lldbVersion,
     includeDir: includeDir,
     libDir: lib.dir,
-    libName: lib.name
+    libName: lib.name,
+    libPath: lib.so
   };
 }
 
