@@ -41,6 +41,62 @@ const char* const
 const char* const FindReferencesCmd::StringScanner::array_reference_template =
     "0x%" PRIx64 ": %s[%" PRId64 "]=0x%" PRIx64 " '%s'\n";
 
+char** ParseInspectOptions(char** cmd, v8::Value::InspectOptions* options) {
+  static struct option opts[] = {
+      {"full-string", no_argument, nullptr, 'F'},
+      {"string-length", required_argument, nullptr, 'l'},
+      {"array-length", required_argument, nullptr, 'l'},
+      {"length", required_argument, nullptr, 'l'},
+      {"print-map", no_argument, nullptr, 'm'},
+      {"print-source", no_argument, nullptr, 's'},
+      {"verbose", no_argument, nullptr, 'v'},
+      {"detailed", no_argument, nullptr, 'd'},
+      {nullptr, 0, nullptr, 0}};
+
+  int argc = 1;
+  for (char** p = cmd; p != nullptr && *p != nullptr; p++) argc++;
+
+  char* args[argc];
+
+  // Make this look like a command line, we need a valid element at index 0
+  // for getopt_long to use in its error messages.
+  char name[] = "llnode";
+  args[0] = name;
+  for (int i = 0; i < argc - 1; i++) args[i + 1] = cmd[i];
+
+  // Reset getopts.
+  optind = 0;
+  opterr = 1;
+  do {
+    int arg = getopt_long(argc, args, "Fmsdvl:", opts, nullptr);
+    if (arg == -1) break;
+
+    switch (arg) {
+      case 'F':
+        options->length = 0;
+        break;
+      case 'm':
+        options->print_map = true;
+        break;
+      case 'l':
+        options->length = strtol(optarg, nullptr, 10);
+        break;
+      case 's':
+        options->print_source = true;
+        break;
+      case 'd':
+      case 'v':
+        options->detailed = true;
+        break;
+      default:
+        continue;
+    }
+  } while (true);
+
+  // Use the original cmd array for our return value.
+  return &cmd[optind - 1];
+}
+
 bool FindObjectsCmd::DoExecute(SBDebugger d, char** cmd,
                                SBCommandReturnObject& result) {
   SBTarget target = d.GetSelectedTarget();

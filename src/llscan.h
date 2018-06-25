@@ -18,6 +18,7 @@ typedef std::map<uint64_t, ReferencesVector*> ReferencesByValueMap;
 typedef std::map<std::string, ReferencesVector*> ReferencesByPropertyMap;
 typedef std::map<std::string, ReferencesVector*> ReferencesByStringMap;
 
+char** ParseInspectOptions(char** cmd, v8::Value::InspectOptions* options);
 
 class FindObjectsCmd : public CommandBase {
  public:
