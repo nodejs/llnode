@@ -378,29 +378,29 @@ inline std::string OneByteString::ToString(Error& err) {
   return v8()->LoadString(chars, len.GetValue(), err);
 }
 
-inline std::string TwoByteString::ToString(Error& err) {
+inline std::string TwoByteString::ToString(Error& err, bool utf16) {
   int64_t chars = LeaField(v8()->two_byte_string()->kCharsOffset);
   Smi len = Length(err);
   if (err.Fail()) return std::string();
-  return v8()->LoadTwoByteString(chars, len.GetValue(), err);
+  return v8()->LoadTwoByteString(chars, len.GetValue(), err, utf16);
 }
 
-inline std::string ConsString::ToString(Error& err) {
+inline std::string ConsString::ToString(Error& err, bool utf16) {
   String first = First(err);
   if (err.Fail()) return std::string();
 
   String second = Second(err);
   if (err.Fail()) return std::string();
 
-  std::string tmp = first.ToString(err);
+  std::string tmp = first.ToString(err, utf16);
   if (err.Fail()) return std::string();
-  tmp += second.ToString(err);
+  tmp += second.ToString(err, utf16);
   if (err.Fail()) return std::string();
 
   return tmp;
 }
 
-inline std::string SlicedString::ToString(Error& err) {
+inline std::string SlicedString::ToString(Error& err, bool utf16) {
   String parent = Parent(err);
   if (err.Fail()) return std::string();
 
@@ -408,7 +408,7 @@ inline std::string SlicedString::ToString(Error& err) {
   // We can't use the offset and length safely if we get "(external)"
   // instead of the original parent string.
   if (parent.Representation(err) == v8()->string()->kExternalStringTag) {
-    return parent.ToString(err);
+    return parent.ToString(err, utf16);
   }
 
   Smi offset = Offset(err);
@@ -417,17 +417,17 @@ inline std::string SlicedString::ToString(Error& err) {
   Smi length = Length(err);
   if (err.Fail()) return std::string();
 
-  std::string tmp = parent.ToString(err);
+  std::string tmp = parent.ToString(err, utf16);
   if (err.Fail()) return std::string();
 
   return tmp.substr(offset.GetValue(), length.GetValue());
 }
 
-inline std::string ThinString::ToString(Error& err) {
+inline std::string ThinString::ToString(Error& err, bool utf16) {
   String actual = Actual(err);
   if (err.Fail()) return std::string();
 
-  std::string tmp = actual.ToString(err);
+  std::string tmp = actual.ToString(err, utf16);
   if (err.Fail()) return std::string();
 
   return tmp;

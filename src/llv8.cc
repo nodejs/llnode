@@ -200,14 +200,158 @@ std::string LLV8::LoadString(int64_t addr, int64_t length, Error& err) {
   return res;
 }
 
+void LLV8::ConvertUTF16toUTF8 (
+  const UTF16** sourceStart, const UTF16* sourceEnd, UTF8** targetStart, 
+    UTF8* targetEnd, ConversionFlags flags, Error& err) {
+  const UTF16* source = *sourceStart;
+  UTF8* target = *targetStart;
+  while (source < sourceEnd) {
+    UTF32 ch;
+    unsigned short bytesToWrite = 0;
+    const UTF32 byteMask = 0xBF;
+    const UTF32 byteMark = 0x80;
+    const UTF16* oldSource = source; /* In case we have to back up because of target overflow. */
+    ch = *source++;
+    /* If we have a surrogate pair, convert to UTF32 first. */
+    if (ch >= UNI_SUR_HIGH_START && ch <= UNI_SUR_HIGH_END) {
+      /* If the 16 bits following the high surrogate are in the source buffer... */
+      if (source < sourceEnd) {
+        UTF32 ch2 = *source;
+        /* If it's a low surrogate, convert to UTF32. */
+        if (ch2 >= UNI_SUR_LOW_START && ch2 <= UNI_SUR_LOW_END) {
+          ch = ((ch - UNI_SUR_HIGH_START) << halfShift)
+               + (ch2 - UNI_SUR_LOW_START) + halfBase;
+          ++source;
+        } else if (flags == strictConversion) { /* it's an unpaired high surrogate */
+          --source; /* return to the illegal value itself */
+          err = Error::Failure("Source Illegal");
+          break;
+        }
+      } else { /* We don't have the 16 bits following the high surrogate. */
+        --source; /* return to the high surrogate */
+        err = Error::Failure("Source Exhausted");
+        break;
+      }
+    } else if (flags == strictConversion) {
+      /* UTF-16 surrogate values are illegal in UTF-32 */
+      if (ch >= UNI_SUR_LOW_START && ch <= UNI_SUR_LOW_END) {
+        --source; /* return to the illegal value itself */
+        err = Error::Failure("Source Illegal");
+        break;
+      }
+    }
+    /* Figure out how many bytes the result will require */
+    if (ch < (UTF32)0x80) {
+      bytesToWrite = 1;
+    } else if (ch < (UTF32)0x800) {
+      bytesToWrite = 2;
+    } else if (ch < (UTF32)0x10000) {
+      bytesToWrite = 3;
+    } else if (ch < (UTF32)0x110000) {
+      bytesToWrite = 4;
+    } else {
+      bytesToWrite = 3;
+      ch = UNI_REPLACEMENT_CHAR;
+    }
 
-std::string LLV8::LoadTwoByteString(int64_t addr, int64_t length, Error& err) {
+    target += bytesToWrite;
+    if (target > targetEnd) {
+      source = oldSource; /* Back up source pointer! */
+      target -= bytesToWrite;
+      err = Error::Failure("Target Exhausted");
+      break;
+    }
+    switch (bytesToWrite) { /* note: everything falls through. */
+    case 4:
+      *--target = (UTF8)((ch | byteMark) & byteMask);
+      ch >>= 6;
+    case 3:
+      *--target = (UTF8)((ch | byteMark) & byteMask);
+      ch >>= 6;
+    case 2:
+      *--target = (UTF8)((ch | byteMark) & byteMask);
+      ch >>= 6;
+    case 1:
+      *--target =  (UTF8)(ch | firstByteMark[bytesToWrite]);
+    }
+    target += bytesToWrite;
+  }
+  *sourceStart = source;
+  *targetStart = target;
+  err = Error::Ok();
+}
+
+std::string LLV8::ConvertUTF16ToUTF8String(UTF16* buf, int64_t length, Error& err) {
+  std::string res;
+  const UTF16 *Src = reinterpret_cast<const UTF16 *>(&buf[0]);
+  const UTF16 *SrcEnd = reinterpret_cast<const UTF16 *>(&buf[length - 1]);
+
+  std::vector<UTF16> ByteSwapped;
+  if (Src[0] == UNI_UTF16_BYTE_ORDER_MARK_SWAPPED) {
+    ByteSwapped.insert(ByteSwapped.end(), Src, SrcEnd);
+    for (unsigned I = 0, E = ByteSwapped.size(); I != E; ++I) {
+      uint16_t Hi = ByteSwapped[I] << 8;
+      uint16_t Lo = ByteSwapped[I] >> 8;
+      ByteSwapped[I] = Hi | Lo;
+    }
+    Src = &ByteSwapped[0];
+    SrcEnd = &ByteSwapped[ByteSwapped.size() - 1] + 1;
+  }
+
+  if (Src[0] == UNI_UTF16_BYTE_ORDER_MARK_NATIVE)
+    Src++;
+
+  res.resize(length * UNI_MAX_UTF8_BYTES_PER_CODE_POINT + 1);
+  UTF8 *Dst = reinterpret_cast<UTF8 *>(&res[0]);
+  UTF8 *DstEnd = Dst + res.size();
+
+  ConvertUTF16toUTF8(&Src, SrcEnd, &Dst, DstEnd, strictConversion, err);
+
+  if (err.Fail()) {
+    res.clear();
+    return std::string();
+  }
+
+  res.resize(reinterpret_cast<char *>(Dst) - &res[0]);
+  res.push_back(0);
+  res.pop_back();
+
+  err = Error::Ok();
+  return res;
+}
+
+std::string LLV8::LoadTwoByteString(int64_t addr, int64_t length, Error& err, bool utf16) {
   if (length < 0) {
     err = Error::Failure("Failed to load V8 two byte string - Invalid length");
     return std::string();
   }
 
-  char* buf = new char[length * 2 + 1];
+  // get source code / debug line needs origin utf16 string, although it
+  // will display wrong when the string contains characters that require 
+  // two bytes to represented
+  if(utf16) {
+    char* buf = new char[2 * length + 1];
+    SBError sberr;
+    process_.ReadMemory(static_cast<addr_t>(addr), buf,
+                        static_cast<size_t>(length * 2), sberr);
+    if (sberr.Fail()) {
+      err = Error::Failure(
+          "Failed to load V8 two byte string memory, "
+          "addr=0x%016" PRIx64 ", length=%" PRId64,
+          addr, length);
+      delete[] buf;
+      return std::string();
+    }
+    for(int64_t i = 0; i <  length; i++)
+      buf[i] =  buf[i * 2];
+    buf[length] = '\0';
+    std::string res = buf;
+    delete[] buf;
+    err = Error::Ok();
+    return res;
+  }
+
+  UTF16* buf = new UTF16[length + 1];
   SBError sberr;
   process_.ReadMemory(static_cast<addr_t>(addr), buf,
                       static_cast<size_t>(length * 2), sberr);
@@ -219,12 +363,12 @@ std::string LLV8::LoadTwoByteString(int64_t addr, int64_t length, Error& err) {
     delete[] buf;
     return std::string();
   }
-
-  for (int64_t i = 0; i < length; i++) buf[i] = buf[i * 2];
   buf[length] = '\0';
-
-  std::string res = buf;
+  std::string res = ConvertUTF16ToUTF8String(buf, length + 1, err);
   delete[] buf;
+  if(err.Fail()) {
+    return std::string();
+  }
   err = Error::Ok();
   return res;
 }
@@ -492,7 +636,7 @@ std::string JSFunction::GetSource(Error& err) {
   }
 
   String str(source);
-  std::string source_str = str.ToString(err);
+  std::string source_str = str.ToString(err, true);
 
   int64_t start_pos = info.StartPosition(err);
 
@@ -698,7 +842,7 @@ void Script::GetLineColumnFromPos(int64_t pos, int64_t& line, int64_t& column,
   }
 
   String str(source);
-  std::string source_str = str.ToString(err);
+  std::string source_str = str.ToString(err, true);
   int64_t limit = source_str.length();
   if (limit > pos) limit = pos;
 
@@ -997,7 +1141,7 @@ std::string HeapNumber::Inspect(Error& err) {
 }
 
 
-std::string String::ToString(Error& err) {
+std::string String::ToString(Error& err, bool utf16) {
   int64_t repr = Representation(err);
   if (err.Fail()) return std::string();
 
@@ -1010,7 +1154,7 @@ std::string String::ToString(Error& err) {
       return one.ToString(err);
     } else if (encoding == v8()->string()->kTwoByteStringTag) {
       TwoByteString two(this);
-      return two.ToString(err);
+      return two.ToString(err, utf16);
     }
 
     err = Error::Failure("Unsupported seq string encoding %" PRId64, encoding);
@@ -1019,12 +1163,12 @@ std::string String::ToString(Error& err) {
 
   if (repr == v8()->string()->kConsStringTag) {
     ConsString cons(this);
-    return cons.ToString(err);
+    return cons.ToString(err, utf16);;
   }
 
   if (repr == v8()->string()->kSlicedStringTag) {
     SlicedString sliced(this);
-    return sliced.ToString(err);
+    return sliced.ToString(err, utf16);
   }
 
   // TODO(indutny): add support for external strings
@@ -1034,7 +1178,7 @@ std::string String::ToString(Error& err) {
 
   if (repr == v8()->string()->kThinStringTag) {
     ThinString thin(this);
-    return thin.ToString(err);
+    return thin.ToString(err, utf16);
   }
 
   err = Error::Failure("Unsupported string representation %" PRId64, repr);

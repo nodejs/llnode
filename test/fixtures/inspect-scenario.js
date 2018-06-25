@@ -32,6 +32,7 @@ function closure() {
 
   c.hashmap['some-key'] = 42;
   c.hashmap['other-key'] = 'ohai';
+  c.hashmap['utf8-string'] = '你是个好人';
   c.hashmap['cons-string'] =
       'this could be a bit smaller, but v8 wants big str.';
   c.hashmap['cons-string'] += c.hashmap['cons-string'];
