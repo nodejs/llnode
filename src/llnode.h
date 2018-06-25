@@ -10,8 +10,6 @@
 namespace llnode {
 
 class CommandBase : public lldb::SBCommandPluginInterface {
- public:
-  char** ParseInspectOptions(char** cmd, v8::Value::InspectOptions* options);
 };
 
 class BacktraceCmd : public CommandBase {
