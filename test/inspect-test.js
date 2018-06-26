@@ -51,7 +51,6 @@ const hashMapTests = {
         const arrowSource = 'source:\n' +
             'function c.hashmap.(anonymous function)(a,b)=>{a+b}\n' +
             '>';
-    
         t.ok(lines.includes(arrowSource),
             'hashmap[25] should have the correct function source');
         cb(null);
@@ -68,6 +67,10 @@ const hashMapTests = {
   'string': {
     re: /.other-key=[^\n]*<String: "ohai">/,
     desc: '.other-key property'
+  },
+  'utf8-string': {
+    re: /.utf8-string=[^\n]*<String: "你是个好人">/,
+    desc: '.utf8-string UTF8 String property'
   },
   // .cons-string=0x000003df9cbe7579:<String: "this could be a ...">,
   'cons-string': {
@@ -407,6 +410,7 @@ function verifyMethodSource(t, sess, that, fn) {
     '>';
 
     lines = lines.join('\n');
+    console.log(123333, lines)
     t.ok(lines.includes(methodSource), 'method source should match');
     verifyClass(t, sess, that);
   });
