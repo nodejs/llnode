@@ -6,8 +6,7 @@ namespace node {
 addr_t BaseObject::Persistent(Error& err) {
   lldb::SBError sberr;
 
-  addr_t persistent_ptr =
-      raw_ + node_->base_object()->kPersistentHandleOffset;
+  addr_t persistent_ptr = raw_ + node_->base_object()->kPersistentHandleOffset;
   addr_t persistent =
       node_->process().ReadPointerFromMemory(persistent_ptr, sberr);
   if (sberr.Fail()) {

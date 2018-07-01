@@ -123,9 +123,7 @@ class Queue : public BaseNode {
   inline Iterator end() const;
 
  private:
-  inline addr_t head() const {
-    return raw_ + constants_->kHeadOffset;
-  }
+  inline addr_t head() const { return raw_ + constants_->kHeadOffset; }
   inline addr_t next(addr_t item) const {
     return item + constants_->kNextOffset;
   }

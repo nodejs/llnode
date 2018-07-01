@@ -12,8 +12,8 @@ template <typename T, typename C>
 const typename Queue<T, C>::Iterator Queue<T, C>::Iterator::operator++() {
   lldb::SBError sberr;
 
-  current_ =
-      node_->process().ReadPointerFromMemory(current_ + constants_->kNextOffset, sberr);
+  current_ = node_->process().ReadPointerFromMemory(
+      current_ + constants_->kNextOffset, sberr);
   return Iterator(node_, current_, constants_);
 }
 
@@ -26,8 +26,7 @@ template <typename T, typename C>
 typename Queue<T, C>::Iterator Queue<T, C>::begin() const {
   lldb::SBError sberr;
 
-  addr_t first =
-      node_->process().ReadPointerFromMemory(next(head()), sberr);
+  addr_t first = node_->process().ReadPointerFromMemory(next(head()), sberr);
   return Iterator(node_, first, constants_);
 }
 
