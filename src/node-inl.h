@@ -32,7 +32,7 @@ typename Queue<T, C>::Iterator Queue<T, C>::begin() const {
 
 template <typename T, typename C>
 typename Queue<T, C>::Iterator Queue<T, C>::end() const {
-  return Iterator(node_, raw_ + constants_->kHeadOffset, constants_);
+  return Iterator(node_, head(), constants_);
 }
 }  // namespace node
 }  // namespace llnode
