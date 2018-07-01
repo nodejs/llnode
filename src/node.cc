@@ -3,25 +3,25 @@
 namespace llnode {
 namespace node {
 
-addr_t BaseObject::persistent_addr(Error& err) {
+addr_t BaseObject::Persistent(Error& err) {
   lldb::SBError sberr;
 
-  addr_t persistentHandlePtr =
+  addr_t persistent_ptr =
       raw_ + node_->base_object()->kPersistentHandleOffset;
-  addr_t persistentHandle =
-      node_->process().ReadPointerFromMemory(persistentHandlePtr, sberr);
+  addr_t persistent =
+      node_->process().ReadPointerFromMemory(persistent_ptr, sberr);
   if (sberr.Fail()) {
     err = Error::Failure("Failed to load persistent handle");
     return 0;
   }
-  return persistentHandle;
+  return persistent;
 }
 
-addr_t BaseObject::v8_object_addr(Error& err) {
+addr_t BaseObject::Object(Error& err) {
   lldb::SBError sberr;
 
-  addr_t persistentHandle = persistent_addr(err);
-  addr_t obj = node_->process().ReadPointerFromMemory(persistentHandle, sberr);
+  addr_t persistent = Persistent(err);
+  addr_t obj = node_->process().ReadPointerFromMemory(persistent, sberr);
   if (sberr.Fail()) {
     err = Error::Failure("Failed to load object from persistent handle");
     return 0;
@@ -29,12 +29,12 @@ addr_t BaseObject::v8_object_addr(Error& err) {
   return obj;
 }
 
-HandleWrap HandleWrap::FromListNode(Node* node, addr_t list_node_addr) {
+HandleWrap HandleWrap::GetItemFromList(Node* node, addr_t list_node_addr) {
   return HandleWrap(node,
                     list_node_addr - node->handle_wrap()->kListNodeOffset);
 }
 
-ReqWrap ReqWrap::FromListNode(Node* node, addr_t list_node_addr) {
+ReqWrap ReqWrap::GetItemFromList(Node* node, addr_t list_node_addr) {
   return ReqWrap(node, list_node_addr - node->req_wrap()->kListNodeOffset);
 }
 

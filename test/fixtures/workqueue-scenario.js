@@ -3,7 +3,7 @@ const http = require('http')
 var fs = require('fs');
 
 // Creates a Timer to be inspected with getactivehandles
-setInterval(()=>{}, 500);
+setInterval(() => {}, 500);
 
 // Creates a TCP to be inspected with getactivehandles
 const server = http.createServer((req, res) => { res.end('test'); });

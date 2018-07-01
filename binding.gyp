@@ -16,7 +16,6 @@
       "<(lldb_include_dir)",
     ],
 
-
     "cflags" : [ "-std=c++11" ],
 
     "conditions": [

@@ -31,8 +31,8 @@ class BaseNode {
   Node* node_;
 };
 
-typedef Queue<HandleWrap, constants::HandleWrapQueue> HandleWrapQueue;
-typedef Queue<ReqWrap, constants::ReqWrapQueue> ReqWrapQueue;
+using HandleWrapQueue = Queue<HandleWrap, constants::HandleWrapQueue>;
+using ReqWrapQueue = Queue<ReqWrap, constants::ReqWrapQueue>;
 
 class Environment : public BaseNode {
  public:
@@ -53,10 +53,8 @@ class BaseObject : public BaseNode {
   BaseObject(Node* node, addr_t raw) : BaseNode(node), raw_(raw){};
   inline addr_t raw() { return raw_; };
 
-  addr_t persistent_addr(Error& err);
-
-  addr_t v8_object_addr(Error& err);
-
+  addr_t Persistent(Error& err);
+  addr_t Object(Error& err);
 
  private:
   addr_t raw_;
@@ -71,14 +69,14 @@ class HandleWrap : public AsyncWrap {
  public:
   HandleWrap(Node* node, addr_t raw) : AsyncWrap(node, raw){};
 
-  static HandleWrap FromListNode(Node* node, addr_t list_node_addr);
+  static HandleWrap GetItemFromList(Node* node, addr_t list_node_addr);
 };
 
 class ReqWrap : public AsyncWrap {
  public:
   ReqWrap(Node* node, addr_t raw) : AsyncWrap(node, raw){};
 
-  static ReqWrap FromListNode(Node* node, addr_t list_node_addr);
+  static ReqWrap GetItemFromList(Node* node, addr_t list_node_addr);
 };
 
 class Node {
@@ -125,6 +123,13 @@ class Queue : public BaseNode {
   inline Iterator end() const;
 
  private:
+  inline addr_t head() const {
+    return raw_ + constants_->kHeadOffset;
+  }
+  inline addr_t next(addr_t item) const {
+    return item + constants_->kNextOffset;
+  }
+
   addr_t raw_;
   C* constants_;
 };

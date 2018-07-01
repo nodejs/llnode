@@ -89,14 +89,12 @@ SessionOutput.prototype.timeoutAfter = function timeoutAfter(timeout) {
   this.timeout = timeout;
 };
 
-SessionOutput.prototype.wait = function wait(regexp, callback, allLines,
-                                             outputOnTimeout) {
+SessionOutput.prototype.wait = function wait(regexp, callback, allLines) {
   if (!this._queueWait(() => { this.wait(regexp, callback, allLines); }))
     return;
 
   const self = this;
   const lines = [];
-  outputOnTimeout = outputOnTimeout == undefined ? true : outputOnTimeout;
 
   function onLine(line) {
     lines.push(line);
@@ -119,11 +117,9 @@ SessionOutput.prototype.wait = function wait(regexp, callback, allLines,
 
     self.removeListener('line', onLine);
     self._unqueueWait();
-    if (outputOnTimeout) {
-      console.error(`${'='.repeat(10)} lldb output ${'='.repeat(10)}`);
-      console.error(lines.join('\n'));
-      console.error('='.repeat(33));
-    }
+    console.error(`${'='.repeat(10)} lldb output ${'='.repeat(10)}`);
+    console.error(lines.join('\n'));
+    console.error('='.repeat(33));
     const message = `Test timeout in ${this.timeout} ` +
       `waiting for ${regexp}`;
     callback(new Error(message));
