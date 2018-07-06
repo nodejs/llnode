@@ -354,16 +354,16 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-[travis]: https://travis-ci.org/nodejs/llnode
-[v6-trusty-badge]: https://travis-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/1
-[v8-trusty-badge]: https://travis-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/2
-[v9-trusty-badge]: https://travis-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/3
-[v10-trusty-badge]: https://travis-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/4
+[travis]: https://travis-ci.com/nodejs/llnode
+[v6-trusty-badge]: https://travisci-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/1?use_travis_com=true
+[v8-trusty-badge]: https://travisci-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/2?use_travis_com=true
+[v9-trusty-badge]: https://travisci-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/3?use_travis_com=true
+[v10-trusty-badge]: https://travisci-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/4?use_travis_com=true
 
-[v6-osx-badge]: https://travis-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/5
-[v8-osx-badge]: https://travis-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/6
-[v9-osx-badge]: https://travis-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/7
-[v10-osx-badge]: https://travis-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/8
+[v6-osx-badge]: https://travisci-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/5?use_travis_com=true
+[v8-osx-badge]: https://travisci-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/6?use_travis_com=true
+[v9-osx-badge]: https://travisci-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/7?use_travis_com=true
+[v10-osx-badge]: https://travisci-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/8?use_travis_com=true
 
-[master-trusty-badge]: https://travis-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/9
-[canary-trusty-badge]: https://travis-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/10
+[master-trusty-badge]: https://travisci-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/9?use_travis_com=true
+[canary-trusty-badge]: https://travisci-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/10?use_travis_com=true
