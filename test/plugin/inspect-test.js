@@ -328,6 +328,11 @@ const hashMapTests = {
         cb(null);
       });
     }]
+  },
+  // .@@oneSymbol=<Smi: 42>
+  'symbol': {
+    re: /.Symbol\('oneSymbol'\)=<Smi: 42>/,
+    desc: ".Symbol('oneSymbol') Symbol property",
   }
 };
 

@@ -468,6 +468,18 @@ class Frame : public Module {
   void Load();
 };
 
+
+class Symbol : public Module {
+ public:
+  CONSTANTS_DEFAULT_METHODS(Symbol);
+
+  int64_t kNameOffset;
+
+ protected:
+  void Load();
+};
+
+
 class Types : public Module {
  public:
   CONSTANTS_DEFAULT_METHODS(Types);
@@ -498,6 +510,7 @@ class Types : public Module {
   int64_t kSharedFunctionInfoType;
   int64_t kScriptType;
   int64_t kScopeInfoType;
+  int64_t kSymbolType;
 
  protected:
   void Load();

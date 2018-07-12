@@ -60,6 +60,7 @@ void LLV8::Load(SBTarget target) {
   descriptor_array.Assign(target, &common);
   name_dictionary.Assign(target, &common);
   frame.Assign(target, &common);
+  symbol.Assign(target, &common);
   types.Assign(target, &common);
 }
 
@@ -566,6 +567,11 @@ std::string HeapObject::ToString(Error& err) {
     return str.ToString(err);
   }
 
+  if (type == v8()->types()->kSymbolType) {
+    Symbol symbol(this);
+    return symbol.ToString(err);
+  }
+
   return "<non-string>";
 }
 
@@ -671,6 +677,15 @@ std::string HeapNumber::ToString(bool whole, Error& err) {
   snprintf(buf, sizeof(buf), fmt, GetValue(err));
   err = Error::Ok();
   return buf;
+}
+
+
+std::string Symbol::ToString(Error& err) {
+  if (!String::IsString(v8(), Name(err), err)) {
+    return "Symbol()";
+  }
+  HeapObject name = Name(err);
+  return "Symbol('" + String(name).ToString(err) + "')";
 }
 
 
