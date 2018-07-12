@@ -328,6 +328,23 @@ const hashMapTests = {
         cb(null);
       });
     }]
+  },
+  // .@@oneSymbol=<Smi: 42>
+  'symbol': {
+    re: /\.(<non-string>|Symbol\('oneSymbol'\))=<Smi: 42>/,
+    desc: ".Symbol('oneSymbol') Symbol property",
+    validator(t, sess, addresses, name, cb) {
+      sess.hasSymbol('v8dbg_type_Symbol__SYMBOL_TYPE', (err, hasSymbol) => {
+        if (err) return cb(err);
+
+        if(!hasSymbol)
+          t.skip("no metadata for Symbol type");
+        else
+          t.ok(/Symbol\('oneSymbol'\)/.test(addresses[name]), 'Symbol should exist');
+
+        cb(null);
+      });
+    }
   }
 };
 

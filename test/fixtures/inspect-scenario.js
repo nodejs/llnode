@@ -6,6 +6,8 @@ const zlib = require('zlib');
 
 let outerVar = 'outer variable';
 
+const oneSymbol = Symbol("oneSymbol");
+
 exports.holder = {};
 
 function makeThin(a, b) {
@@ -66,6 +68,7 @@ function closure() {
   c.hashmap[4] = undefined;
   c.hashmap[23] = /regexp/;
   c.hashmap[25] = (a,b)=>{a+b};
+  c.hashmap[oneSymbol] = 42;
 
   let scopedVar = 'scoped value';
   let scopedAPI = zlib.createDeflate()._handle;
