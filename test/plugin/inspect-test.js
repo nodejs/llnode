@@ -133,6 +133,11 @@ const hashMapTests = {
     re: /.sliced-externalized-string=(0x[0-9a-f]+):<String: "\(external\)">/,
     desc: '.sliced-externalized-string Sliced ExternalString property'
   },
+  // .error=0x0000392d5d661119:<Object: Error>
+  'error': {
+    re: /.error=(0x[0-9a-f]+):<Object: Error>/,
+    desc: '.error Error property'
+  },
   // .array=0x000003df9cbe7919:<Array: length=6>,
   'array': {
     re: /.array=(0x[0-9a-f]+):<Array: length=6>/,

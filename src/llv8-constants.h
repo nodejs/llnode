@@ -478,6 +478,7 @@ class Types : public Module {
   int64_t kFirstContextType;
   int64_t kLastContextType;
 
+  int64_t kJSErrorType;
   int64_t kHeapNumberType;
   int64_t kMapType;
   int64_t kGlobalObjectType;

@@ -490,6 +490,7 @@ void Types::Load() {
   kFirstContextType = LoadConstant("FirstContextType");
   kLastContextType = LoadConstant("LastContextType");
 
+  kJSErrorType = LoadConstant("type_JSError__JS_ERROR_TYPE");
   kHeapNumberType = LoadConstant("type_HeapNumber__HEAP_NUMBER_TYPE");
   kMapType = LoadConstant("type_Map__MAP_TYPE");
   kGlobalObjectType =
