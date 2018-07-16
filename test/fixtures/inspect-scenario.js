@@ -57,6 +57,10 @@ function closure() {
   );
   c.hashmap['buffer'] = Buffer.from([0xff, 0xf0, 0x80, 0x0f, 0x01, 0x00]);
 
+  c.hashmap['error'] = new Error('test');
+  c.hashmap['error'].code = 'ERR_TEST';
+  c.hashmap['error'].errno = 1;
+
   c.hashmap[0] = null;
   c.hashmap[4] = undefined;
   c.hashmap[23] = /regexp/;
