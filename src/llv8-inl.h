@@ -420,6 +420,17 @@ inline std::string SlicedString::ToString(Error& err) {
   std::string tmp = parent.ToString(err);
   if (err.Fail()) return std::string();
 
+  int64_t off = offset.GetValue();
+  int64_t len = length.GetValue();
+  int64_t tmp_size = tmp.size();
+  if (off > tmp_size || len > tmp_size) {
+    err = Error::Failure("Failed to display sliced string 0x%016" PRIx64
+                         " (offset = 0x%016" PRIx64 ", length = 0x%016" PRIx64
+                         ") from parent string 0x%016" PRIx64
+                         " (length = 0x%016" PRIx64 ")",
+                         raw(), off, len, parent.raw(), tmp_size);
+    return std::string(err.GetMessage());
+  }
   return tmp.substr(offset.GetValue(), length.GetValue());
 }
 
