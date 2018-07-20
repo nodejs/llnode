@@ -95,7 +95,7 @@ class BaseObject : public Module {
  protected:
   void Load();
 };
-}
+}  // namespace constants
 }  // namespace node
 }  // namespace llnode
 
