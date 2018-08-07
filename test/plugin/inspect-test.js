@@ -151,6 +151,12 @@ const hashMapTests = {
         let errnoMatch = lines.match(/errno=<Smi: 1>/i);
         t.ok(errnoMatch, 'hashmap.error.errno should be 1');
 
+        let stackMatch  = lines.match(/error stack {/i);
+        t.ok(stackMatch, 'Error object should have an error stack');
+
+        let closureMatch = lines.match(/0x[0-9a-f]+:<function: closure/i);
+        t.ok(closureMatch, 'closure frame should be in the error stack');
+
         cb(null);
       });
     }

@@ -827,6 +827,11 @@ std::string HeapObject::Inspect(InspectOptions* options, Error& err) {
     return pre + m.Inspect(options, err);
   }
 
+  if (ISJSErrorType(err)) {
+    JSError error(this);
+    return pre + error.Inspect(options, err);
+  }
+
   if (JSObject::IsObjectType(v8(), type)) {
     JSObject o(this);
     return pre + o.Inspect(options, err);
@@ -1495,22 +1500,31 @@ std::string JSObject::Inspect(InspectOptions* options, Error& err) {
   int64_t constructor_type = constructor_obj.GetType(err);
   if (err.Fail()) return std::string();
 
+  std::stringstream output;
   if (constructor_type != v8()->types()->kJSFunctionType) {
-    std::stringstream ss;
-    ss << rang::fg::yellow << "<Object: no constructor>" << rang::fg::reset;
-    return ss.str().c_str();
+    output << rang::fg::yellow << "<Object: " << rang::fg::gray
+           << "no constructor" << rang::fg::yellow << ">" << rang::fg::reset;
+    return output.str();
   }
 
   JSFunction constructor(constructor_obj);
 
-  std::string res = "<Object: " + constructor.Name(err);
+  output << rang::fg::yellow << "<Object: " << constructor.Name(err);
   if (err.Fail()) return std::string();
 
+  output << InspectAllProperties(options, err) << rang::fg::yellow << ">"
+         << rang::fg::reset;
+  return output.str();
+}
+
+std::string JSObject::InspectAllProperties(InspectOptions* options,
+                                           Error& err) {
+  std::string res = std::string();
   // Print properties in detailed mode
   if (options->detailed) {
     std::stringstream ss;
     ss << rang::fg::magenta << res << rang::fg::reset;
-    res = ss.str().c_str();
+    res = ss.str();
 
     res += " " + InspectProperties(err);
     if (err.Fail()) return std::string();
@@ -1523,15 +1537,101 @@ std::string JSObject::Inspect(InspectOptions* options, Error& err) {
       ss << rang::fg::magenta << "\n  internal fields" << rang::fg::reset
          << " {" << std::endl
          << fields << "}";
-      res += ss.str().c_str();
+      res += ss.str();
     }
-    return res + ">";
+    return res;
   } else {
     std::stringstream ss;
-    ss << rang::fg::yellow << res << ">" << rang::fg::reset;
-    res = ss.str().c_str();
+    ss << rang::fg::yellow << res << rang::fg::reset;
+    res = ss.str();
     return res;
   }
+
+  return res;
+}
+
+std::string JSError::InspectAllProperties(InspectOptions* options, Error& err) {
+  std::string res = JSObject::InspectAllProperties(options, err);
+  if (options->detailed) {
+    InspectOptions simple;
+
+    // TODO (mmarchini): once we have Symbol support we'll need to search for
+    // <unnamed symbol>, since the stack symbol doesn't have an external name.
+    // In the future we can add postmortem metadata on V8 regarding existing
+    // symbols, but for now we'll use an heuristic to find the stack in the
+    // error object.
+    Value maybe_stack = GetProperty("<non-string>", err);
+
+    if (err.Fail()) {
+      Error::PrintInDebugMode(
+          "Couldn't find a symbol property in the Error objcet.");
+      return res;
+    }
+
+    int64_t type = HeapObject(maybe_stack).GetType(err);
+
+    if (err.Fail()) {
+      Error::PrintInDebugMode("Symbol property references an invalid object.");
+      return res;
+    }
+
+    // NOTE (mmarchini): The stack is stored as a JSArray
+    if (type != v8()->types()->kJSArrayType) {
+      Error::PrintInDebugMode("Symbol property doesn't have the right type.");
+      return res;
+    }
+
+    JSArray arr(maybe_stack);
+
+    Value maybe_stack_len = arr.GetArrayElement(0, err);
+
+    if (err.Fail()) {
+      Error::PrintInDebugMode(
+          "Couldn't get the first element from the stack array");
+      return res;
+    }
+
+    int64_t stack_len = Smi(maybe_stack_len).GetValue();
+
+    int multiplier = 5;
+    // On Node.js v8.x, the first array element is the stack size, and each
+    // stack frame use 5 elements.
+    if ((stack_len * multiplier + 1) != arr.GetArrayLength(err)) {
+      // On Node.js v6.x, the first array element is zero, and each stack frame
+      // use 4 element.
+      multiplier = 4;
+      if ((stack_len != 0) ||
+          ((arr.GetArrayLength(err) - 1) % multiplier != 0)) {
+        Error::PrintInDebugMode(
+            "JSArray doesn't look like a Stack Frames array. stack_len: %lld "
+            "array_len: %lld",
+            stack_len, arr.GetArrayLength(err));
+        return res;
+      }
+      stack_len = (arr.GetArrayLength(err) - 1) / multiplier;
+    }
+
+    std::stringstream error_stack;
+    error_stack << std::endl
+                << rang::fg::red << "  error stack" << rang::fg::reset << " {"
+                << std::endl;
+
+    // TODO (mmarchini): Refactor: create an StackIterator which returns
+    // StackFrame objects
+    for (int64_t i = 0; i < stack_len; i++) {
+      Value maybe_fn = arr.GetArrayElement(2 + (i * multiplier), err);
+      if (err.Fail()) {
+        error_stack << rang::fg::gray << "    <unknown>" << std::endl;
+        continue;
+      }
+
+      error_stack << "    " << HeapObject(maybe_fn).Inspect(&simple, err)
+                  << std::endl;
+    }
+    error_stack << "  }";
+    res += error_stack.str();
+  }
+  return res;
 }
 
 
