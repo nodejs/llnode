@@ -84,6 +84,22 @@ inline int64_t HeapObject::GetType(Error& err) {
 }
 
 
+inline bool HeapObject::IsJSErrorType(Error& err) {
+  int64_t type = GetType(err);
+  if (err.Fail()) return false;
+  if (type == v8()->types()->kJSErrorType) return true;
+
+  // NOTE (mmarchini): We don't have a JSErrorType constant on Node.js v6.x,
+  // thus we try to guess if the object is an Error object by checking if its
+  // name is Error. Should work most of the time.
+  if (!JSObject::IsObjectType(v8(), type)) return false;
+
+  JSObject obj(this);
+  std::string type_name = obj.GetTypeName(err);
+  return err.Success() && type_name == "Error";
+}
+
+
 inline int64_t Map::GetType(Error& err) {
   int64_t type =
       v8()->LoadUnsigned(LeaField(v8()->map()->kInstanceAttrsOffset), 2, err);
