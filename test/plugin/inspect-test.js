@@ -136,7 +136,24 @@ const hashMapTests = {
   // .error=0x0000392d5d661119:<Object: Error>
   'error': {
     re: /.error=(0x[0-9a-f]+):<Object: Error>/,
-    desc: '.error Error property'
+    desc: '.error Error property',
+    validator(t, sess, addresses, name, cb) {
+      const address = addresses[name];
+      sess.send(`v8 inspect ${address}`);
+
+      sess.linesUntil(/}>/, (err, lines) => {
+        if (err) return cb(err);
+        lines = lines.join('\n');
+
+        let codeMatch = lines.match(/code=(0x[0-9a-f]+):<String: "ERR_TEST">/i);
+        t.ok(codeMatch, 'hashmap.error.code should be "ERR_TEST"');
+
+        let errnoMatch = lines.match(/errno=<Smi: 1>/i);
+        t.ok(errnoMatch, 'hashmap.error.errno should be 1');
+
+        cb(null);
+      });
+    }
   },
   // .array=0x000003df9cbe7919:<Array: length=6>,
   'array': {
