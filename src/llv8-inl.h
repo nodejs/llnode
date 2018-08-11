@@ -476,6 +476,18 @@ inline Value DescriptorArray::GetValue(int index, Error& err) {
                     err);
 }
 
+inline bool DescriptorArray::IsDescriptorDetails(Smi details) {
+  // node.js <= 7
+  if (v8()->descriptor_array()->kPropertyTypeMask != -1) {
+    return false;
+  }
+
+  // node.js >= 8
+  return (details.GetValue() &
+          v8()->descriptor_array()->kPropertyLocationMask) ==
+         (v8()->descriptor_array()->kPropertyLocationEnum_kDescriptor
+          << v8()->descriptor_array()->kPropertyLocationShift);
+}
 inline bool DescriptorArray::IsFieldDetails(Smi details) {
   // node.js <= 7
   if (v8()->descriptor_array()->kPropertyTypeMask != -1) {

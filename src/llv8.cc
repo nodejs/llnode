@@ -1516,7 +1516,7 @@ std::string JSObject::InspectDescriptors(Map map, Error& err) {
     res += "    ." + key.ToString(err) + "=";
     if (err.Fail()) return std::string();
 
-    if (descriptors.IsConstFieldDetails(details)) {
+    if (descriptors.IsConstFieldDetails(details) || descriptors.IsDescriptorDetails(details)) {
       Value value;
 
       value = descriptors.GetValue(i, err);
@@ -1524,14 +1524,6 @@ std::string JSObject::InspectDescriptors(Map map, Error& err) {
 
       res += value.Inspect(&options, err);
       if (err.Fail()) return std::string();
-      continue;
-    }
-
-    // Skip non-fields for now
-    if (!descriptors.IsFieldDetails(details)) {
-      Error::PrintInDebugMode("Unknown field Type %" PRId64,
-                              details.GetValue());
-      res += "<unknown field type>";
       continue;
     }
 
