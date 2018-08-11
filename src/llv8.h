@@ -363,6 +363,7 @@ class DescriptorArray : public FixedArray {
   inline Value GetValue(int index, Error& err);
 
   inline bool IsFieldDetails(Smi details);
+  inline bool IsDescriptorDetails(Smi details);
   inline bool IsConstFieldDetails(Smi details);
   inline bool IsDoubleField(Smi details);
   inline int64_t FieldIndex(Smi details);
