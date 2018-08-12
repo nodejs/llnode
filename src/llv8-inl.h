@@ -510,10 +510,7 @@ inline bool DescriptorArray::IsConstFieldDetails(Smi details) {
   }
 
   // node.js >= 8
-  return (details.GetValue() &
-          v8()->descriptor_array()->kPropertyAttributesMask) ==
-         (v8()->descriptor_array()->kPropertyAttributesEnum_READ_ONLY
-          << v8()->descriptor_array()->kPropertyAttributesShift);
+  return false;
 }
 
 inline bool DescriptorArray::IsDoubleField(Smi details) {
