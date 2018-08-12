@@ -15,9 +15,6 @@ tape('llnode API', (t) => {
   if (process.env.LLNODE_CORE && process.env.LLNODE_NODE_EXE) {
     test(process.env.LLNODE_NODE_EXE, process.env.LLNODE_CORE, t);
     t.end();
-  } else if (process.platform === 'linux') {
-    t.skip('No `process save-core` on linux');
-    t.end();
   } else {
     common.saveCore({
       scenario: 'inspect-scenario.js'

@@ -98,7 +98,8 @@ SessionOutput.prototype.wait = function wait(regexp, callback, allLines) {
 
   function onLine(line) {
     lines.push(line);
-    debug(`[LINE][${self.session.lldb.pid}]`, line);
+    if (self.session)
+      debug(`[LINE][${self.session.lldb.pid}]`, line);
 
     if (!regexp.test(line))
       return;
@@ -205,10 +206,7 @@ Session.create = function create(scenario) {
   return new Session({ scenario: scenario });
 };
 
-exports.saveCore = function saveCore(options, cb) {
-  const scenario = options.scenario;
-  const core = options.core || exports.core;
-
+function saveCoreLLDB(scenario, core, cb) {
   // Create a core and test
   const sess = Session.create(scenario);
   sess.timeoutAfter(exports.saveCoreTimeout);
@@ -232,6 +230,47 @@ exports.saveCore = function saveCore(options, cb) {
       exports.generateRanges(core, ranges, cb);
     }
   });
+}
+
+function spawnWithTimeout(cmd, cb) {
+  const proc = spawn(cmd, {
+    shell: true,
+    stdio: ['pipe', 'pipe', 'pipe'] });
+  const stdout = new SessionOutput(null, proc.stdout, exports.saveCoreTimeout);
+  const stderr = new SessionOutput(null, proc.stderr, exports.saveCoreTimeout);
+  stdout.on('line', (line) => { debug('[stdout]', line); });
+  stderr.on('line', (line) => { debug('[stderr]', line); });
+
+  const timeout = setTimeout(() => {
+    console.error(`timeout while saving core dump for scenario "${scenario}"`);
+    proc.kill();
+  }, exports.saveCoreTimeout);
+
+  proc.on('exit', (status) => {
+    clearTimeout(timeout);
+    cb(null);
+  });
+}
+
+function saveCoreLinux(executable, scenario, core, cb) {
+  const cmd = `ulimit -c unlimited && ${executable} ` +
+              `--abort_on_uncaught_exception --expose_externalize_string ` +
+              `${path.join(exports.fixturesDir, scenario)}; `;
+  spawnWithTimeout(cmd, () => {
+    // FIXME (mmarchini): Should also handle different core system settings.
+    spawnWithTimeout(`mv ./core ${core}`, cb);
+  });
+}
+
+exports.saveCore = function saveCore(options, cb) {
+  const scenario = options.scenario;
+  const core = options.core || exports.core;
+
+  if (process.platform === 'linux') {
+    saveCoreLinux(process.execPath, scenario, core, cb);
+  } else {
+    saveCoreLLDB(scenario, core, cb);
+  }
 }
 
 // Load the core dump with the executable

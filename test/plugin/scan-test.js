@@ -10,9 +10,6 @@ tape('v8 findrefs and friends', (t) => {
   // Use prepared core and executable to test
   if (process.env.LLNODE_CORE && process.env.LLNODE_NODE_EXE) {
     test(process.env.LLNODE_NODE_EXE, process.env.LLNODE_CORE, t);
-  } else if (process.platform === 'linux') {
-    t.skip('No `process save-core` on linux');
-    t.end();
   } else {
     common.saveCore({
       scenario: 'inspect-scenario.js'
