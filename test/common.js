@@ -205,10 +205,7 @@ Session.create = function create(scenario) {
   return new Session({ scenario: scenario });
 };
 
-exports.saveCore = function saveCore(options, cb) {
-  const scenario = options.scenario;
-  const core = options.core || exports.core;
-
+function saveCoreLLDB(scenario, core, cb) {
   // Create a core and test
   const sess = Session.create(scenario);
   sess.timeoutAfter(exports.saveCoreTimeout);
@@ -232,6 +229,29 @@ exports.saveCore = function saveCore(options, cb) {
       exports.generateRanges(core, ranges, cb);
     }
   });
+}
+
+function saveCoreLinux(executable, scenario, core, cb) {
+  const cmd = `ulimit -c unlimited && ${executable} ` +
+              `--abort_on_uncaught_exception --expose_externalize_string ` +
+              `${path.join(exports.fixturesDir, scenario)}`;
+  const proc = spawn(cmd, { shell: true });
+  const timeout = setTimeout(() => { proc.kill() }, exports.saveCoreTimeout);
+  proc.on('exit', (status) => {
+    clearTimeout(timeout);
+    fs.rename("./core", core, cb);
+  });
+}
+
+exports.saveCore = function saveCore(options, cb) {
+  const scenario = options.scenario;
+  const core = options.core || exports.core;
+
+  if (process.platform === 'linux') {
+    saveCoreLinux(process.execPath, scenario, core, cb);
+  } else {
+    saveCoreLLDB(scenario, core, cb);
+  }
 }
 
 // Load the core dump with the executable
