@@ -98,7 +98,8 @@ SessionOutput.prototype.wait = function wait(regexp, callback, allLines) {
 
   function onLine(line) {
     lines.push(line);
-    debug(`[LINE][${self.session.lldb.pid}]`, line);
+    if (self.session)
+      debug(`[LINE][${self.session.lldb.pid}]`, line);
 
     if (!regexp.test(line))
       return;
@@ -234,12 +235,24 @@ function saveCoreLLDB(scenario, core, cb) {
 function saveCoreLinux(executable, scenario, core, cb) {
   const cmd = `ulimit -c unlimited && ${executable} ` +
               `--abort_on_uncaught_exception --expose_externalize_string ` +
-              `${path.join(exports.fixturesDir, scenario)}`;
-  const proc = spawn(cmd, { shell: true });
-  const timeout = setTimeout(() => { proc.kill() }, exports.saveCoreTimeout);
+              `${path.join(exports.fixturesDir, scenario)}; ` +
+              `mv ./core ${core}`;
+  const proc = spawn(cmd, {
+    shell: true,
+    stdio: ['pipe', 'pipe', 'pipe'] });
+  const stdout = new SessionOutput(null, proc.stdout, exports.saveCoreTimeout);
+  const stderr = new SessionOutput(null, proc.stderr, exports.saveCoreTimeout);
+  stdout.on('line', (line) => { debug('[stdout]', line); });
+  stderr.on('line', (line) => { debug('[stderr]', line); });
+
+  const timeout = setTimeout(() => {
+    console.error(`timeout while saving core dump for scenario "${scenario}"`);
+    proc.kill();
+  }, exports.saveCoreTimeout);
+
   proc.on('exit', (status) => {
     clearTimeout(timeout);
-    fs.rename("./core", core, cb);
+    cb(null);
   });
 }
 
