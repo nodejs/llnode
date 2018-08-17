@@ -93,8 +93,8 @@ class FindReferencesCmd : public CommandBase {
     virtual void PrintContextRefs(lldb::SBCommandReturnObject& result,
                                   Error& err) {}
 
-    static const char* const property_reference_template;
-    static const char* const array_reference_template;
+    std::string GetPropertyReferenceString();
+    std::string GetArrayReferenceString();
   };
 
   void PrintReferences(lldb::SBCommandReturnObject& result,

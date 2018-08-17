@@ -9,11 +9,13 @@
 
 #include <lldb/API/SBExpressionOptions.h>
 
+#include "deps/rang/include/rang.hpp"
 #include "src/error.h"
 #include "src/llnode.h"
 #include "src/llscan.h"
 #include "src/llv8.h"
 #include "src/node-inl.h"
+#include "src/settings.h"
 
 namespace llnode {
 
@@ -102,6 +104,35 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
 
   result.SetStatus(eReturnStatusSuccessFinishResult);
   return true;
+}
+
+bool SetPropertyColorCmd::DoExecute(SBDebugger d, char** cmd,
+                                    SBCommandReturnObject& result) {
+#ifdef NO_COLOR_OUTPUT
+  result.Printf("Color support is not available\n");
+  return false;
+#endif
+  if (cmd != nullptr) {
+    Settings* settings = Settings::GetSettings();
+    char* arg = cmd[0];
+    if (strcmp(arg, "always") == 0) {
+      settings->SetColor(arg);
+      result.Printf("Color set to 'always'\n");
+      return true;
+    }
+    if (strcmp(arg, "never") == 0) {
+      settings->SetColor(arg);
+      result.Printf("Color set to 'never'\n");
+      return true;
+    }
+    if (strcmp(arg, "auto") == 0) {
+      settings->SetColor(arg);
+      result.Printf("Color set to 'auto'\n");
+      return true;
+    }
+  }
+  result.Printf("Error: Available options are (always | never | auto)\n");
+  return false;
 }
 
 
@@ -418,6 +449,15 @@ bool PluginInitialize(SBDebugger d) {
 #endif  // LLDB_SBMemoryRegionInfoList_h_
   );
 
+  SBCommand settingsCmd =
+      v8.AddMultiwordCommand("settings", "Interpreter settings");
+
+  SBCommand setPropertyCmd =
+      settingsCmd.AddMultiwordCommand("set", "Set a property");
+
+  setPropertyCmd.AddCommand("color", new llnode::SetPropertyColorCmd(&llv8),
+                            "Set color property value");
+
   interpreter.AddCommand("findjsobjects", new llnode::FindObjectsCmd(&llscan),
                          "Alias for `v8 findjsobjects`");
 
@@ -456,6 +496,11 @@ bool PluginInitialize(SBDebugger d) {
       "getactiverequests", new llnode::GetActiveRequestsCmd(&llv8, &node),
       "Print all pending requests in the queue. Equivalent to "
       "running process._getActiveRequests() on the living process.\n");
+
+  // Set initial value for color support
+  llnode::Settings* settings = llnode::Settings::GetSettings();
+  settings->SetColor("auto");
+
 
   return true;
 }

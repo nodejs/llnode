@@ -27,6 +27,7 @@
     "binding.gyp",
     "llnode.gypi",
     "src/",
+    "deps/rang/",
     "scripts/",
     "index.js"
   ],
