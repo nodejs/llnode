@@ -7,6 +7,9 @@
 #include <cinttypes>
 #include <fstream>
 #include <vector>
+#include <sstream>
+#include <string>
+#include <iomanip>
 
 #include <lldb/API/SBExpressionOptions.h>
 
@@ -14,6 +17,7 @@
 #include "src/llnode.h"
 #include "src/llscan.h"
 #include "src/llv8-inl.h"
+#include "src/rang.hpp"
 
 namespace llnode {
 
@@ -28,18 +32,6 @@ using lldb::SBValue;
 using lldb::eReturnStatusFailed;
 using lldb::eReturnStatusSuccessFinishResult;
 
-const char* const
-    FindReferencesCmd::ObjectScanner::property_reference_template =
-        "0x%" PRIx64 ": %s.%s=0x%" PRIx64 "\n";
-const char* const FindReferencesCmd::ObjectScanner::array_reference_template =
-    "0x%" PRIx64 ": %s[%" PRId64 "]=0x%" PRIx64 "\n";
-
-
-const char* const
-    FindReferencesCmd::StringScanner::property_reference_template =
-        "0x%" PRIx64 ": %s.%s=0x%" PRIx64 " '%s'\n";
-const char* const FindReferencesCmd::StringScanner::array_reference_template =
-    "0x%" PRIx64 ": %s[%" PRId64 "]=0x%" PRIx64 " '%s'\n";
 
 char** ParseInspectOptions(char** cmd, v8::Value::InspectOptions* options) {
   static struct option opts[] = {
@@ -241,7 +233,12 @@ bool FindInstancesCmd::DoExecute(SBDebugger d, char** cmd,
     }
 
   } else {
-    result.Printf("No objects found with type name %s\n", type_name.c_str());
+    rang::setControlMode(rang::control::Force);
+    std::stringstream ss;
+    ss << rang::style::bold << rang::fg::red << "No objects found with type name "
+      << type_name.c_str() << rang::fg::reset << rang::style::reset << std::endl;
+    std::string str(ss.str());
+    result.Printf(str.c_str());
     result.SetStatus(eReturnStatusFailed);
     return false;
   }
@@ -428,6 +425,7 @@ bool NodeInfoCmd::DoExecute(SBDebugger d, char** cmd,
 
 bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
                                   SBCommandReturnObject& result) {
+  rang::setControlMode(rang::control::Force);
   if (cmd == nullptr || *cmd == nullptr) {
     result.SetError("USAGE: v8 findrefs expr\n");
     return false;
@@ -706,6 +704,27 @@ void FindReferencesCmd::ReferenceScanner::PrintContextRefs(
   }
 }
 
+std::string FindReferencesCmd::ObjectScanner::GetPropertyReferenceString() {
+  rang::setControlMode(rang::control::Force);
+  std::stringstream ss;
+  ss << rang::fg::cyan << "0x%" PRIx64 << rang::fg::reset << ": " << rang::fg::magenta
+    << "%s" << rang::style::bold << rang::fg::yellow << ".%s" << rang::fg::reset
+    << rang::style::reset << "=" << rang::fg::cyan << "0x%" PRIx64 << rang::fg::reset
+    << "\n";
+  return ss.str();
+}
+
+std::string FindReferencesCmd::ObjectScanner::GetArrayReferenceString() {
+  rang::setControlMode(rang::control::Force);
+  std::stringstream ss;
+  ss << rang::fg::cyan << "0x%" PRIx64 << rang::fg::reset << ": " << rang::fg::magenta
+    << "%s" << rang::style::bold << rang::fg::yellow << "[%" PRId64 "]" << rang::fg::reset
+    << rang::style::reset << "=" << rang::fg::cyan << "0x%" PRIx64 << rang::fg::reset
+    << "\n";
+  return ss.str();
+}
+
+
 void FindReferencesCmd::ReferenceScanner::PrintRefs(
     SBCommandReturnObject& result, v8::JSObject& js_obj, Error& err) {
   int64_t length = js_obj.GetArrayLength(err);
@@ -718,7 +737,9 @@ void FindReferencesCmd::ReferenceScanner::PrintRefs(
     if (v.raw() != search_value_.raw()) continue;
 
     std::string type_name = js_obj.GetTypeName(err);
-    result.Printf(array_reference_template, js_obj.raw(), type_name.c_str(), i,
+
+    std::string reference_template(GetArrayReferenceString());
+    result.Printf(reference_template.c_str(), js_obj.raw(), type_name.c_str(), i,
                   search_value_.raw());
   }
 
@@ -734,7 +755,9 @@ void FindReferencesCmd::ReferenceScanner::PrintRefs(
     if (v.raw() == search_value_.raw()) {
       std::string key = entry.first.ToString(err);
       std::string type_name = js_obj.GetTypeName(err);
-      result.Printf(property_reference_template, js_obj.raw(),
+
+      std::string reference_template(GetPropertyReferenceString());
+      result.Printf(reference_template.c_str(), js_obj.raw(),
                     type_name.c_str(), key.c_str(), search_value_.raw());
     }
   }
@@ -754,7 +777,9 @@ void FindReferencesCmd::ReferenceScanner::PrintRefs(
     v8::String parent = sliced_str.Parent(err);
     if (err.Success() && parent.raw() == search_value_.raw()) {
       std::string type_name = sliced_str.GetTypeName(err);
-      result.Printf(property_reference_template, str.raw(), type_name.c_str(),
+
+      std::string reference_template(GetPropertyReferenceString());
+      result.Printf(reference_template.c_str(), str.raw(), type_name.c_str(),
                     "<Parent>", search_value_.raw());
     }
   } else if (repr == v8->string()->kConsStringTag) {
@@ -763,14 +788,18 @@ void FindReferencesCmd::ReferenceScanner::PrintRefs(
     v8::String first = cons_str.First(err);
     if (err.Success() && first.raw() == search_value_.raw()) {
       std::string type_name = cons_str.GetTypeName(err);
-      result.Printf(property_reference_template, str.raw(), type_name.c_str(),
+
+      std::string reference_template(GetPropertyReferenceString());
+      result.Printf(reference_template.c_str(), str.raw(), type_name.c_str(),
                     "<First>", search_value_.raw());
     }
 
     v8::String second = cons_str.Second(err);
     if (err.Success() && second.raw() == search_value_.raw()) {
       std::string type_name = cons_str.GetTypeName(err);
-      result.Printf(property_reference_template, str.raw(), type_name.c_str(),
+
+      std::string reference_template(GetPropertyReferenceString());
+      result.Printf(reference_template.c_str(), str.raw(), type_name.c_str(),
                     "<Second>", search_value_.raw());
     }
   } else if (repr == v8->string()->kThinStringTag) {
@@ -778,7 +807,9 @@ void FindReferencesCmd::ReferenceScanner::PrintRefs(
     v8::String actual = thin_str.Actual(err);
     if (err.Success() && actual.raw() == search_value_.raw()) {
       std::string type_name = thin_str.GetTypeName(err);
-      result.Printf(property_reference_template, str.raw(), type_name.c_str(),
+
+      std::string reference_template(GetPropertyReferenceString());
+      result.Printf(reference_template.c_str(), str.raw(), type_name.c_str(),
                     "<Actual>", search_value_.raw());
     }
   }
@@ -900,7 +931,9 @@ void FindReferencesCmd::PropertyScanner::PrintRefs(
     }
     if (key == search_value_) {
       std::string type_name = js_obj.GetTypeName(err);
-      result.Printf(property_reference_template, js_obj.raw(),
+
+      std::string reference_template(GetPropertyReferenceString());
+      result.Printf(reference_template.c_str(), js_obj.raw(),
                     type_name.c_str(), key.c_str(), entry.second.raw());
     }
   }
@@ -967,8 +1000,11 @@ void FindReferencesCmd::StringScanner::PrintRefs(SBCommandReturnObject& result,
       if (err.Success() && search_value_ == value) {
         std::string type_name = js_obj.GetTypeName(err);
 
-        result.Printf("0x%" PRIx64 ": %s[%" PRId64 "]=0x%" PRIx64 " '%s'\n",
-                      js_obj.raw(), type_name.c_str(), i, v.raw(),
+        std::stringstream ss;
+        ss << rang::fg::cyan << std::hex << js_obj.raw() << std::dec << rang::fg::reset;
+
+        result.Printf("%s: %s[%" PRId64 "]=0x%" PRIx64 " '%s'\n",
+                      ss.str().c_str(), type_name.c_str(), i, v.raw(),
                       value.c_str());
       }
     }
@@ -997,9 +1033,14 @@ void FindReferencesCmd::StringScanner::PrintRefs(SBCommandReturnObject& result,
             continue;
           }
           std::string type_name = js_obj.GetTypeName(err);
-          result.Printf("0x%" PRIx64 ": %s.%s=0x%" PRIx64 " '%s'\n",
-                        js_obj.raw(), type_name.c_str(), key.c_str(),
-                        entry.second.raw(), value.c_str());
+
+          std::stringstream ss;
+          ss << rang::fg::cyan << "0x" << std::hex << js_obj.raw() << rang::fg::reset
+            << std::dec << ": " << type_name.c_str() << "." << key.c_str() << "="
+            << std::hex << entry.second.raw() << std::dec << " '"  << value.c_str()
+            << "'" << std::endl;
+
+          result.Printf(ss.str().c_str());
         }
       }
     }
