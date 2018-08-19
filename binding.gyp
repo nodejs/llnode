@@ -25,33 +25,8 @@
         # Necessary for node v4.x
         "xcode_settings": {
           "OTHER_CPLUSPLUSFLAGS" : [ "-std=c++11", "-stdlib=libc++" ],
-          "OTHER_LDFLAGS": [ "-stdlib=libc++" ],
+          "OTHER_LDFLAGS": [ "-stdlib=libc++","-Wl,-undefined,dynamic_lookup" ],
         },
-
-        "conditions": [
-          [ "lldb_lib_dir == ''", {
-            "variables": {
-              "mac_shared_frameworks": "/Applications/Xcode.app/Contents/SharedFrameworks",
-            },
-            "xcode_settings": {
-              "OTHER_LDFLAGS": [
-                "-F<(mac_shared_frameworks)",
-                "-Wl,-rpath,<(mac_shared_frameworks)",
-                "-framework LLDB",
-              ],
-            },
-          },
-          # lldb_lib_dir != ""
-          {
-            "xcode_settings": {
-              "OTHER_LDFLAGS": [
-                "-Wl,-rpath,<(lldb_lib_dir)",
-                "-L<(lldb_lib_dir)",
-                "-l<(lldb_lib)",
-              ],
-            },
-          }],
-        ],
       }],
       [ "OS == 'win'", {
         "sources": [
