@@ -487,6 +487,9 @@ void Types::Load() {
   kFirstJSObjectType =
       LoadConstant("type_JSGlobalObject__JS_GLOBAL_OBJECT_TYPE");
 
+  kFirstContextType = LoadConstant("FirstContextType");
+  kLastContextType = LoadConstant("LastContextType");
+
   kHeapNumberType = LoadConstant("type_HeapNumber__HEAP_NUMBER_TYPE");
   kMapType = LoadConstant("type_Map__MAP_TYPE");
   kGlobalObjectType =
@@ -508,6 +511,7 @@ void Types::Load() {
   kSharedFunctionInfoType =
       LoadConstant("type_SharedFunctionInfo__SHARED_FUNCTION_INFO_TYPE");
   kScriptType = LoadConstant("type_Script__SCRIPT_TYPE");
+  kScopeInfoType = LoadConstant("type_ScopeInfo__SCOPE_INFO_TYPE");
 
   if (kJSAPIObjectType == -1) {
     common_->Load();

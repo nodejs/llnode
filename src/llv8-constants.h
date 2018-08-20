@@ -475,6 +475,9 @@ class Types : public Module {
   int64_t kFirstNonstringType;
   int64_t kFirstJSObjectType;
 
+  int64_t kFirstContextType;
+  int64_t kLastContextType;
+
   int64_t kHeapNumberType;
   int64_t kMapType;
   int64_t kGlobalObjectType;
@@ -493,6 +496,7 @@ class Types : public Module {
   int64_t kJSDateType;
   int64_t kSharedFunctionInfoType;
   int64_t kScriptType;
+  int64_t kScopeInfoType;
 
  protected:
   void Load();
