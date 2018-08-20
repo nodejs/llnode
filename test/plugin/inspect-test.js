@@ -51,7 +51,7 @@ const hashMapTests = {
         const arrowSource = 'source:\n' +
             'function c.hashmap.(anonymous function)(a,b)=>{a+b}\n' +
             '>';
-    
+
         t.ok(lines.includes(arrowSource),
             'hashmap[25] should have the correct function source');
         cb(null);
@@ -305,14 +305,22 @@ const hashMapTests = {
 
 const contextTests = {
   'previous': {
-    re: /\(previous\)/,
+    re: /\(previous\)=(0x[0-9a-f]+)[^\n]+/,
     desc: '.(previous)'
   },
   'closure': {
-    re: /\(closure\)=(0x[0-9a-f]+)[^\n]+function: closure/i,
+    re: /(\((?:closure|scope_info)\)=0x[0-9a-f]+)[^\n]+/i,
     desc: '.(closure)',
     validator(t, sess, addresses, name, cb) {
-      const address = addresses[name];
+      const type = addresses[name].split("=")[0];
+      let address = undefined;
+      if (type === "(closure)") {
+        address = addresses[name].split("=")[1];
+      } else if (type === "(scope_info)") {
+        address = addresses["previous"];
+      } else {
+        return cb(new Error("unknown field"));
+      }
       sess.send(`v8 inspect ${address}`);
       sess.linesUntil(/}>/, (err, lines) => {
         if (err) return cb(err);
