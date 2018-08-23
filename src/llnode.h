@@ -10,12 +10,48 @@
 
 namespace llnode {
 
+
+// Use singleton pattern to avoid multiples instatiations
+// of Settings
+class Settings {
+ private:
+  static Settings instance;
+
+  // Private constructors to prevent instantiations
+  Settings(){};
+  Settings(const Settings&){};
+  ~Settings(){};
+
+  // Override assignment operator to avoid copies
+  Settings& operator=(const Settings&){};
+
+  std::string color = "auto";
+
+ public:
+  static Settings* GetSettings();
+  std::string SetColor(std::string option);
+  std::string GetColor() { return color; };
+  bool ShouldUseColor();
+};
+
 class CommandBase : public lldb::SBCommandPluginInterface {};
 
 class BacktraceCmd : public CommandBase {
  public:
   BacktraceCmd(v8::LLV8* llv8) : llv8_(llv8) {}
   ~BacktraceCmd() override {}
+
+  bool DoExecute(lldb::SBDebugger d, char** cmd,
+                 lldb::SBCommandReturnObject& result) override;
+
+ private:
+  v8::LLV8* llv8_;
+};
+
+class SetPropertyColorCmd : public CommandBase {
+ public:
+  SetPropertyColorCmd(v8::LLV8* llv8) : llv8_(llv8) {}
+  ~SetPropertyColorCmd() override {}
 
   bool DoExecute(lldb::SBDebugger d, char** cmd,
                  lldb::SBCommandReturnObject& result) override;

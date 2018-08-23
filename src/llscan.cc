@@ -6,10 +6,10 @@
 #include <algorithm>
 #include <cinttypes>
 #include <fstream>
-#include <vector>
+#include <iomanip>
 #include <sstream>
 #include <string>
-#include <iomanip>
+#include <vector>
 
 #include <lldb/API/SBExpressionOptions.h>
 
@@ -233,10 +233,17 @@ bool FindInstancesCmd::DoExecute(SBDebugger d, char** cmd,
     }
 
   } else {
-    rang::setControlMode(rang::control::Force);
+    Settings* settings = Settings::GetSettings();
+    if (settings->ShouldUseColor()) {
+      rang::setControlMode(rang::control::Force);
+    } else {
+      rang::setControlMode(rang::control::Off);
+    }
+
     std::stringstream ss;
-    ss << rang::style::bold << rang::fg::red << "No objects found with type name "
-      << type_name.c_str() << rang::fg::reset << rang::style::reset << std::endl;
+    ss << rang::style::bold << rang::fg::red
+       << "No objects found with type name " << type_name.c_str()
+       << rang::fg::reset << rang::style::reset << std::endl;
     std::string str(ss.str());
     result.Printf(str.c_str());
     result.SetStatus(eReturnStatusFailed);
@@ -425,7 +432,13 @@ bool NodeInfoCmd::DoExecute(SBDebugger d, char** cmd,
 
 bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
                                   SBCommandReturnObject& result) {
-  rang::setControlMode(rang::control::Force);
+  Settings* settings = Settings::GetSettings();
+  if (settings->ShouldUseColor()) {
+    rang::setControlMode(rang::control::Force);
+  } else {
+    rang::setControlMode(rang::control::Off);
+  }
+
   if (cmd == nullptr || *cmd == nullptr) {
     result.SetError("USAGE: v8 findrefs expr\n");
     return false;
@@ -705,22 +718,34 @@ void FindReferencesCmd::ReferenceScanner::PrintContextRefs(
 }
 
 std::string FindReferencesCmd::ObjectScanner::GetPropertyReferenceString() {
-  rang::setControlMode(rang::control::Force);
+  Settings* settings = Settings::GetSettings();
+  if (settings->ShouldUseColor()) {
+    rang::setControlMode(rang::control::Force);
+  } else {
+    rang::setControlMode(rang::control::Off);
+  }
+
   std::stringstream ss;
-  ss << rang::fg::cyan << "0x%" PRIx64 << rang::fg::reset << ": " << rang::fg::magenta
-    << "%s" << rang::style::bold << rang::fg::yellow << ".%s" << rang::fg::reset
-    << rang::style::reset << "=" << rang::fg::cyan << "0x%" PRIx64 << rang::fg::reset
-    << "\n";
+  ss << rang::fg::cyan << "0x%" PRIx64 << rang::fg::reset << ": "
+     << rang::fg::magenta << "%s" << rang::style::bold << rang::fg::yellow
+     << ".%s" << rang::fg::reset << rang::style::reset << "=" << rang::fg::cyan
+     << "0x%" PRIx64 << rang::fg::reset << "\n";
   return ss.str();
 }
 
 std::string FindReferencesCmd::ObjectScanner::GetArrayReferenceString() {
-  rang::setControlMode(rang::control::Force);
+  Settings* settings = Settings::GetSettings();
+  if (settings->ShouldUseColor()) {
+    rang::setControlMode(rang::control::Force);
+  } else {
+    rang::setControlMode(rang::control::Off);
+  }
+
   std::stringstream ss;
-  ss << rang::fg::cyan << "0x%" PRIx64 << rang::fg::reset << ": " << rang::fg::magenta
-    << "%s" << rang::style::bold << rang::fg::yellow << "[%" PRId64 "]" << rang::fg::reset
-    << rang::style::reset << "=" << rang::fg::cyan << "0x%" PRIx64 << rang::fg::reset
-    << "\n";
+  ss << rang::fg::cyan << "0x%" PRIx64 << rang::fg::reset << ": "
+     << rang::fg::magenta << "%s" << rang::style::bold << rang::fg::yellow
+     << "[%" PRId64 "]" << rang::fg::reset << rang::style::reset << "="
+     << rang::fg::cyan << "0x%" PRIx64 << rang::fg::reset << "\n";
   return ss.str();
 }
 
@@ -739,8 +764,8 @@ void FindReferencesCmd::ReferenceScanner::PrintRefs(
     std::string type_name = js_obj.GetTypeName(err);
 
     std::string reference_template(GetArrayReferenceString());
-    result.Printf(reference_template.c_str(), js_obj.raw(), type_name.c_str(), i,
-                  search_value_.raw());
+    result.Printf(reference_template.c_str(), js_obj.raw(), type_name.c_str(),
+                  i, search_value_.raw());
   }
 
   // Walk all the properties in this object.
@@ -757,8 +782,8 @@ void FindReferencesCmd::ReferenceScanner::PrintRefs(
       std::string type_name = js_obj.GetTypeName(err);
 
       std::string reference_template(GetPropertyReferenceString());
-      result.Printf(reference_template.c_str(), js_obj.raw(),
-                    type_name.c_str(), key.c_str(), search_value_.raw());
+      result.Printf(reference_template.c_str(), js_obj.raw(), type_name.c_str(),
+                    key.c_str(), search_value_.raw());
     }
   }
 }
@@ -933,8 +958,8 @@ void FindReferencesCmd::PropertyScanner::PrintRefs(
       std::string type_name = js_obj.GetTypeName(err);
 
       std::string reference_template(GetPropertyReferenceString());
-      result.Printf(reference_template.c_str(), js_obj.raw(),
-                    type_name.c_str(), key.c_str(), entry.second.raw());
+      result.Printf(reference_template.c_str(), js_obj.raw(), type_name.c_str(),
+                    key.c_str(), entry.second.raw());
     }
   }
 }
@@ -1001,7 +1026,8 @@ void FindReferencesCmd::StringScanner::PrintRefs(SBCommandReturnObject& result,
         std::string type_name = js_obj.GetTypeName(err);
 
         std::stringstream ss;
-        ss << rang::fg::cyan << std::hex << js_obj.raw() << std::dec << rang::fg::reset;
+        ss << rang::fg::cyan << std::hex << js_obj.raw() << std::dec
+           << rang::fg::reset;
 
         result.Printf("%s: %s[%" PRId64 "]=0x%" PRIx64 " '%s'\n",
                       ss.str().c_str(), type_name.c_str(), i, v.raw(),
@@ -1035,10 +1061,10 @@ void FindReferencesCmd::StringScanner::PrintRefs(SBCommandReturnObject& result,
           std::string type_name = js_obj.GetTypeName(err);
 
           std::stringstream ss;
-          ss << rang::fg::cyan << "0x" << std::hex << js_obj.raw() << rang::fg::reset
-            << std::dec << ": " << type_name.c_str() << "." << key.c_str() << "="
-            << std::hex << entry.second.raw() << std::dec << " '"  << value.c_str()
-            << "'" << std::endl;
+          ss << rang::fg::cyan << "0x" << std::hex << js_obj.raw()
+             << rang::fg::reset << std::dec << ": " << type_name.c_str() << "."
+             << key.c_str() << "=" << std::hex << entry.second.raw() << std::dec
+             << " '" << value.c_str() << "'" << std::endl;
 
           result.Printf(ss.str().c_str());
         }

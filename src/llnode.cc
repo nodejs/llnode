@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include <cinttypes>
+#include <iostream>
 #include <sstream>
 #include <string>
 
@@ -14,6 +15,7 @@
 #include "src/llscan.h"
 #include "src/llv8.h"
 #include "src/node-inl.h"
+#include "src/rang.hpp"
 
 namespace llnode {
 
@@ -31,6 +33,22 @@ using lldb::SBValue;
 using lldb::eReturnStatusFailed;
 using lldb::eReturnStatusSuccessFinishResult;
 
+Settings Settings::instance;
+Settings* Settings::GetSettings() { return &Settings::instance; }
+
+std::string Settings::SetColor(std::string option) {
+  if (option == "auto" || option == "always" || option == "never")
+    color = option;
+  return color;
+}
+
+bool Settings::ShouldUseColor() {
+  if (color == "always" ||
+      (color == "auto" && rang::rang_implementation::supportsColor() &&
+       rang::rang_implementation::isTerminal(std::cout.rdbuf())))
+    return true;
+  return false;
+}
 
 bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
                              SBCommandReturnObject& result) {
@@ -102,6 +120,31 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
 
   result.SetStatus(eReturnStatusSuccessFinishResult);
   return true;
+}
+
+bool SetPropertyColorCmd::DoExecute(SBDebugger d, char** cmd,
+                                    SBCommandReturnObject& result) {
+  if (cmd != nullptr) {
+    Settings* settings = Settings::GetSettings();
+    char* arg = cmd[0];
+    if (strcmp(arg, "always") == 0) {
+      settings->SetColor(arg);
+      result.Printf("Color set to 'always'\n");
+      return true;
+    }
+    if (strcmp(arg, "never") == 0) {
+      settings->SetColor(arg);
+      result.Printf("Color set to 'never'\n");
+      return true;
+    }
+    if (strcmp(arg, "auto") == 0) {
+      settings->SetColor(arg);
+      result.Printf("Color set to 'auto'\n");
+      return true;
+    }
+  }
+  result.Printf("Error: Available options are (always | never | auto)\n");
+  return false;
 }
 
 
@@ -417,6 +460,15 @@ bool PluginInitialize(SBDebugger d) {
                 "in the scripts directory of the llnode repository."
 #endif  // LLDB_SBMemoryRegionInfoList_h_
   );
+
+  SBCommand settingsCmd =
+      v8.AddMultiwordCommand("settings", "Interpreter settings");
+
+  SBCommand setPropertyCmd =
+      settingsCmd.AddMultiwordCommand("set", "Set a property");
+
+  setPropertyCmd.AddCommand("color", new llnode::SetPropertyColorCmd(&llv8),
+                            "Set color property value");
 
   interpreter.AddCommand("findjsobjects", new llnode::FindObjectsCmd(&llscan),
                          "Alias for `v8 findjsobjects`");
