@@ -13,11 +13,11 @@
 
 #include <lldb/API/SBExpressionOptions.h>
 
+#include "src/settings.h"
 #include "src/error.h"
-#include "src/llnode.h"
 #include "src/llscan.h"
 #include "src/llv8-inl.h"
-#include "src/rang.hpp"
+#include "deps/rang/include/rang.hpp"
 
 namespace llnode {
 
@@ -233,19 +233,13 @@ bool FindInstancesCmd::DoExecute(SBDebugger d, char** cmd,
     }
 
   } else {
-    Settings* settings = Settings::GetSettings();
-    if (settings->ShouldUseColor()) {
-      rang::setControlMode(rang::control::Force);
-    } else {
-      rang::setControlMode(rang::control::Off);
-    }
-
+    // "No objects found with type name %s", type_name
     std::stringstream ss;
     ss << rang::style::bold << rang::fg::red
-       << "No objects found with type name " << type_name.c_str()
+       << "No objects found with type name " << type_name
        << rang::fg::reset << rang::style::reset << std::endl;
     std::string str(ss.str());
-    result.Printf(str.c_str());
+    result.Printf("%s", str.c_str());
     result.SetStatus(eReturnStatusFailed);
     return false;
   }
@@ -432,12 +426,6 @@ bool NodeInfoCmd::DoExecute(SBDebugger d, char** cmd,
 
 bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
                                   SBCommandReturnObject& result) {
-  Settings* settings = Settings::GetSettings();
-  if (settings->ShouldUseColor()) {
-    rang::setControlMode(rang::control::Force);
-  } else {
-    rang::setControlMode(rang::control::Off);
-  }
 
   if (cmd == nullptr || *cmd == nullptr) {
     result.SetError("USAGE: v8 findrefs expr\n");
@@ -718,12 +706,6 @@ void FindReferencesCmd::ReferenceScanner::PrintContextRefs(
 }
 
 std::string FindReferencesCmd::ObjectScanner::GetPropertyReferenceString() {
-  Settings* settings = Settings::GetSettings();
-  if (settings->ShouldUseColor()) {
-    rang::setControlMode(rang::control::Force);
-  } else {
-    rang::setControlMode(rang::control::Off);
-  }
 
   std::stringstream ss;
   ss << rang::fg::cyan << "0x%" PRIx64 << rang::fg::reset << ": "
@@ -734,12 +716,6 @@ std::string FindReferencesCmd::ObjectScanner::GetPropertyReferenceString() {
 }
 
 std::string FindReferencesCmd::ObjectScanner::GetArrayReferenceString() {
-  Settings* settings = Settings::GetSettings();
-  if (settings->ShouldUseColor()) {
-    rang::setControlMode(rang::control::Force);
-  } else {
-    rang::setControlMode(rang::control::Off);
-  }
 
   std::stringstream ss;
   ss << rang::fg::cyan << "0x%" PRIx64 << rang::fg::reset << ": "
@@ -1066,7 +1042,7 @@ void FindReferencesCmd::StringScanner::PrintRefs(SBCommandReturnObject& result,
              << key.c_str() << "=" << std::hex << entry.second.raw() << std::dec
              << " '" << value.c_str() << "'" << std::endl;
 
-          result.Printf(ss.str().c_str());
+          result.Printf("%s", ss.str().c_str());
         }
       }
     }

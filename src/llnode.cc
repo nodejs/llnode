@@ -4,18 +4,18 @@
 #include <string.h>
 
 #include <cinttypes>
-#include <iostream>
 #include <sstream>
 #include <string>
 
 #include <lldb/API/SBExpressionOptions.h>
 
+#include "src/node-inl.h"
+#include "src/settings.h"
 #include "src/error.h"
 #include "src/llnode.h"
 #include "src/llscan.h"
 #include "src/llv8.h"
-#include "src/node-inl.h"
-#include "src/rang.hpp"
+#include "deps/rang/include/rang.hpp"
 
 namespace llnode {
 
@@ -33,22 +33,6 @@ using lldb::SBValue;
 using lldb::eReturnStatusFailed;
 using lldb::eReturnStatusSuccessFinishResult;
 
-Settings Settings::instance;
-Settings* Settings::GetSettings() { return &Settings::instance; }
-
-std::string Settings::SetColor(std::string option) {
-  if (option == "auto" || option == "always" || option == "never")
-    color = option;
-  return color;
-}
-
-bool Settings::ShouldUseColor() {
-  if (color == "always" ||
-      (color == "auto" && rang::rang_implementation::supportsColor() &&
-       rang::rang_implementation::isTerminal(std::cout.rdbuf())))
-    return true;
-  return false;
-}
 
 bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
                              SBCommandReturnObject& result) {
@@ -124,6 +108,10 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
 
 bool SetPropertyColorCmd::DoExecute(SBDebugger d, char** cmd,
                                     SBCommandReturnObject& result) {
+  #ifdef NO_COLOR_OUTPUT
+  result.Printf("Color support is not available\n");
+  return false;
+  #endif
   if (cmd != nullptr) {
     Settings* settings = Settings::GetSettings();
     char* arg = cmd[0];
@@ -508,6 +496,11 @@ bool PluginInitialize(SBDebugger d) {
       "getactiverequests", new llnode::GetActiveRequestsCmd(&llv8, &node),
       "Print all pending requests in the queue. Equivalent to "
       "running process._getActiveRequests() on the living process.\n");
+
+  // Set initial value for color support
+  llnode::Settings* settings = llnode::Settings::GetSettings();
+  settings->SetColor("auto");
+
 
   return true;
 }

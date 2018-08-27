@@ -79,6 +79,7 @@
       "src/llscan.cc",
       "src/node.cc",
       "src/node-constants.cc",
+      "src/settings.cc",
     ],
     "conditions": [
       [ "OS == 'win'", {
@@ -97,7 +98,7 @@
         "include_dirs": [
           "<!@(node -p \"require('node-addon-api').include\")"
         ],
-        "defines": [ "NAPI_DISABLE_CPP_EXCEPTIONS" ],
+        "defines": [ "NAPI_DISABLE_CPP_EXCEPTIONS", "NO_COLOR_OUTPUT" ],
         "sources": [
           "src/addon.cc",
           "src/llnode_module.cc",
@@ -108,6 +109,7 @@
           "src/llv8-constants.cc",
           "src/llscan.cc",
           "src/node-constants.cc",
+          "src/settings.cc",
         ],
         "cflags!": [ "-fno-exceptions" ],
         "cflags_cc!": [ "-fno-exceptions" ],

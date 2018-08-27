@@ -9,8 +9,8 @@
 
 #include "llv8-inl.h"
 #include "llv8.h"
-#include "src/llnode.h"
-#include "src/rang.hpp"
+#include "src/settings.h"
+#include "deps/rang/include/rang.hpp"
 
 namespace llnode {
 namespace v8 {
@@ -381,7 +381,6 @@ std::string JSFunction::GetDebugLine(std::string args, Error& err) {
 
 
 std::string JSFunction::Inspect(InspectOptions* options, Error& err) {
-  std::stringstream ss;
   std::string res = "<function: " + GetDebugLine(std::string(), err);
 
   if (err.Fail()) return std::string();
@@ -392,20 +391,11 @@ std::string JSFunction::Inspect(InspectOptions* options, Error& err) {
 
     Context context(context_obj);
 
-    ss << rang::fg::magenta << res << rang::fg::reset;
+    std::stringstream ss;
+    ss << rang::fg::magenta << res << rang::fg::reset << rang::style::bold
+       << rang::fg::yellow << "\n  context" << rang::fg::reset << rang::style::reset
+       << "=" << rang::fg::cyan << "0x%016" PRIx64 << rang::fg::reset;
     res = ss.str();
-
-    ss.str("");
-    ss.clear();
-    ss << rang::style::bold << rang::fg::yellow << "\n  context"
-       << rang::fg::reset << rang::style::reset << "=" << rang::fg::cyan
-       << "0x%016" PRIx64 << rang::fg::reset;
-
-
-    char tmp[128];
-    snprintf(tmp, sizeof(tmp), ss.str().c_str(), context.raw());
-    // snprintf(tmp, sizeof(tmp), "\n  context=0x%016" PRIx64, context.raw());
-    res += tmp;
 
     {
       InspectOptions ctx_options;
@@ -437,7 +427,7 @@ std::string JSFunction::Inspect(InspectOptions* options, Error& err) {
   } else {
     std::stringstream ss;
     ss << rang::fg::yellow << res << ">" << rang::fg::reset;
-    res = ss.str().c_str();
+    res = ss.str();
   }
   return res;
 }
@@ -517,11 +507,18 @@ std::string JSRegExp::Inspect(InspectOptions* options, Error& err) {
 
   // Print properties in detailed mode
   if (options->detailed) {
-    res += " " + InspectProperties(err);
-    if (err.Fail()) return std::string();
-  }
+    std::stringstream ss;
+    ss << rang::fg::magenta << res << rang::fg::reset;
+    res = ss.str();
 
-  res += ">";
+    res += " " + InspectProperties(err);
+    res += ">";
+    if (err.Fail()) return std::string();
+  } else {
+    std::stringstream ss;
+    ss << rang::fg::yellow << res + ">" << rang::fg::reset;
+    res = ss.str();
+  }
   return res;
 }
 
@@ -789,12 +786,6 @@ std::string HeapObject::ToString(Error& err) {
 
 
 std::string HeapObject::Inspect(InspectOptions* options, Error& err) {
-  Settings* settings = Settings::GetSettings();
-  if (settings->ShouldUseColor()) {
-    rang::setControlMode(rang::control::Force);
-  } else {
-    rang::setControlMode(rang::control::Off);
-  }
 
   int64_t type = GetType(err);
   if (err.Fail()) return std::string();
@@ -816,9 +807,21 @@ std::string HeapObject::Inspect(InspectOptions* options, Error& err) {
 
   std::string pre = buf;
 
-  if (type == v8()->types()->kGlobalObjectType) return pre + "<Global>";
-  if (type == v8()->types()->kGlobalProxyType) return pre + "<Global proxy>";
-  if (type == v8()->types()->kCodeType) return pre + "<Code>";
+  if (type == v8()->types()->kGlobalObjectType) {
+      std::stringstream ss;
+      ss << rang::fg::yellow << "<Global>" << rang::fg::reset;
+      return pre + ss.str();
+  }
+  if (type == v8()->types()->kGlobalProxyType) {
+      std::stringstream ss;
+      ss << rang::fg::yellow << "<Global proxy>" << rang::fg::reset;
+      return pre + ss.str();
+  }
+  if (type == v8()->types()->kCodeType) {
+      std::stringstream ss;
+      ss << rang::fg::yellow << "<Code>" << rang::fg::reset;
+      return pre + ss.str();
+  }
   if (type == v8()->types()->kMapType) {
     Map m(this);
     return pre + m.Inspect(options, err);
@@ -992,7 +995,7 @@ std::string HeapObject::GetTypeName(Error& err) {
 std::string Smi::Inspect(Error& err) {
   std::stringstream ss;
   ss << rang::fg::yellow << "<Smi: " + ToString(err) + ">" << rang::fg::reset;
-  return ss.str().c_str();
+  return ss.str();
 }
 
 
@@ -1009,7 +1012,7 @@ std::string HeapNumber::Inspect(Error& err) {
   std::stringstream ss;
   ss << rang::fg::yellow << "<Number: " + ToString(true, err) + ">"
      << rang::fg::reset;
-  return ss.str().c_str();
+  return ss.str();
 }
 
 
@@ -1068,7 +1071,7 @@ std::string String::Inspect(InspectOptions* options, Error& err) {
 
   std::stringstream ss;
   ss << rang::fg::yellow << "<String: \"" + val + "\">" << rang::fg::reset;
-  return ss.str().c_str();
+  return ss.str();
 }
 
 
@@ -1093,7 +1096,7 @@ std::string FixedArray::Inspect(InspectOptions* options, Error& err) {
     ss << rang::fg::yellow << res + ">" << rang::fg::reset;
     res = ss.str();
   }
-  return res.c_str();
+  return res;
 }
 
 
@@ -1112,8 +1115,7 @@ std::string FixedArray::InspectContents(int length, Error& err) {
     std::stringstream ss;
     ss << rang::style::bold << rang::fg::yellow << "    [" << i << "]"
        << rang::fg::reset << rang::style::reset << "=";
-    snprintf(tmp, sizeof(tmp), "%s", ss.str().c_str());
-    res += tmp + value.Inspect(&options, err);
+    res += ss.str() + value.Inspect(&options, err);
     if (err.Fail()) return std::string();
   }
 
@@ -1186,9 +1188,10 @@ std::string Context::Inspect(InspectOptions* options, Error& err) {
     std::stringstream ss;
     ss << rang::style::bold << rang::fg::yellow << options->get_indent_spaces() << "(previous)"
        << rang::fg::reset << rang::style::reset << "=" << rang::fg::cyan
-       << "0x" << std::hex << previous.raw() << std::dec << rang::fg::reset;
+       << "0x" << std::hex << previous.raw() << std::dec << rang::fg::reset
+       << ":" << rang::fg::yellow << "<Context>" << rang::fg::reset << ",";
 
-    res += ss.str() + ":<Context>,";
+    res += ss.str();
   }
 
   if (!res.empty()) res += "\n";
@@ -1207,13 +1210,14 @@ std::string Context::Inspect(InspectOptions* options, Error& err) {
     res += closure.Inspect(&closure_options, err) + "}";
     if (err.Fail()) return std::string();
   } else {
-    char tmp[128];
-    snprintf(
-        tmp, sizeof(tmp),
-        (options->get_indent_spaces() + "(scope_info)=0x%016" PRIx64).c_str(),
-        scope.raw());
-
-    res += std::string(tmp) + ":<ScopeInfo";
+    // Scope for string stream
+    {
+      std::stringstream ss;
+      ss << rang::style::bold << rang::fg::yellow << options->get_indent_spaces() << "(scope_info)"
+        << rang::fg::reset << rang::style::reset << "=" << rang::fg::cyan << "0x" << std::hex << scope.raw()
+        << std::dec << rang::fg::yellow;
+      res += ss.str() + ":<ScopeInfo";
+    }
 
     Error function_name_error;
     HeapObject maybe_function_name =
@@ -1223,7 +1227,13 @@ std::string Context::Inspect(InspectOptions* options, Error& err) {
       res += ": for function " + String(maybe_function_name).ToString(err);
     }
 
-    res += ">";
+    // Scope for string stream
+    {
+      std::stringstream ss;
+      ss << rang::fg::reset;
+      res += ">" + ss.str();
+    }
+
   }
 
   Context::Locals locals(this, err);
@@ -1277,7 +1287,7 @@ std::string Oddball::Inspect(Error& err) {
 
   std::stringstream ss;
   ss << rang::fg::yellow << str << rang::fg::reset;
-  return ss.str().c_str();
+  return ss.str();
 }
 
 std::string JSArrayBuffer::Inspect(InspectOptions* options, Error& err) {
@@ -1287,7 +1297,7 @@ std::string JSArrayBuffer::Inspect(InspectOptions* options, Error& err) {
   if (neutered) {
     std::stringstream ss;
     ss << rang::fg::yellow << "<ArrayBuffer [neutered]>" << rang::fg::reset;
-    return ss.str().c_str();
+    return ss.str();
   }
 
   int64_t data = BackingStore(err);
@@ -1306,7 +1316,11 @@ std::string JSArrayBuffer::Inspect(InspectOptions* options, Error& err) {
   std::string res;
   res += tmp;
   if (options->detailed) {
-    res += ": [\n  ";
+    std::stringstream ss;
+    ss << rang::fg::magenta << res + ":" << rang::fg::yellow;
+    res = ss.str();
+
+    res += " [\n  ";
 
     int display_length = std::min<int>(byte_length, options->length);
     res += v8()->LoadBytes(data, display_length, err);
@@ -1314,14 +1328,18 @@ std::string JSArrayBuffer::Inspect(InspectOptions* options, Error& err) {
     if (display_length < byte_length) {
       res += " ...";
     }
-    res += "\n]>";
-  } else {
-    res += ">";
-  }
 
-  std::stringstream ss;
-  ss << rang::fg::yellow << res << rang::fg::reset;
-  return ss.str().c_str();
+    res += "\n]";
+    ss.str(""); ss.clear();
+    ss << res << rang::fg::reset;
+
+    res = ss.str();
+    return res + ">";
+  } else {
+    std::stringstream ss;
+    ss << rang::fg::yellow << res + ">" << rang::fg::reset;
+    return ss.str();
+  }
 }
 
 
@@ -1370,7 +1388,12 @@ std::string JSArrayBufferView::Inspect(InspectOptions* options, Error& err) {
   std::string res;
   res += tmp;
   if (options->detailed) {
-    res += ": [\n  ";
+
+    std::stringstream ss;
+    ss << rang::fg::magenta << res + ":" << rang::fg::yellow;
+    res = ss.str();
+
+    res += " [\n  ";
 
     int display_length = std::min<int>(byte_length, options->length);
     res += v8()->LoadBytes(data + byte_offset, display_length, err);
@@ -1378,11 +1401,19 @@ std::string JSArrayBufferView::Inspect(InspectOptions* options, Error& err) {
     if (display_length < byte_length) {
       res += " ...";
     }
-    res += "\n]>";
+
+    res += "\n]";
+
+    ss.str(""); ss.clear();
+    ss << res << rang::fg::reset;
+    res = ss.str();
+
+    return res + ">";
   } else {
-    res += ">";
+    std::stringstream ss;
+    ss << rang::fg::yellow << res + ">" << rang::fg::reset;
+    return ss.str();
   }
-  return res;
 }
 
 
@@ -1421,13 +1452,6 @@ std::string Map::Inspect(InspectOptions* options, Error& err) {
            static_cast<int>(in_object_properties_or_constructor_index),
            static_cast<int>(instance_size), descriptors_obj.raw());
 
-  // snprintf(tmp, sizeof(tmp),
-  //          "<Map own_descriptors=%d %s=%d instance_size=%d "
-  //          "descriptors=0x%016" PRIx64,
-  //          static_cast<int>(own_descriptors_count),
-  //          in_object_properties_or_constructor.c_str(),
-  //          static_cast<int>(in_object_properties_or_constructor_index),
-  //          static_cast<int>(instance_size), descriptors_obj.raw());
   if (!options->detailed) {
     return std::string(tmp) + ">";
   }
@@ -1495,10 +1519,10 @@ std::string JSObject::Inspect(InspectOptions* options, Error& err) {
       std::stringstream ss;
       ss << rang::fg::magenta << "\n  internal fields" << rang::fg::reset
          << " {" << std::endl
-         << fields << "}>";
+         << fields << "}";
       res += ss.str().c_str();
     }
-    return res;
+    return res + ">";
   } else {
     std::stringstream ss;
     ss << rang::fg::yellow << res << ">" << rang::fg::reset;
@@ -1533,6 +1557,7 @@ std::string JSObject::InspectInternalFields(Error& err) {
   instance_size -= in_object_props * v8()->common()->kPointerSize;
 
   std::string res;
+  std::stringstream ss;
   for (int64_t off = v8()->js_object()->kInternalFieldsOffset;
        off < instance_size; off += v8()->common()->kPointerSize) {
     int64_t field = LoadField(off, err);
@@ -1542,7 +1567,11 @@ std::string JSObject::InspectInternalFields(Error& err) {
     snprintf(tmp, sizeof(tmp), "    0x%016" PRIx64, field);
 
     if (!res.empty()) res += ",\n  ";
-    res += tmp;
+
+    ss.str(""); ss.clear();
+    ss << rang::fg::cyan << tmp << rang::fg::reset;
+    res += ss.str();
+
   }
 
   return res;
@@ -1560,6 +1589,7 @@ std::string JSObject::InspectProperties(Error& err) {
     ss << rang::fg::magenta << "elements" << rang::fg::reset << " {"
        << std::endl
        << elems << "}";
+    res = ss.str();
   }
 
   HeapObject map_obj = GetMap(err);
@@ -1631,8 +1661,7 @@ std::string JSObject::InspectElements(int64_t length, Error& err) {
     ss << rang::style::bold << rang::fg::yellow << "    ["
        << static_cast<int>(i) << "]" << rang::fg::reset << rang::style::reset
        << "=";
-    snprintf(tmp, sizeof(tmp), "%s", ss.str().c_str());
-    res += tmp;
+    res += ss.str();
 
     res += value.Inspect(&options, err);
     if (err.Fail()) return std::string();
@@ -1733,17 +1762,6 @@ std::string JSObject::InspectDescriptors(Map map, Error& err) {
 
       res += value.Inspect(&options, err);
       if (err.Fail()) return std::string();
-      continue;
-    }
-
-    // Skip non-fields for now
-    if (!descriptors.IsFieldDetails(details)) {
-      Error::PrintInDebugMode("Unknown field Type %" PRId64,
-                              details.GetValue());
-      ss.str("");
-      ss.clear();
-      ss << rang::fg::yellow << "<unknown field type>" << rang::fg::reset;
-      res += ss.str();
       continue;
     }
 

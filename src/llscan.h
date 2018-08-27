@@ -93,8 +93,8 @@ class FindReferencesCmd : public CommandBase {
     virtual void PrintContextRefs(lldb::SBCommandReturnObject& result,
                                   Error& err) {}
 
-    virtual std::string GetPropertyReferenceString();
-    virtual std::string GetArrayReferenceString();
+    std::string GetPropertyReferenceString();
+    std::string GetArrayReferenceString();
   };
 
   void PrintReferences(lldb::SBCommandReturnObject& result,
