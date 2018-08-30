@@ -1109,7 +1109,7 @@ std::string Context::Inspect(InspectOptions* options, Error& err) {
 
   if (!res.empty()) res += "\n";
 
-  if (v8()->context()->kClosureIndex != -1) {
+  if (v8()->context()->hasClosure()) {
     JSFunction closure = Closure(err);
     if (err.Fail()) return std::string();
     char tmp[128];
