@@ -49,7 +49,7 @@ class Value {
 
     static const unsigned int kLength = 16;
     static const unsigned int kIndentSize = 2;
-    inline std::string get_indent_spaecs() {
+    inline std::string get_indent_spaces() {
       return std::string(indent_depth * kIndentSize, ' ');
     }
 
