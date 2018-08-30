@@ -389,10 +389,15 @@ std::string JSFunction::Inspect(InspectOptions* options, Error& err) {
     snprintf(tmp, sizeof(tmp), "\n  context=0x%016" PRIx64, context.raw());
     res += tmp;
 
-    std::string context_str = context.Inspect(err);
-    if (err.Fail()) return std::string();
+    {
+      InspectOptions ctx_options;
+      ctx_options.detailed = true;
+      ctx_options.indent_depth = options->indent_depth + 1;
+      std::string context_str = context.Inspect(&ctx_options, err);
+      if (err.Fail()) return std::string();
 
-    if (!context_str.empty()) res += "{\n" + context_str + "}";
+      if (!context_str.empty()) res += ":" + context_str;
+    }
 
     if (options->print_source) {
       SharedFunctionInfo info = Info(err);
@@ -821,6 +826,12 @@ std::string HeapObject::Inspect(InspectOptions* options, Error& err) {
     return pre + str.Inspect(options, err);
   }
 
+  if (type >= v8()->types()->kFirstContextType &&
+      type <= v8()->types()->kLastContextType) {
+    Context ctx(this);
+    return pre + ctx.Inspect(options, err);
+  }
+
   if (type == v8()->types()->kFixedArrayType) {
     FixedArray arr(this);
     return pre + arr.Inspect(options, err);
@@ -1047,24 +1058,37 @@ std::string FixedArray::InspectContents(int length, Error& err) {
   return res;
 }
 
+HeapObject Context::GetScopeInfo(Error& err) {
+  if (v8()->context()->kScopeInfoIndex != -1) {
+    return FixedArray::Get<HeapObject>(v8()->context()->kScopeInfoIndex, err);
+  }
+  JSFunction closure = Closure(err);
+  if (err.Fail()) return HeapObject();
 
-std::string Context::Inspect(Error& err) {
-  std::string res;
+  SharedFunctionInfo info = closure.Info(err);
+  if (err.Fail()) return HeapObject();
+
+  return info.GetScopeInfo(err);
+}
+
+std::string Context::Inspect(InspectOptions* options, Error& err) {
   // Not enough postmortem information, return bare minimum
   if (v8()->shared_info()->kScopeInfoOffset == -1 &&
       v8()->shared_info()->kNameOrScopeInfoOffset == -1)
-    return res;
+    return std::string();
+
+  std::string res = "<Context";
+
+  if (!options->detailed) {
+    return res + ">";
+  }
+
+  res += ": {\n";
 
   Value previous = Previous(err);
   if (err.Fail()) return std::string();
 
-  JSFunction closure = Closure(err);
-  if (err.Fail()) return std::string();
-
-  SharedFunctionInfo info = closure.Info(err);
-  if (err.Fail()) return std::string();
-
-  HeapObject scope_obj = info.GetScopeInfo(err);
+  HeapObject scope_obj = GetScopeInfo(err);
   if (err.Fail()) return std::string();
 
   ScopeInfo scope(scope_obj);
@@ -1076,25 +1100,41 @@ std::string Context::Inspect(Error& err) {
   Smi local_count_smi = scope.ContextLocalCount(err);
   if (err.Fail()) return std::string();
 
-  InspectOptions options;
-
   HeapObject heap_previous = HeapObject(previous);
   if (heap_previous.Check()) {
     char tmp[128];
-    snprintf(tmp, sizeof(tmp), "    (previous)=0x%016" PRIx64, previous.raw());
-    res += tmp;
+    snprintf(tmp, sizeof(tmp), (options->get_indent_spaces() + "(previous)=0x%016" PRIx64).c_str(), previous.raw());
+    res += std::string(tmp) + ":<Context>,";
   }
 
   if (!res.empty()) res += "\n";
-  {
+
+  if (v8()->context()->hasClosure()) {
+    JSFunction closure = Closure(err);
+    if (err.Fail()) return std::string();
     char tmp[128];
-    snprintf(tmp, sizeof(tmp), "    (closure)=0x%016" PRIx64 " {",
+    snprintf(tmp, sizeof(tmp), (options->get_indent_spaces() + "(closure)=0x%016" PRIx64 " {").c_str(),
              closure.raw());
     res += tmp;
 
-    InspectOptions options;
-    res += closure.Inspect(&options, err) + "}";
+    InspectOptions closure_options;
+    res += closure.Inspect(&closure_options, err) + "}";
     if (err.Fail()) return std::string();
+  } else {
+    char tmp[128];
+    snprintf(tmp, sizeof(tmp), (options->get_indent_spaces() + "(scope_info)=0x%016" PRIx64).c_str(),
+             scope.raw());
+
+    res += std::string(tmp) + ":<ScopeInfo";
+
+    Error function_name_error;
+    HeapObject maybe_function_name = scope.MaybeFunctionName(function_name_error);
+
+    if (function_name_error.Success()) {
+      res += ": for function " + String(maybe_function_name).ToString(err);
+    }
+
+    res += ">";
   }
 
   int param_count = param_count_smi.GetValue();
@@ -1106,17 +1146,18 @@ std::string Context::Inspect(Error& err) {
 
     if (!res.empty()) res += ",\n";
 
-    res += "    " + name.ToString(err) + "=";
+    res += options->get_indent_spaces() + name.ToString(err) + "=";
     if (err.Fail()) return std::string();
 
     Value value = ContextSlot(i, err);
     if (err.Fail()) return std::string();
 
-    res += value.Inspect(&options, err);
+    InspectOptions val_options;
+    res += value.Inspect(&val_options, err);
     if (err.Fail()) return std::string();
   }
 
-  return res;
+  return res + "}>";
 }
 
 
