@@ -397,6 +397,35 @@ class Context : public FixedArray {
   inline Value ContextSlot(int index, Error& err);
 
   std::string Inspect(InspectOptions* options, Error& err);
+  static inline bool IsContext(LLV8* v8, HeapObject heap_object, Error& err);
+
+  // Iterator class to walk all local references on a context
+  class Locals {
+   public:
+    class Iterator {
+     public:
+      Value operator*();
+      const Context::Locals::Iterator operator++(int);
+      bool operator!=(Context::Locals::Iterator that);
+
+      inline Iterator(int current, Context* ctx) : current(current), ctx(ctx){};
+
+     public:
+      int current;
+      Context* ctx;
+    };
+
+    Locals(Context* ctx_);
+
+    Iterator begin();
+    Iterator end();
+
+   public:
+    int local_count;
+    int param_count;
+    int stack_count;
+    Context* ctx;
+  };
 
  private:
   inline JSFunction Closure(Error& err);

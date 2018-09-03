@@ -65,6 +65,7 @@ function test(executable, core, t) {
     }
     t.ok(found, 'Zlib should be in findjsinstances');
 
+    sess.send("target modules dump symtab");
     // Just a separator
     sess.send('version');
   });
@@ -83,6 +84,11 @@ function test(executable, core, t) {
     t.ok(/Object\.holder/.test(lines.join('\n')), 'Should find reference #2');
     t.ok(/\(Array\)\[1\]/.test(lines.join('\n')), 'Should find reference #3');
 
+    // Test if LastContextType constat exists
+    let patt = new RegExp("v8dbg_LastContextType");
+    if (patt.test(lines.join('\n'))) {
+        t.ok(/Context\.scopedAPI/.test(lines.join('\n')), 'Should find reference #4');
+    }
     sess.quit();
     t.end();
   });

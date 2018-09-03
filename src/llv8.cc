@@ -876,6 +876,10 @@ std::string HeapObject::GetTypeName(Error& err) {
   if (type == v8()->types()->kMapType) {
     return "(Map)";
   }
+  if (type >= v8()->types()->kFirstContextType &&
+      type <= v8()->types()->kLastContextType) {
+    return "Context";
+  }
 
   if (JSObject::IsObjectType(v8(), type)) {
     v8::HeapObject map_obj = GetMap(err);
@@ -1058,17 +1062,44 @@ std::string FixedArray::InspectContents(int length, Error& err) {
   return res;
 }
 
-HeapObject Context::GetScopeInfo(Error& err) {
-  if (v8()->context()->kScopeInfoIndex != -1) {
-    return FixedArray::Get<HeapObject>(v8()->context()->kScopeInfoIndex, err);
-  }
-  JSFunction closure = Closure(err);
-  if (err.Fail()) return HeapObject();
+// Context locals iterator implementations
+Context::Locals::Locals(Context* ctx_) {
+  ctx = ctx_;
+  Error err;
+  HeapObject scope_obj = ctx->GetScopeInfo(err);
+  if (err.Fail()) return;
 
-  SharedFunctionInfo info = closure.Info(err);
-  if (err.Fail()) return HeapObject();
+  ScopeInfo scope(scope_obj);
+  Smi param_count_smi = scope.ParameterCount(err);
+  if (err.Fail()) return;
+  Smi stack_count_smi = scope.StackLocalCount(err);
+  if (err.Fail()) return;
+  Smi local_count_smi = scope.ContextLocalCount(err);
+  if (err.Fail()) return;
 
-  return info.GetScopeInfo(err);
+  param_count = param_count_smi.GetValue();
+  stack_count = stack_count_smi.GetValue();
+  local_count = local_count_smi.GetValue();
+}
+
+Context::Locals::Iterator Context::Locals::begin() { return Iterator(0, ctx); }
+
+Context::Locals::Iterator Context::Locals::end() {
+  return Iterator(local_count, ctx);
+}
+
+const Context::Locals::Iterator Context::Locals::Iterator::operator++(int) {
+  current++;
+  return Iterator(current, ctx);
+}
+
+bool Context::Locals::Iterator::operator!=(Context::Locals::Iterator that) {
+  return current != that.current || ctx != that.ctx;
+}
+
+v8::Value Context::Locals::Iterator::operator*() {
+  Error err;
+  return ctx->ContextSlot(current, err);
 }
 
 std::string Context::Inspect(InspectOptions* options, Error& err) {
@@ -1092,13 +1123,6 @@ std::string Context::Inspect(InspectOptions* options, Error& err) {
   if (err.Fail()) return std::string();
 
   ScopeInfo scope(scope_obj);
-
-  Smi param_count_smi = scope.ParameterCount(err);
-  if (err.Fail()) return std::string();
-  Smi stack_count_smi = scope.StackLocalCount(err);
-  if (err.Fail()) return std::string();
-  Smi local_count_smi = scope.ContextLocalCount(err);
-  if (err.Fail()) return std::string();
 
   HeapObject heap_previous = HeapObject(previous);
   if (heap_previous.Check()) {
@@ -1145,11 +1169,11 @@ std::string Context::Inspect(InspectOptions* options, Error& err) {
     res += ">";
   }
 
-  int param_count = param_count_smi.GetValue();
-  int stack_count = stack_count_smi.GetValue();
-  int local_count = local_count_smi.GetValue();
-  for (int i = 0; i < local_count; i++) {
-    String name = scope.ContextLocalName(i, param_count, stack_count, err);
+  Context::Locals locals(this);
+  for (v8::Context::Locals::Iterator it = locals.begin(); it != locals.end();
+       it++) {
+    String name = scope.ContextLocalName(it.current, locals.param_count,
+                                         locals.stack_count, err);
     if (err.Fail()) return std::string();
 
     if (!res.empty()) res += ",\n";
@@ -1157,7 +1181,7 @@ std::string Context::Inspect(InspectOptions* options, Error& err) {
     res += options->get_indent_spaces() + name.ToString(err) + "=";
     if (err.Fail()) return std::string();
 
-    Value value = ContextSlot(i, err);
+    Value value = ContextSlot(it.current, err);
     if (err.Fail()) return std::string();
 
     InspectOptions val_options;
