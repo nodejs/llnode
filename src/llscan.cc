@@ -612,6 +612,10 @@ void FindReferencesCmd::PrintReferences(SBCommandReturnObject& result,
       //    "\n", type, addr);
     }
   }
+
+  // Print references found directly inside Context objects
+  Error err;
+  scanner->PrintContextRefs(result, err);
 }
 
 
@@ -668,6 +672,39 @@ char** FindReferencesCmd::ParseScanOptions(char** cmd, ScanType* type) {
   return &cmd[optind - 1];
 }
 
+// Walk all contexts previously stored and print search_value_
+// reference if it exists. Not all values are associated with
+// a context object. It seems that Function-Local variables are
+// stored in the stack, and when some nested closure references
+// it is allocated in a Context object.
+void FindReferencesCmd::ReferenceScanner::PrintContextRefs(
+    SBCommandReturnObject& result, Error& err) {
+  ContextVector* contexts = llscan_->GetContexts();
+  v8::LLV8* v8 = llscan_->v8();
+
+  for (auto ctx : *contexts) {
+    Error err;
+    v8::HeapObject context_obj(v8, ctx);
+    v8::Context c(context_obj);
+
+    v8::Context::Locals locals(&c, err);
+    if (err.Fail()) return;
+
+    for (v8::Context::Locals::Iterator it = locals.begin(); it != locals.end();
+         it++) {
+      if ((*it).raw() == search_value_.raw()) {
+        v8::String _name = it.LocalName(err);
+        if (err.Fail()) return;
+
+        std::string name = _name.ToString(err);
+        if (err.Fail()) return;
+
+        result.Printf("0x%" PRIx64 ": Context.%s=0x%" PRIx64 "\n", c.raw(),
+                      name.c_str(), search_value_.raw());
+      }
+    }
+  }
+}
 
 void FindReferencesCmd::ReferenceScanner::PrintRefs(
     SBCommandReturnObject& result, v8::JSObject& js_obj, Error& err) {
@@ -1192,6 +1229,20 @@ uint64_t FindJSObjectsVisitor::Visit(uint64_t location, uint64_t word) {
 
   v8::HeapObject heap_object(v8_value);
   if (!heap_object.Check()) return address_byte_size_;
+
+  bool is_context = v8::Context::IsContext(llscan_->v8(), heap_object, err);
+  if (err.Fail()) {
+    return address_byte_size_;
+  }
+
+  if (is_context) {
+    ContextVector* contexts;
+    contexts = llscan_->GetContexts();
+
+    if (std::find(contexts->begin(), contexts->end(), word) == contexts->end())
+      contexts->push_back(word);
+    return address_byte_size_;
+  }
 
   v8::HeapObject map_object = heap_object.GetMap(err);
   if (err.Fail() || !map_object.Check()) return address_byte_size_;

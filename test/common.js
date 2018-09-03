@@ -33,7 +33,9 @@ else
 exports.llnodePath = path.join(exports.projectDir, pluginName);
 exports.saveCoreTimeout = 360 * 1000;
 exports.loadCoreTimeout = 60 * 1000;
-exports.versionMark = /^lldb-|^lldb version/;
+
+let versionMark = /^lldb-|^lldb version/;
+exports.versionMark = versionMark;
 
 function SessionOutput(session, stream, timeout) {
   EventEmitter.call(this);
@@ -315,6 +317,20 @@ Session.prototype.send = function send(line, callback) {
   debug(`[SEND][${this.lldb.pid}]`, line);
   this.lldb.stdin.write(line + '\n', callback);
 };
+
+Session.prototype.hasSymbol = function hasSymbol(symbol, callback) {
+  this.send('target modules dump symtab');
+  this.send('version');
+
+  let pattern = new RegExp(symbol);
+  this.linesUntil(versionMark, (err, lines) => {
+    if(pattern.test(lines.join('\n'))) {
+      callback(err, true);
+    } else {
+      return callback(err, false);
+    }
+  });
+}
 
 exports.generateRanges = function generateRanges(core, dest, cb) {
   let script;

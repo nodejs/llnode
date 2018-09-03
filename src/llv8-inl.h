@@ -167,6 +167,15 @@ inline bool Map::IsJSObjectMap(Error& err) {
   return InstanceType(err) >= v8()->types()->kFirstJSObjectType;
 }
 
+inline bool Context::IsContext(LLV8* v8, HeapObject heap_object, Error& err) {
+  if (!heap_object.Check()) return false;
+
+  int64_t type = heap_object.GetType(err);
+  if (err.Fail()) return false;
+
+  return type >= v8->types()->kFirstContextType &&
+         type <= v8->types()->kLastContextType;
+}
 
 inline int64_t Map::InObjectProperties(Error& err) {
   if (!IsJSObjectMap(err)) {
@@ -260,7 +269,6 @@ ACCESSOR(SharedFunctionInfo, scope_info, shared_info()->kScopeInfoOffset,
          HeapObject)
 ACCESSOR(SharedFunctionInfo, name_or_scope_info,
          shared_info()->kNameOrScopeInfoOffset, HeapObject)
-
 
 HeapObject SharedFunctionInfo::GetScopeInfo(Error& err) {
   if (v8()->shared_info()->kNameOrScopeInfoOffset == -1) return scope_info(err);
@@ -578,6 +586,19 @@ inline T Context::GetEmbedderData(int64_t index, Error& err) {
     return T();
   }
   return embedder_data.Get<T>(index, err);
+}
+
+HeapObject Context::GetScopeInfo(Error& err) {
+  if (v8()->context()->kScopeInfoIndex != -1) {
+    return FixedArray::Get<HeapObject>(v8()->context()->kScopeInfoIndex, err);
+  }
+  JSFunction closure = Closure(err);
+  if (err.Fail()) return HeapObject();
+
+  SharedFunctionInfo info = closure.Info(err);
+  if (err.Fail()) return HeapObject();
+
+  return info.GetScopeInfo(err);
 }
 
 inline Value Context::ContextSlot(int index, Error& err) {

@@ -83,7 +83,13 @@ function test(executable, core, t) {
     t.ok(/Object\.holder/.test(lines.join('\n')), 'Should find reference #2');
     t.ok(/\(Array\)\[1\]/.test(lines.join('\n')), 'Should find reference #3');
 
-    sess.quit();
-    t.end();
+    // Test if LastContextType constat exists
+    sess.hasSymbol('v8dbg_LastContextType', (err, hasSymbol) => {
+      t.error(err)
+      if(hasSymbol)
+        t.ok(/Context\.scopedAPI/.test(lines.join('\n')), 'Should find reference #4');
+      sess.quit();
+      t.end();
+    });
   });
 }
