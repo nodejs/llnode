@@ -13,7 +13,6 @@ namespace llnode {
 namespace v8 {
 namespace constants {
 
-using lldb::addr_t;
 using lldb::SBAddress;
 using lldb::SBError;
 using lldb::SBProcess;
@@ -21,6 +20,7 @@ using lldb::SBSymbol;
 using lldb::SBSymbolContext;
 using lldb::SBSymbolContextList;
 using lldb::SBTarget;
+using lldb::addr_t;
 
 void Module::Assign(SBTarget target, Common* common) {
   loaded_ = false;
