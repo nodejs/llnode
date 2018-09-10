@@ -232,11 +232,7 @@ function saveCoreLLDB(scenario, core, cb) {
   });
 }
 
-function saveCoreLinux(executable, scenario, core, cb) {
-  const cmd = `ulimit -c unlimited && ${executable} ` +
-              `--abort_on_uncaught_exception --expose_externalize_string ` +
-              `${path.join(exports.fixturesDir, scenario)}; ` +
-              `mv ./core ${core}`;
+function spawnWithTimeout(cmd, cb) {
   const proc = spawn(cmd, {
     shell: true,
     stdio: ['pipe', 'pipe', 'pipe'] });
@@ -253,6 +249,16 @@ function saveCoreLinux(executable, scenario, core, cb) {
   proc.on('exit', (status) => {
     clearTimeout(timeout);
     cb(null);
+  });
+}
+
+function saveCoreLinux(executable, scenario, core, cb) {
+  const cmd = `ulimit -c unlimited && ${executable} ` +
+              `--abort_on_uncaught_exception --expose_externalize_string ` +
+              `${path.join(exports.fixturesDir, scenario)}; `;
+  spawnWithTimeout(cmd, () => {
+    // FIXME (mmarchini): Should also handle different core system settings.
+    spawnWithTimeout(`mv ./core ${core}`, cb);
   });
 }
 
