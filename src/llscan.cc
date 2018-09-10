@@ -18,8 +18,6 @@
 namespace llnode {
 
 using lldb::ByteOrder;
-using lldb::eReturnStatusFailed;
-using lldb::eReturnStatusSuccessFinishResult;
 using lldb::SBCommandReturnObject;
 using lldb::SBDebugger;
 using lldb::SBError;
@@ -27,6 +25,8 @@ using lldb::SBExpressionOptions;
 using lldb::SBStream;
 using lldb::SBTarget;
 using lldb::SBValue;
+using lldb::eReturnStatusFailed;
+using lldb::eReturnStatusSuccessFinishResult;
 
 const char* const
     FindReferencesCmd::ObjectScanner::property_reference_template =

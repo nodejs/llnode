@@ -17,8 +17,6 @@
 
 namespace llnode {
 
-using lldb::eReturnStatusFailed;
-using lldb::eReturnStatusSuccessFinishResult;
 using lldb::SBCommandInterpreter;
 using lldb::SBCommandReturnObject;
 using lldb::SBDebugger;
@@ -30,6 +28,8 @@ using lldb::SBSymbol;
 using lldb::SBTarget;
 using lldb::SBThread;
 using lldb::SBValue;
+using lldb::eReturnStatusFailed;
+using lldb::eReturnStatusSuccessFinishResult;
 
 
 bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,

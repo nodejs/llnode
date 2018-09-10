@@ -1103,7 +1103,10 @@ std::string Context::Inspect(InspectOptions* options, Error& err) {
   HeapObject heap_previous = HeapObject(previous);
   if (heap_previous.Check()) {
     char tmp[128];
-    snprintf(tmp, sizeof(tmp), (options->get_indent_spaces() + "(previous)=0x%016" PRIx64).c_str(), previous.raw());
+    snprintf(
+        tmp, sizeof(tmp),
+        (options->get_indent_spaces() + "(previous)=0x%016" PRIx64).c_str(),
+        previous.raw());
     res += std::string(tmp) + ":<Context>,";
   }
 
@@ -1113,8 +1116,10 @@ std::string Context::Inspect(InspectOptions* options, Error& err) {
     JSFunction closure = Closure(err);
     if (err.Fail()) return std::string();
     char tmp[128];
-    snprintf(tmp, sizeof(tmp), (options->get_indent_spaces() + "(closure)=0x%016" PRIx64 " {").c_str(),
-             closure.raw());
+    snprintf(
+        tmp, sizeof(tmp),
+        (options->get_indent_spaces() + "(closure)=0x%016" PRIx64 " {").c_str(),
+        closure.raw());
     res += tmp;
 
     InspectOptions closure_options;
@@ -1122,13 +1127,16 @@ std::string Context::Inspect(InspectOptions* options, Error& err) {
     if (err.Fail()) return std::string();
   } else {
     char tmp[128];
-    snprintf(tmp, sizeof(tmp), (options->get_indent_spaces() + "(scope_info)=0x%016" PRIx64).c_str(),
-             scope.raw());
+    snprintf(
+        tmp, sizeof(tmp),
+        (options->get_indent_spaces() + "(scope_info)=0x%016" PRIx64).c_str(),
+        scope.raw());
 
     res += std::string(tmp) + ":<ScopeInfo";
 
     Error function_name_error;
-    HeapObject maybe_function_name = scope.MaybeFunctionName(function_name_error);
+    HeapObject maybe_function_name =
+        scope.MaybeFunctionName(function_name_error);
 
     if (function_name_error.Success()) {
       res += ": for function " + String(maybe_function_name).ToString(err);
