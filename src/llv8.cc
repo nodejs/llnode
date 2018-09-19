@@ -7,10 +7,10 @@
 #include <sstream>
 #include <string>
 
+#include "deps/rang/include/rang.hpp"
 #include "llv8-inl.h"
 #include "llv8.h"
 #include "src/settings.h"
-#include "deps/rang/include/rang.hpp"
 
 namespace llnode {
 namespace v8 {
@@ -393,8 +393,9 @@ std::string JSFunction::Inspect(InspectOptions* options, Error& err) {
 
     std::stringstream ss;
     ss << rang::fg::magenta << res << rang::fg::reset << rang::style::bold
-       << rang::fg::yellow << "\n  context" << rang::fg::reset << rang::style::reset
-       << "=" << rang::fg::cyan << "0x%016" PRIx64 << rang::fg::reset;
+       << rang::fg::yellow << "\n  context" << rang::fg::reset
+       << rang::style::reset << "=" << rang::fg::cyan << "0x%016" PRIx64
+       << rang::fg::reset;
     res = ss.str();
 
     {
@@ -786,7 +787,6 @@ std::string HeapObject::ToString(Error& err) {
 
 
 std::string HeapObject::Inspect(InspectOptions* options, Error& err) {
-
   int64_t type = GetType(err);
   if (err.Fail()) return std::string();
 
@@ -808,19 +808,19 @@ std::string HeapObject::Inspect(InspectOptions* options, Error& err) {
   std::string pre = buf;
 
   if (type == v8()->types()->kGlobalObjectType) {
-      std::stringstream ss;
-      ss << rang::fg::yellow << "<Global>" << rang::fg::reset;
-      return pre + ss.str();
+    std::stringstream ss;
+    ss << rang::fg::yellow << "<Global>" << rang::fg::reset;
+    return pre + ss.str();
   }
   if (type == v8()->types()->kGlobalProxyType) {
-      std::stringstream ss;
-      ss << rang::fg::yellow << "<Global proxy>" << rang::fg::reset;
-      return pre + ss.str();
+    std::stringstream ss;
+    ss << rang::fg::yellow << "<Global proxy>" << rang::fg::reset;
+    return pre + ss.str();
   }
   if (type == v8()->types()->kCodeType) {
-      std::stringstream ss;
-      ss << rang::fg::yellow << "<Code>" << rang::fg::reset;
-      return pre + ss.str();
+    std::stringstream ss;
+    ss << rang::fg::yellow << "<Code>" << rang::fg::reset;
+    return pre + ss.str();
   }
   if (type == v8()->types()->kMapType) {
     Map m(this);
@@ -1186,10 +1186,11 @@ std::string Context::Inspect(InspectOptions* options, Error& err) {
   HeapObject heap_previous = HeapObject(previous);
   if (heap_previous.Check()) {
     std::stringstream ss;
-    ss << rang::style::bold << rang::fg::yellow << options->get_indent_spaces() << "(previous)"
-       << rang::fg::reset << rang::style::reset << "=" << rang::fg::cyan
-       << "0x" << std::hex << previous.raw() << std::dec << rang::fg::reset
-       << ":" << rang::fg::yellow << "<Context>" << rang::fg::reset << ",";
+    ss << rang::style::bold << rang::fg::yellow << options->get_indent_spaces()
+       << "(previous)" << rang::fg::reset << rang::style::reset << "="
+       << rang::fg::cyan << "0x" << std::hex << previous.raw() << std::dec
+       << rang::fg::reset << ":" << rang::fg::yellow << "<Context>"
+       << rang::fg::reset << ",";
 
     res += ss.str();
   }
@@ -1201,9 +1202,10 @@ std::string Context::Inspect(InspectOptions* options, Error& err) {
     if (err.Fail()) return std::string();
 
     std::stringstream ss;
-    ss << rang::style::bold << rang::fg::yellow << options->get_indent_spaces() << "(closure)"
-       << rang::fg::reset << rang::style::reset << "=" << rang::fg::cyan
-       << "0x" << std::hex << closure.raw() << std::dec << rang::fg::reset << " {";
+    ss << rang::style::bold << rang::fg::yellow << options->get_indent_spaces()
+       << "(closure)" << rang::fg::reset << rang::style::reset << "="
+       << rang::fg::cyan << "0x" << std::hex << closure.raw() << std::dec
+       << rang::fg::reset << " {";
     res += ss.str();
 
     InspectOptions closure_options;
@@ -1213,9 +1215,10 @@ std::string Context::Inspect(InspectOptions* options, Error& err) {
     // Scope for string stream
     {
       std::stringstream ss;
-      ss << rang::style::bold << rang::fg::yellow << options->get_indent_spaces() << "(scope_info)"
-        << rang::fg::reset << rang::style::reset << "=" << rang::fg::cyan << "0x" << std::hex << scope.raw()
-        << std::dec << rang::fg::yellow;
+      ss << rang::style::bold << rang::fg::yellow
+         << options->get_indent_spaces() << "(scope_info)" << rang::fg::reset
+         << rang::style::reset << "=" << rang::fg::cyan << "0x" << std::hex
+         << scope.raw() << std::dec << rang::fg::yellow;
       res += ss.str() + ":<ScopeInfo";
     }
 
@@ -1233,7 +1236,6 @@ std::string Context::Inspect(InspectOptions* options, Error& err) {
       ss << rang::fg::reset;
       res += ">" + ss.str();
     }
-
   }
 
   Context::Locals locals(this, err);
@@ -1242,11 +1244,11 @@ std::string Context::Inspect(InspectOptions* options, Error& err) {
        it++) {
     String name = it.LocalName(err);
     if (err.Fail()) return std::string();
-
     if (!res.empty()) res += ",\n";
 
-    ss << options->get_indent_spaces() << rang::style::bold << rang::fg::yellow << name.ToString(err)
-       << rang::fg::reset << rang::style::reset;
+    std::stringstream ss;
+    ss << options->get_indent_spaces() << rang::style::bold << rang::fg::yellow
+       << name.ToString(err) << rang::fg::reset << rang::style::reset;
     res += ss.str() + "=";
     if (err.Fail()) return std::string();
 
@@ -1330,7 +1332,8 @@ std::string JSArrayBuffer::Inspect(InspectOptions* options, Error& err) {
     }
 
     res += "\n]";
-    ss.str(""); ss.clear();
+    ss.str("");
+    ss.clear();
     ss << res << rang::fg::reset;
 
     res = ss.str();
@@ -1388,7 +1391,6 @@ std::string JSArrayBufferView::Inspect(InspectOptions* options, Error& err) {
   std::string res;
   res += tmp;
   if (options->detailed) {
-
     std::stringstream ss;
     ss << rang::fg::magenta << res + ":" << rang::fg::yellow;
     res = ss.str();
@@ -1404,7 +1406,8 @@ std::string JSArrayBufferView::Inspect(InspectOptions* options, Error& err) {
 
     res += "\n]";
 
-    ss.str(""); ss.clear();
+    ss.str("");
+    ss.clear();
     ss << res << rang::fg::reset;
     res = ss.str();
 
@@ -1568,10 +1571,10 @@ std::string JSObject::InspectInternalFields(Error& err) {
 
     if (!res.empty()) res += ",\n  ";
 
-    ss.str(""); ss.clear();
+    ss.str("");
+    ss.clear();
     ss << rang::fg::cyan << tmp << rang::fg::reset;
     res += ss.str();
-
   }
 
   return res;

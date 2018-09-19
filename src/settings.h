@@ -28,5 +28,5 @@ class Settings {
   bool ShouldUseColor();
 };
 
-} // namespace llnode
-#endif // SRC_SETTINGS_H
+}  // namespace llnode
+#endif  // SRC_SETTINGS_H

@@ -13,11 +13,11 @@
 
 #include <lldb/API/SBExpressionOptions.h>
 
-#include "src/settings.h"
+#include "deps/rang/include/rang.hpp"
 #include "src/error.h"
 #include "src/llscan.h"
 #include "src/llv8-inl.h"
-#include "deps/rang/include/rang.hpp"
+#include "src/settings.h"
 
 namespace llnode {
 
@@ -236,8 +236,8 @@ bool FindInstancesCmd::DoExecute(SBDebugger d, char** cmd,
     // "No objects found with type name %s", type_name
     std::stringstream ss;
     ss << rang::style::bold << rang::fg::red
-       << "No objects found with type name " << type_name
-       << rang::fg::reset << rang::style::reset << std::endl;
+       << "No objects found with type name " << type_name << rang::fg::reset
+       << rang::style::reset << std::endl;
     std::string str(ss.str());
     result.Printf("%s", str.c_str());
     result.SetStatus(eReturnStatusFailed);
@@ -426,7 +426,6 @@ bool NodeInfoCmd::DoExecute(SBDebugger d, char** cmd,
 
 bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
                                   SBCommandReturnObject& result) {
-
   if (cmd == nullptr || *cmd == nullptr) {
     result.SetError("USAGE: v8 findrefs expr\n");
     return false;
@@ -706,7 +705,6 @@ void FindReferencesCmd::ReferenceScanner::PrintContextRefs(
 }
 
 std::string FindReferencesCmd::ObjectScanner::GetPropertyReferenceString() {
-
   std::stringstream ss;
   ss << rang::fg::cyan << "0x%" PRIx64 << rang::fg::reset << ": "
      << rang::fg::magenta << "%s" << rang::style::bold << rang::fg::yellow
@@ -716,7 +714,6 @@ std::string FindReferencesCmd::ObjectScanner::GetPropertyReferenceString() {
 }
 
 std::string FindReferencesCmd::ObjectScanner::GetArrayReferenceString() {
-
   std::stringstream ss;
   ss << rang::fg::cyan << "0x%" PRIx64 << rang::fg::reset << ": "
      << rang::fg::magenta << "%s" << rang::style::bold << rang::fg::yellow

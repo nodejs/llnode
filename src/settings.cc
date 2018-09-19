@@ -22,9 +22,9 @@ std::string Settings::SetColor(std::string option) {
 }
 
 bool Settings::ShouldUseColor() {
-  #ifdef NO_COLOR_OUTPUT
+#ifdef NO_COLOR_OUTPUT
   return false;
-  #endif
+#endif
   if (color == "always" ||
       (color == "auto" && rang::rang_implementation::supportsColor() &&
        rang::rang_implementation::isTerminal(std::cout.rdbuf())))
@@ -32,4 +32,4 @@ bool Settings::ShouldUseColor() {
   return false;
 }
 
-} // namespace llnode
+}  // namespace llnode
