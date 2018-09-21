@@ -686,20 +686,14 @@ void FindReferencesCmd::ReferenceScanner::PrintContextRefs(
     Error err;
     v8::HeapObject context_obj(v8, ctx);
     v8::Context c(context_obj);
-    v8::Context::Locals locals(&c);
 
-    v8::HeapObject scope_obj(locals.ctx->GetScopeInfo(err));
+    v8::Context::Locals locals(&c, err);
     if (err.Fail()) return;
 
-    v8::ScopeInfo scope(scope_obj);
     for (v8::Context::Locals::Iterator it = locals.begin(); it != locals.end();
          it++) {
-      if (err.Fail()) {
-        continue;
-      }
       if ((*it).raw() == search_value_.raw()) {
-        v8::String _name = scope.ContextLocalName(
-            it.current, locals.param_count, locals.stack_count, err);
+        v8::String _name = it.LocalName(err);
         if (err.Fail()) return;
 
         std::string name = _name.ToString(err);

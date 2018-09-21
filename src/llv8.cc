@@ -1063,43 +1063,42 @@ std::string FixedArray::InspectContents(int length, Error& err) {
 }
 
 // Context locals iterator implementations
-Context::Locals::Locals(Context* ctx_) {
-  ctx = ctx_;
-  Error err;
-  HeapObject scope_obj = ctx->GetScopeInfo(err);
+Context::Locals::Locals(Context* context, Error& err) {
+  context_ = context;
+  HeapObject scope_obj = context_->GetScopeInfo(err);
   if (err.Fail()) return;
 
-  ScopeInfo scope(scope_obj);
-  Smi param_count_smi = scope.ParameterCount(err);
+  scope_info_ = ScopeInfo(scope_obj);
+  Smi param_count_smi = scope_info_.ParameterCount(err);
   if (err.Fail()) return;
-  Smi stack_count_smi = scope.StackLocalCount(err);
+  Smi stack_count_smi = scope_info_.StackLocalCount(err);
   if (err.Fail()) return;
-  Smi local_count_smi = scope.ContextLocalCount(err);
+  Smi local_count_smi = scope_info_.ContextLocalCount(err);
   if (err.Fail()) return;
 
-  param_count = param_count_smi.GetValue();
-  stack_count = stack_count_smi.GetValue();
-  local_count = local_count_smi.GetValue();
+  param_count_ = param_count_smi.GetValue();
+  stack_count_ = stack_count_smi.GetValue();
+  local_count_ = local_count_smi.GetValue();
 }
 
-Context::Locals::Iterator Context::Locals::begin() { return Iterator(0, ctx); }
+Context::Locals::Iterator Context::Locals::begin() { return Iterator(0, this); }
 
 Context::Locals::Iterator Context::Locals::end() {
-  return Iterator(local_count, ctx);
+  return Iterator(local_count_, this);
 }
 
 const Context::Locals::Iterator Context::Locals::Iterator::operator++(int) {
-  current++;
-  return Iterator(current, ctx);
+  current_++;
+  return Iterator(current_, this->outer_);
 }
 
 bool Context::Locals::Iterator::operator!=(Context::Locals::Iterator that) {
-  return current != that.current || ctx != that.ctx;
+  return current_ != that.current_ || outer_->context_ != that.outer_->context_;
 }
 
 v8::Value Context::Locals::Iterator::operator*() {
   Error err;
-  return ctx->ContextSlot(current, err);
+  return outer_->context_->ContextSlot(current_, err);
 }
 
 std::string Context::Inspect(InspectOptions* options, Error& err) {
@@ -1169,11 +1168,11 @@ std::string Context::Inspect(InspectOptions* options, Error& err) {
     res += ">";
   }
 
-  Context::Locals locals(this);
+  Context::Locals locals(this, err);
+  if (err.Fail()) return std::string();
   for (v8::Context::Locals::Iterator it = locals.begin(); it != locals.end();
        it++) {
-    String name = scope.ContextLocalName(it.current, locals.param_count,
-                                         locals.stack_count, err);
+    String name = it.LocalName(err);
     if (err.Fail()) return std::string();
 
     if (!res.empty()) res += ",\n";
@@ -1181,7 +1180,7 @@ std::string Context::Inspect(InspectOptions* options, Error& err) {
     res += options->get_indent_spaces() + name.ToString(err) + "=";
     if (err.Fail()) return std::string();
 
-    Value value = ContextSlot(it.current, err);
+    Value value = it.GetValue(err);
     if (err.Fail()) return std::string();
 
     InspectOptions val_options;

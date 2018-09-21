@@ -384,6 +384,19 @@ class NameDictionary : public FixedArray {
   inline int64_t Length(Error& err);
 };
 
+class ScopeInfo : public FixedArray {
+ public:
+  V8_VALUE_DEFAULT_METHODS(ScopeInfo, FixedArray)
+
+  inline Smi ParameterCount(Error& err);
+  inline Smi StackLocalCount(Error& err);
+  inline Smi ContextLocalCount(Error& err);
+
+  inline String ContextLocalName(int index, int param_count, int stack_count,
+                                 Error& err);
+  inline HeapObject MaybeFunctionName(Error& err);
+};
+
 class Context : public FixedArray {
  public:
   V8_VALUE_DEFAULT_METHODS(Context, FixedArray)
@@ -408,41 +421,40 @@ class Context : public FixedArray {
       const Context::Locals::Iterator operator++(int);
       bool operator!=(Context::Locals::Iterator that);
 
-      inline Iterator(int current, Context* ctx) : current(current), ctx(ctx){};
+      inline Iterator(int current, Locals* outer)
+          : current_(current), outer_(outer){};
 
-     public:
-      int current;
-      Context* ctx;
+      String LocalName(Error& err) {
+        return outer_->scope_info_.ContextLocalName(
+            current_, outer_->param_count_, outer_->stack_count_, err);
+      }
+
+      Value GetValue(Error& err) {
+        return outer_->context_->ContextSlot(current_, err);
+      }
+
+     private:
+      int current_;
+      Locals* outer_;
     };
 
-    Locals(Context* ctx_);
+    Locals(Context* context, Error& err);
 
     Iterator begin();
     Iterator end();
 
-   public:
-    int local_count;
-    int param_count;
-    int stack_count;
-    Context* ctx;
+   private:
+    int local_count_;
+    int param_count_;
+    int stack_count_;
+    Context* context_;
+    ScopeInfo scope_info_;
   };
 
  private:
   inline JSFunction Closure(Error& err);
 };
 
-class ScopeInfo : public FixedArray {
- public:
-  V8_VALUE_DEFAULT_METHODS(ScopeInfo, FixedArray)
-
-  inline Smi ParameterCount(Error& err);
-  inline Smi StackLocalCount(Error& err);
-  inline Smi ContextLocalCount(Error& err);
-
-  inline String ContextLocalName(int index, int param_count, int stack_count,
-                                 Error& err);
-  inline HeapObject MaybeFunctionName(Error& err);
-};
 
 class Oddball : public HeapObject {
  public:

@@ -65,8 +65,16 @@ function test(executable, core, t) {
     }
     t.ok(found, 'Zlib should be in findjsinstances');
 
-    sess.send("target modules dump symtab");
     // Just a separator
+    sess.send('version');
+  });
+
+  sess.linesUntil(versionMark, (err, lines) => {
+    t.error(err)
+    // `target modules dump symtab` is used to check if
+    // constant `v8dbg_LastContextType` exists on the next
+    // test.
+    sess.send('target modules dump symtab');
     sess.send('version');
   });
 
