@@ -70,15 +70,6 @@ function test(executable, core, t) {
   });
 
   sess.linesUntil(versionMark, (err, lines) => {
-    t.error(err)
-    // `target modules dump symtab` is used to check if
-    // constant `v8dbg_LastContextType` exists on the next
-    // test.
-    sess.send('target modules dump symtab');
-    sess.send('version');
-  });
-
-  sess.linesUntil(versionMark, (err, lines) => {
     t.error(err);
 
     // `class Deflate extends Zlib` makes instances show up as
@@ -93,11 +84,12 @@ function test(executable, core, t) {
     t.ok(/\(Array\)\[1\]/.test(lines.join('\n')), 'Should find reference #3');
 
     // Test if LastContextType constat exists
-    let patt = new RegExp("v8dbg_LastContextType");
-    if (patt.test(lines.join('\n'))) {
+    sess.hasSymbol('v8dbg_LastContextType', (err, hasSymbol) => {
+      t.error(err)
+      if(hasSymbol)
         t.ok(/Context\.scopedAPI/.test(lines.join('\n')), 'Should find reference #4');
-    }
-    sess.quit();
-    t.end();
+      sess.quit();
+      t.end();
+    });
   });
 }
