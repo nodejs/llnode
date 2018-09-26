@@ -10,6 +10,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <iostream>
 
 #include <lldb/API/SBExpressionOptions.h>
 
@@ -43,6 +44,7 @@ char** ParseInspectOptions(char** cmd, v8::Value::InspectOptions* options) {
       {"print-source", no_argument, nullptr, 's'},
       {"verbose", no_argument, nullptr, 'v'},
       {"detailed", no_argument, nullptr, 'd'},
+      {"output-limit", required_argument, nullptr, 'n'},
       {nullptr, 0, nullptr, 0}};
 
   int argc = 1;
@@ -60,7 +62,7 @@ char** ParseInspectOptions(char** cmd, v8::Value::InspectOptions* options) {
   optind = 0;
   opterr = 1;
   do {
-    int arg = getopt_long(argc, args, "Fmsdvl:", opts, nullptr);
+    int arg = getopt_long(argc, args, "Fmsdvln:", opts, nullptr);
     if (arg == -1) break;
 
     switch (arg) {
@@ -80,6 +82,10 @@ char** ParseInspectOptions(char** cmd, v8::Value::InspectOptions* options) {
       case 'v':
         options->detailed = true;
         break;
+      case 'n': {
+        int limit = strtol(optarg, nullptr, 10);
+        options->output_limit = limit && limit > 0 ? limit : 0;
+      } break;
       default:
         continue;
     }
@@ -213,6 +219,7 @@ bool FindInstancesCmd::DoExecute(SBDebugger d, char** cmd,
 
   inspect_options.detailed = detailed_;
 
+  // Use same options as inspect?
   char** start = ParseInspectOptions(cmd, &inspect_options);
 
   std::string full_cmd;
@@ -222,15 +229,57 @@ bool FindInstancesCmd::DoExecute(SBDebugger d, char** cmd,
 
   TypeRecordMap::iterator instance_it =
       llscan_->GetMapsToInstances().find(type_name);
+
   if (instance_it != llscan_->GetMapsToInstances().end()) {
+
+
     TypeRecord* t = instance_it->second;
-    for (std::set<uint64_t>::iterator it = t->GetInstances().begin();
-         it != t->GetInstances().end(); ++it) {
+
+    // Update pagination options
+    if (full_cmd != pagination_.command ||
+        inspect_options.output_limit != pagination_.output_limit) {
+      pagination_.total_entries = t->GetInstanceCount();
+      pagination_.command = full_cmd;
+      pagination_.current_page = 0;
+      pagination_.output_limit = inspect_options.output_limit;
+    } else {
+      if (pagination_.output_limit <= 0 ||
+          (pagination_.current_page + 1) * pagination_.output_limit >
+              pagination_.total_entries) {
+        pagination_.current_page = 0;
+      } else {
+        pagination_.current_page++;
+      }
+    }
+
+    int initial_p_offset =
+        (pagination_.current_page * inspect_options.output_limit);
+    int final_p_offset =
+        initial_p_offset +
+        std::min(pagination_.output_limit,
+                 pagination_.total_entries -
+                     pagination_.current_page * pagination_.output_limit);
+    if (final_p_offset <= 0) {
+      final_p_offset = pagination_.total_entries;
+    }
+
+    std::set<uint64_t>::iterator it =
+        pagination_.current_page == 0
+            ? t->GetInstances().begin()
+            : std::next(t->GetInstances().begin(), initial_p_offset);
+    for (; it != t->GetInstances().end() &&
+           it != (std::next(t->GetInstances().begin(), final_p_offset));
+         ++it) {
       Error err;
       v8::Value v8_value(llscan_->v8(), *it);
       std::string res = v8_value.Inspect(&inspect_options, err);
       result.Printf("%s\n", res.c_str());
     }
+    if (it != t->GetInstances().end()) {
+      result.Printf("..........\n");
+    }
+    result.Printf("(Showing %d to %d of %d instances)\n", initial_p_offset + 1,
+                  final_p_offset, pagination_.total_entries);
 
   } else {
     // "No objects found with type name %s", type_name

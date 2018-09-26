@@ -463,8 +463,14 @@ bool PluginInitialize(SBDebugger d) {
 
   v8.AddCommand("findjsinstances", new llnode::FindInstancesCmd(&llscan, false),
                 "List every object with the specified type name.\n"
-                "Use -v or --verbose to display detailed `v8 inspect` output "
+                "Flags:\n\n"
+                " * -v, --verbose                  - display detailed `v8 "
+                "inspect` output "
                 "for each object.\n"
+                " * -n <num>  --output-limit <num> - limit the number of "
+                "entries displayed "
+                "to `num` (use 0 to show all). To get next page repeat command "
+                "or press [ENTER].\n"
                 "Accepts the same options as `v8 inspect`");
 
   interpreter.AddCommand("findjsinstances",
