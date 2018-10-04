@@ -255,7 +255,7 @@ LLNode* LLNodeHeapType::llnode() {
 }
 
 void LLNodeHeapType::InitInstances() {
-  std::set<uint64_t>* instances_set =
+  auto instances_set =
       this->llnode()->api_->GetTypeInstances(this->type_index_);
   this->current_instance_index_ = 0;
 
