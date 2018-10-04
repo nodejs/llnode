@@ -4,6 +4,7 @@
 #include <lldb/API/LLDB.h>
 #include <map>
 #include <set>
+#include <unordered_set>
 
 #include "src/error.h"
 #include "src/llnode.h"
@@ -13,7 +14,7 @@ namespace llnode {
 class LLScan;
 
 typedef std::vector<uint64_t> ReferencesVector;
-typedef std::vector<uint64_t> ContextVector;
+typedef std::unordered_set<uint64_t> ContextVector;
 
 typedef std::map<uint64_t, ReferencesVector*> ReferencesByValueMap;
 typedef std::map<std::string, ReferencesVector*> ReferencesByPropertyMap;
@@ -208,12 +209,14 @@ class TypeRecord {
   inline std::string& GetTypeName() { return type_name_; };
   inline uint64_t GetInstanceCount() { return instance_count_; };
   inline uint64_t GetTotalInstanceSize() { return total_instance_size_; };
-  inline std::set<uint64_t>& GetInstances() { return instances_; };
+  inline std::unordered_set<uint64_t>& GetInstances() { return instances_; };
 
   inline void AddInstance(uint64_t address, uint64_t size) {
-    instances_.insert(address);
-    instance_count_++;
-    total_instance_size_ += size;
+    auto result = instances_.insert(address);
+    if (result.second) {
+      instance_count_++;
+      total_instance_size_ += size;
+    }
   };
 
   /* Sort records by instance count, use the other fields as tie breakers
@@ -235,7 +238,7 @@ class TypeRecord {
   std::string type_name_;
   uint64_t instance_count_;
   uint64_t total_instance_size_;
-  std::set<uint64_t> instances_;
+  std::unordered_set<uint64_t> instances_;
 };
 
 class DetailedTypeRecord : public TypeRecord {
@@ -277,6 +280,7 @@ class FindJSObjectsVisitor : MemoryVisitor {
 
     std::string type_name;
     bool is_histogram;
+    bool is_context;
 
     std::vector<std::string> properties_;
     uint64_t own_descriptors_count_ = 0;
@@ -292,6 +296,7 @@ class FindJSObjectsVisitor : MemoryVisitor {
 
   static bool IsAHistogramType(v8::Map& map, Error& err);
 
+  void InsertOnContexts(uint64_t word, Error& err);
   void InsertOnMapsToInstances(uint64_t word, v8::Map map,
                                FindJSObjectsVisitor::MapCacheEntry map_info,
                                Error& err);

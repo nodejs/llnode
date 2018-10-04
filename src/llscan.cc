@@ -263,7 +263,7 @@ bool FindInstancesCmd::DoExecute(SBDebugger d, char** cmd,
       final_p_offset = pagination_.total_entries;
     }
 
-    std::set<uint64_t>::iterator it =
+    auto it =
         pagination_.current_page == 0
             ? t->GetInstances().begin()
             : std::next(t->GetInstances().begin(), initial_p_offset);
@@ -321,12 +321,11 @@ bool NodeInfoCmd::DoExecute(SBDebugger d, char** cmd,
 
   if (instance_it != llscan_->GetMapsToInstances().end()) {
     TypeRecord* t = instance_it->second;
-    for (std::set<uint64_t>::iterator it = t->GetInstances().begin();
-         it != t->GetInstances().end(); ++it) {
+    for (auto it : t->GetInstances()) {
       Error err;
 
       // The properties object should be a JSObject
-      v8::JSObject process_obj(llscan_->v8(), *it);
+      v8::JSObject process_obj(llscan_->v8(), it);
 
 
       v8::Value pid_val = process_obj.GetProperty("pid", err);
@@ -1319,20 +1318,6 @@ uint64_t FindJSObjectsVisitor::Visit(uint64_t location, uint64_t word) {
   v8::HeapObject heap_object(v8_value);
   if (!heap_object.Check()) return address_byte_size_;
 
-  bool is_context = v8::Context::IsContext(llscan_->v8(), heap_object, err);
-  if (err.Fail()) {
-    return address_byte_size_;
-  }
-
-  if (is_context) {
-    ContextVector* contexts;
-    contexts = llscan_->GetContexts();
-
-    if (std::find(contexts->begin(), contexts->end(), word) == contexts->end())
-      contexts->push_back(word);
-    return address_byte_size_;
-  }
-
   v8::HeapObject map_object = heap_object.GetMap(err);
   if (err.Fail() || !map_object.Check()) return address_byte_size_;
 
@@ -1346,10 +1331,13 @@ uint64_t FindJSObjectsVisitor::Visit(uint64_t location, uint64_t word) {
     }
     // Cache result
     map_cache_.emplace(map.raw(), map_info);
-
-    if (err.Fail()) return address_byte_size_;
   } else {
     map_info = map_cache_.at(map.raw());
+  }
+
+  if (map_info.is_context) {
+    InsertOnContexts(word, err);
+    return address_byte_size_;
   }
 
   if (!map_info.is_histogram) return address_byte_size_;
@@ -1369,6 +1357,11 @@ uint64_t FindJSObjectsVisitor::Visit(uint64_t location, uint64_t word) {
   return address_byte_size_;
 }
 
+void FindJSObjectsVisitor::InsertOnContexts(uint64_t word, Error& err) {
+  ContextVector* contexts;
+  contexts = llscan_->GetContexts();
+  contexts->insert(word);
+}
 
 void FindJSObjectsVisitor::InsertOnMapsToInstances(
     uint64_t word, v8::Map map, FindJSObjectsVisitor::MapCacheEntry map_info,
@@ -1380,13 +1373,7 @@ void FindJSObjectsVisitor::InsertOnMapsToInstances(
   // No entry in the map, create a new one.
   if (*pp == nullptr) *pp = new TypeRecord(map_info.type_name);
   t = *pp;
-
-  // Determine if this is a new instance.
-  // (We are scanning pointers to objects, we may have seen this location
-  // before.)
-  if (t->GetInstances().count(word) == 0) {
-    t->AddInstance(word, map.InstanceSize(err));
-  }
+  t->AddInstance(word, map.InstanceSize(err));
 }
 
 void FindJSObjectsVisitor::InsertOnDetailedMapsToInstances(
@@ -1408,13 +1395,7 @@ void FindJSObjectsVisitor::InsertOnDetailedMapsToInstances(
                                  map_info.indexed_properties_count_);
   }
   t = *pp;
-
-  // Determine if this is a new instance.
-  // (We are scanning pointers to objects, we may have seen this location
-  // before.)
-  if (t->GetInstances().count(word) == 0) {
-    t->AddInstance(word, map.InstanceSize(err));
-  }
+  t->AddInstance(word, map.InstanceSize(err));
 }
 
 
@@ -1513,6 +1494,12 @@ std::string FindJSObjectsVisitor::MapCacheEntry::GetTypeNameWithProperties(
 bool FindJSObjectsVisitor::MapCacheEntry::Load(v8::Map map,
                                                v8::HeapObject heap_object,
                                                v8::LLV8* llv8, Error& err) {
+  is_histogram = false;
+
+  is_context = v8::Context::IsContext(llv8, heap_object, err);
+  if (err.Fail()) return false;
+  if (is_context) return true;
+
   // Check type first
   is_histogram = FindJSObjectsVisitor::IsAHistogramType(map, err);
 
@@ -1526,7 +1513,7 @@ bool FindJSObjectsVisitor::MapCacheEntry::Load(v8::Map map,
   own_descriptors_count_ = map.NumberOfOwnDescriptors(err);
   if (err.Fail()) return false;
 
-  int64_t type = heap_object.GetType(err);
+  int64_t type = map.GetType(err);
   indexed_properties_count_ = 0;
   if (v8::JSObject::IsObjectType(llv8, type) ||
       (type == llv8->types()->kJSArrayType)) {

@@ -174,7 +174,7 @@ uint32_t LLNodeApi::GetTypeTotalSize(size_t type_index) {
   return object_types[type_index]->GetTotalInstanceSize();
 }
 
-std::set<uint64_t>* LLNodeApi::GetTypeInstances(size_t type_index) {
+std::unordered_set<uint64_t>* LLNodeApi::GetTypeInstances(size_t type_index) {
   if (object_types.size() <= type_index) {
     return nullptr;
   }

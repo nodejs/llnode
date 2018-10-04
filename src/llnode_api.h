@@ -4,7 +4,7 @@
 #define SRC_LLNODE_API_H_
 
 #include <memory>
-#include <set>
+#include <unordered_set>
 #include <string>
 #include <vector>
 
@@ -51,7 +51,7 @@ class LLNodeApi {
   std::string GetTypeName(size_t type_index);
   uint32_t GetTypeInstanceCount(size_t type_index);
   uint32_t GetTypeTotalSize(size_t type_index);
-  std::set<uint64_t>* GetTypeInstances(size_t type_index);
+  std::unordered_set<uint64_t>* GetTypeInstances(size_t type_index);
   // TODO(joyeecheung): templatize all the `Inspect` in llv8.h to
   // return structured data
   std::string GetObject(uint64_t address);
