@@ -46,8 +46,40 @@ function test(executable, core, t) {
     t.ok(/3 +0 Class: x, y, hashmap/.test(lines.join('\n')),
          '"Class: x, y, hashmap" should be in findjsobjects -d');
 
-    sess.send('v8 findjsinstances Zlib');
+    sess.send('v8 findjsinstances Class_B')
     // Just a separator
+    sess.send('version');
+  });
+
+  sess.linesUntil(versionMark, (err, lines) => {
+    t.error(err);
+
+    t.ok((lines.join('\n').match(/<Object: Class_B>/g)).length == 10, 'Should show 10 instances');
+    t.ok(/\(Showing 1 to 10 of 10 instances\)/.test(lines.join('\n')), 'Should show 1 to 10 ');
+
+    sess.send('v8 findjsinstances -n 5 Class_B');
+    sess.send('version');
+  });
+
+  sess.linesUntil(versionMark, (err, lines) => {
+    t.error(err);
+
+    t.ok((lines.join('\n').match(/<Object: Class_B>/g)).length == 5, 'Should show 5 instances');
+    t.ok(/\.\.\.\.\.\.\.\.\.\./.test(lines.join('\n')), 'Should show that more instances are available');
+    t.ok(/\(Showing 1 to 5 of 10 instances\)/.test(lines.join('\n')), 'Should show 1 to 5 ');
+
+    sess.send('v8 findjsinstances -n 5 Class_B');
+    sess.send('version');
+  });
+
+  sess.linesUntil(versionMark, (err, lines) => {
+    t.error(err);
+
+    t.ok((lines.join('\n').match(/<Object: Class_B>/g)).length == 5, 'Should show 5 instances');
+    t.notOk(/\.\.\.\.\.\.\.\.\.\./.test(lines.join('\n')), 'Should not show ellipses');
+    t.ok(/\(Showing 6 to 10 of 10 instances\)/.test(lines.join('\n')), 'Should show 6 to 10 ');
+
+    sess.send('v8 findjsinstances Zlib');
     sess.send('version');
   });
 

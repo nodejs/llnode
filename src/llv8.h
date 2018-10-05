@@ -45,7 +45,8 @@ class Value {
           print_map(false),
           print_source(false),
           length(kLength),
-          indent_depth(1) {}
+          indent_depth(1),
+          output_limit(0) {}
 
     static const unsigned int kLength = 16;
     static const unsigned int kIndentSize = 2;
@@ -58,6 +59,7 @@ class Value {
     bool print_source;
     unsigned int length;
     unsigned int indent_depth;
+    int output_limit;
   };
 
   Value(const Value& v) = default;
