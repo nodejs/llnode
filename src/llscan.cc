@@ -35,7 +35,6 @@ const char* const
 const char* const FindReferencesCmd::ObjectScanner::array_reference_template =
     "0x%" PRIx64 ": %s[%" PRId64 "]=0x%" PRIx64 "\n";
 
-
 const char* const
     FindReferencesCmd::StringScanner::property_reference_template =
         "0x%" PRIx64 ": %s.%s=0x%" PRIx64 " '%s'\n";
@@ -283,7 +282,9 @@ bool FindInstancesCmd::DoExecute(SBDebugger d, char** cmd,
       std::string res = v8_value.Inspect(&inspect_options, err);
       result.Printf("%s\n", res.c_str());
     }
-    result.Printf("..........\n");
+    if (it != t->GetInstances().end()) {
+      result.Printf("..........\n");
+    }
     result.Printf("(Showing %d to %d of %d instances)\n", initial_p_offset + 1,
                   final_p_offset, pagination_.total_entries);
 

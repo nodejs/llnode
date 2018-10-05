@@ -23,14 +23,12 @@ typedef std::map<std::string, ReferencesVector*> ReferencesByStringMap;
 // New type defining pagination options
 // It should be feasible to use it to any commands that output
 // a list of information
-typedef struct cmd_pagination {
-  cmd_pagination()
-      : total_entries(0), current_page(0), output_limit(0), command(""){};
-  int total_entries;
-  int current_page;
-  int output_limit;
-  std::string command;
-} cmd_pagination_t;
+struct cmd_pagination_t {
+  int total_entries = 0;
+  int current_page = 0;
+  int output_limit = 0;
+  std::string command = "";
+};
 
 char** ParseInspectOptions(char** cmd, v8::Value::InspectOptions* options);
 
