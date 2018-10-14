@@ -117,7 +117,7 @@
                   }],
                 ]
           }],
-          [ "OS=='linux' or OS=='freebsd'", {
+          [ "OS=='linux' or OS=='freebsd' or OS=='android'", {
             "conditions": [
               # If we could not locate the lib dir, then we will have to search
               # from the global search paths during linking and at runtime

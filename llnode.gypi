@@ -79,6 +79,15 @@
           }],
         ],
       }],
+      [ "OS in 'android'", {
+        "target_conditions": [
+          ["_type=='static_library'", {
+            "standalone_static_library": 1, # disable thin archive which needs binutils >= 2.19
+          }],
+        ],
+        'libraries': ['-llldb'],
+        'cflags_cc': ['-std=c++11',' -Wall','-O3',' -fPIC']
+      }],
     ]
   },
 }
