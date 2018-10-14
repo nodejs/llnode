@@ -52,7 +52,7 @@ function configureInstallation(osName, buildDir) {
     if (installation.libDir) {
       config.variables['lldb_lib_dir%'] = installation.libDir;
     }
-  } else if (osName === 'Linux') {
+  } else if (osName === 'Linux' || osName === 'Android') {
     installation = require('./linux').getLldbInstallation();
     if (installation.libDir) {
       config.variables['lldb_lib_dir%'] = installation.libDir;

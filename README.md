@@ -91,6 +91,18 @@ version is LLDB 3.9 and above.
 
     Visual Studio is required for MSBuild and headers when building llnode. Git
     is required to download the lldb headers.
+    
+- Android / Termux
+  - Install Termux (https://termux.com)
+
+  - Install Termux Packages
+    - pkg install clang lldb lldb-dev liblldb
+    - pkg install nodejs-lts nodejs-lts-dev
+  - To debug:
+```
+        llnode -- /data/data/com.termux/files/usr/bin/node --abort_on_uncaught_exception script.js
+        (llnode) run
+```
 
 ### Install the Plugin
 
