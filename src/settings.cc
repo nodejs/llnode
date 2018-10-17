@@ -21,6 +21,12 @@ std::string Settings::SetColor(std::string option) {
   return color;
 }
 
+int Settings::SetTreePadding(int option) {
+  if (option < 1) option = 1;
+  tree_padding = option;
+  return tree_padding;
+}
+
 bool Settings::ShouldUseColor() {
 #ifdef NO_COLOR_OUTPUT
   return false;

@@ -470,7 +470,6 @@ bool NodeInfoCmd::DoExecute(SBDebugger d, char** cmd,
   return true;
 }
 
-
 bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
                                   SBCommandReturnObject& result) {
   if (cmd == nullptr || *cmd == nullptr) {
@@ -487,10 +486,8 @@ bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
   // Load V8 constants from postmortem data
   llscan_->v8()->Load(target);
 
-  // Default scan type.
-  ScanType type = ScanType::kFieldValue;
-
-  char** start = ParseScanOptions(cmd, &type);
+  ScanOptions scan_options;
+  char** start = ParseScanOptions(cmd, &scan_options);
 
   if (*start == nullptr) {
     result.SetError("Missing search parameter");
@@ -500,8 +497,8 @@ bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
 
   ObjectScanner* scanner;
 
-  switch (type) {
-    case ScanType::kFieldValue: {
+  switch (scan_options.scan_type) {
+    case ScanOptions::ScanType::kFieldValue: {
       std::string full_cmd;
       for (; start != nullptr && *start != nullptr; start++) full_cmd += *start;
 
@@ -526,7 +523,7 @@ bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
       scanner = new ReferenceScanner(llscan_, search_value);
       break;
     }
-    case ScanType::kPropertyName: {
+    case ScanOptions::ScanType::kPropertyName: {
       // Check for extra parameters or parameters that needed quoting.
       if (start[1] != nullptr) {
         result.SetError("Extra search parameter or unquoted string specified.");
@@ -537,7 +534,7 @@ bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
       scanner = new PropertyScanner(llscan_, property_name);
       break;
     }
-    case ScanType::kStringValue: {
+    case ScanOptions::ScanType::kStringValue: {
       // Check for extra parameters or parameters that needed quoting.
       if (start[1] != nullptr) {
         result.SetError("Extra search parameter or unquoted string specified.");
@@ -553,7 +550,7 @@ bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
      * - Objects that refer to a particular string literal.
      *   (lldb) findreferences -s "Hello World!"
      */
-    case ScanType::kBadOption: {
+    case ScanOptions::ScanType::kBadOption: {
       result.SetError("Invalid search type");
       result.SetStatus(eReturnStatusFailed);
       return false;
@@ -573,8 +570,15 @@ bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
   if (!scanner->AreReferencesLoaded()) {
     ScanForReferences(scanner);
   }
+
+  // Store already visited references to avoid and infinite recursive loop
+  // when `--recursive (-r)` option is set
+  ReferencesVector already_visited_references;
+
+  // Get the list of references for the given search value, property or string
   ReferencesVector* references = scanner->GetReferences();
-  PrintReferences(result, references, scanner);
+  PrintReferences(result, references, scanner, &scan_options,
+                  &already_visited_references);
 
   delete scanner;
 
@@ -588,6 +592,7 @@ void FindReferencesCmd::ScanForReferences(ObjectScanner* scanner) {
   TypeRecordMap mapstoinstances = llscan_->GetMapsToInstances();
   for (auto const entry : mapstoinstances) {
     TypeRecord* typerecord = entry.second;
+
     for (uint64_t addr : typerecord->GetInstances()) {
       Error err;
       v8::Value obj_value(llscan_->v8(), addr);
@@ -621,12 +626,47 @@ void FindReferencesCmd::ScanForReferences(ObjectScanner* scanner) {
   }
 }
 
+void FindReferencesCmd::PrintRecursiveReferences(
+  lldb::SBCommandReturnObject& result,
+  ScanOptions* options,
+  ReferencesVector* visited_references,
+  uint64_t address,
+  int level
+)
+{
+  if (find(visited_references->begin(), visited_references->end(), address) != visited_references->end())
+  {
+    Settings* settings = Settings::GetSettings();
+    unsigned int padding = settings->GetTreePadding();
+    std::stringstream seen_str;
+    seen_str << std::string((level)*padding, ' ') << "|\n";
+    seen_str << std::string((level)*padding, ' ') << "+"
+      << std::string(padding, '-') << rang::fg::red
+      << " [seen above]" << rang::fg::reset << std::endl;
+    result.Printf(seen_str.str().c_str());
+  } else {
+    visited_references->push_back(address);
+    v8::Value value(llscan_->v8(), address);
+    ReferenceScanner scanner_(llscan_, value);
+    ReferencesVector* references_ = scanner_.GetReferences();
+    PrintReferences(
+      result,
+      references_,
+      &scanner_,
+      options,
+      visited_references,
+      level + 1
+    );
+  }
+}
 
-void FindReferencesCmd::PrintReferences(SBCommandReturnObject& result,
-                                        ReferencesVector* references,
-                                        ObjectScanner* scanner) {
+void FindReferencesCmd::PrintReferences(
+    SBCommandReturnObject& result, ReferencesVector* references,
+    ObjectScanner* scanner, ScanOptions* options,
+    ReferencesVector* already_visited_references, int level) {
   // Walk all the object instances and handle them according to their type.
   TypeRecordMap mapstoinstances = llscan_->GetMapsToInstances();
+
   for (uint64_t addr : *references) {
     Error err;
     v8::Value obj_value(llscan_->v8(), addr);
@@ -643,11 +683,19 @@ void FindReferencesCmd::PrintReferences(SBCommandReturnObject& result,
       // Basically we need to access objects and arrays as both objects and
       // arrays.
       v8::JSObject js_obj(heap_object);
-      scanner->PrintRefs(result, js_obj, err);
+      scanner->PrintRefs(result, js_obj, err, level);
+
+      if (options->recursive_scan) {
+        PrintRecursiveReferences(result, options, already_visited_references, addr, level);
+      }
 
     } else if (type < v8->types()->kFirstNonstringType) {
       v8::String str(heap_object);
-      scanner->PrintRefs(result, str, err);
+      scanner->PrintRefs(result, str, err, level);
+
+      if (options->recursive_scan) {
+        PrintRecursiveReferences(result, options, already_visited_references, addr, level);
+      }
 
     } else if (type == v8->types()->kJSTypedArrayType) {
       // These should only point to off heap memory,
@@ -660,14 +708,16 @@ void FindReferencesCmd::PrintReferences(SBCommandReturnObject& result,
 
   // Print references found directly inside Context objects
   Error err;
-  scanner->PrintContextRefs(result, err);
+  scanner->PrintContextRefs(result, err, this, options,
+                            already_visited_references, level);
 }
 
 
-char** FindReferencesCmd::ParseScanOptions(char** cmd, ScanType* type) {
+char** FindReferencesCmd::ParseScanOptions(char** cmd, ScanOptions* options) {
   static struct option opts[] = {{"value", no_argument, nullptr, 'v'},
                                  {"name", no_argument, nullptr, 'n'},
                                  {"string", no_argument, nullptr, 's'},
+                                 {"recursive", no_argument, nullptr, 'r'},
                                  {nullptr, 0, nullptr, 0}};
 
   int argc = 1;
@@ -687,29 +737,32 @@ char** FindReferencesCmd::ParseScanOptions(char** cmd, ScanType* type) {
   optind = 0;
   opterr = 1;
   do {
-    int arg = getopt_long(argc, args, "vns", opts, nullptr);
+    int arg = getopt_long(argc, args, "vnsr", opts, nullptr);
     if (arg == -1) break;
 
     if (found_scan_type) {
-      *type = ScanType::kBadOption;
+      options->scan_type = ScanOptions::ScanType::kBadOption;
       break;
     }
 
     switch (arg) {
+      case 'r':
+        options->recursive_scan = true;
+        break;
       case 'v':
-        *type = ScanType::kFieldValue;
+        options->scan_type = ScanOptions::ScanType::kFieldValue;
         found_scan_type = true;
         break;
       case 'n':
-        *type = ScanType::kPropertyName;
+        options->scan_type = ScanOptions::ScanType::kPropertyName;
         found_scan_type = true;
         break;
       case 's':
-        *type = ScanType::kStringValue;
+        options->scan_type = ScanOptions::ScanType::kStringValue;
         found_scan_type = true;
         break;
       default:
-        *type = ScanType::kBadOption;
+        options->scan_type = ScanOptions::ScanType::kBadOption;
         break;
     }
   } while (true);
@@ -723,7 +776,9 @@ char** FindReferencesCmd::ParseScanOptions(char** cmd, ScanType* type) {
 // stored in the stack, and when some nested closure references
 // it is allocated in a Context object.
 void FindReferencesCmd::ReferenceScanner::PrintContextRefs(
-    SBCommandReturnObject& result, Error& err) {
+    SBCommandReturnObject& result, Error& err, FindReferencesCmd* cli_cmd_,
+    ScanOptions* options, ReferencesVector* already_visited_references,
+    int level) {
   ContextVector* contexts = llscan_->GetContexts();
   v8::LLV8* v8 = llscan_->v8();
 
@@ -744,15 +799,43 @@ void FindReferencesCmd::ReferenceScanner::PrintContextRefs(
         std::string name = _name.ToString(err);
         if (err.Fail()) return;
 
-        result.Printf("0x%" PRIx64 ": Context.%s=0x%" PRIx64 "\n", c.raw(),
-                      name.c_str(), search_value_.raw());
+
+        std::stringstream ss;
+        if (level > 0) {
+          Settings* settings = Settings::GetSettings();
+          unsigned int padding = settings->GetTreePadding();
+          ss << rang::fg::gray << std::string((level - 1) * padding, ' ')
+             << "|\n";
+          ss << std::string((level - 1) * padding, ' ') << "+"
+             << std::string(padding - 1, '-') << "+ " << rang::fg::reset;
+        }
+        ss << rang::fg::cyan << "0x%" PRIx64 << rang::fg::reset << ": "
+           << rang::fg::magenta << "Context" << rang::style::bold
+           << rang::fg::yellow << ".%s" << rang::fg::reset << rang::style::reset
+           << "=" << rang::fg::cyan << "0x%" PRIx64 << rang::fg::reset << "\n";
+
+        result.Printf(ss.str().c_str(), c.raw(), name.c_str(),
+                      search_value_.raw());
+
+        if (options->recursive_scan) {
+          cli_cmd_->PrintRecursiveReferences(result, options, already_visited_references, c.raw(), level);
+        }
       }
     }
   }
 }
 
-std::string FindReferencesCmd::ObjectScanner::GetPropertyReferenceString() {
+std::string FindReferencesCmd::ObjectScanner::GetPropertyReferenceString(
+    int level) {
   std::stringstream ss;
+  // Pretty print guide
+  if (level > 0) {
+    Settings* settings = Settings::GetSettings();
+    unsigned int padding = settings->GetTreePadding();
+    ss << rang::fg::gray << std::string((level - 1) * padding, ' ') << "|\n";
+    ss << std::string((level - 1) * padding, ' ') << "+"
+       << std::string(padding - 1, '-') << "+ " << rang::fg::reset;
+  }
   ss << rang::fg::cyan << "0x%" PRIx64 << rang::fg::reset << ": "
      << rang::fg::magenta << "%s" << rang::style::bold << rang::fg::yellow
      << ".%s" << rang::fg::reset << rang::style::reset << "=" << rang::fg::cyan
@@ -760,8 +843,17 @@ std::string FindReferencesCmd::ObjectScanner::GetPropertyReferenceString() {
   return ss.str();
 }
 
-std::string FindReferencesCmd::ObjectScanner::GetArrayReferenceString() {
+std::string FindReferencesCmd::ObjectScanner::GetArrayReferenceString(
+    int level) {
   std::stringstream ss;
+  // Pretty print guide
+  if (level > 0) {
+    Settings* settings = Settings::GetSettings();
+    unsigned int padding = settings->GetTreePadding();
+    ss << rang::fg::gray << std::string((level - 1) * padding, ' ') << "|\n";
+    ss << std::string((level - 1) * padding, ' ') << "+"
+       << std::string(padding, '-') << "+ " << rang::fg::reset;
+  }
   ss << rang::fg::cyan << "0x%" PRIx64 << rang::fg::reset << ": "
      << rang::fg::magenta << "%s" << rang::style::bold << rang::fg::yellow
      << "[%" PRId64 "]" << rang::fg::reset << rang::style::reset << "="
@@ -771,7 +863,8 @@ std::string FindReferencesCmd::ObjectScanner::GetArrayReferenceString() {
 
 
 void FindReferencesCmd::ReferenceScanner::PrintRefs(
-    SBCommandReturnObject& result, v8::JSObject& js_obj, Error& err) {
+    SBCommandReturnObject& result, v8::JSObject& js_obj, Error& err,
+    int level) {
   int64_t length = js_obj.GetArrayLength(err);
   for (int64_t i = 0; i < length; ++i) {
     v8::Value v = js_obj.GetArrayElement(i, err);
@@ -783,7 +876,7 @@ void FindReferencesCmd::ReferenceScanner::PrintRefs(
 
     std::string type_name = js_obj.GetTypeName(err);
 
-    std::string reference_template(GetArrayReferenceString());
+    std::string reference_template(GetArrayReferenceString(level));
     result.Printf(reference_template.c_str(), js_obj.raw(), type_name.c_str(),
                   i, search_value_.raw());
   }
@@ -801,7 +894,8 @@ void FindReferencesCmd::ReferenceScanner::PrintRefs(
       std::string key = entry.first.ToString(err);
       std::string type_name = js_obj.GetTypeName(err);
 
-      std::string reference_template(GetPropertyReferenceString());
+      std::string reference_template(GetPropertyReferenceString(level));
+
       result.Printf(reference_template.c_str(), js_obj.raw(), type_name.c_str(),
                     key.c_str(), search_value_.raw());
     }
@@ -810,7 +904,7 @@ void FindReferencesCmd::ReferenceScanner::PrintRefs(
 
 
 void FindReferencesCmd::ReferenceScanner::PrintRefs(
-    SBCommandReturnObject& result, v8::String& str, Error& err) {
+    SBCommandReturnObject& result, v8::String& str, Error& err, int level) {
   v8::LLV8* v8 = str.v8();
 
   int64_t repr = str.Representation(err);
@@ -823,7 +917,7 @@ void FindReferencesCmd::ReferenceScanner::PrintRefs(
     if (err.Success() && parent.raw() == search_value_.raw()) {
       std::string type_name = sliced_str.GetTypeName(err);
 
-      std::string reference_template(GetPropertyReferenceString());
+      std::string reference_template(GetPropertyReferenceString(level));
       result.Printf(reference_template.c_str(), str.raw(), type_name.c_str(),
                     "<Parent>", search_value_.raw());
     }
@@ -834,7 +928,7 @@ void FindReferencesCmd::ReferenceScanner::PrintRefs(
     if (err.Success() && first.raw() == search_value_.raw()) {
       std::string type_name = cons_str.GetTypeName(err);
 
-      std::string reference_template(GetPropertyReferenceString());
+      std::string reference_template(GetPropertyReferenceString(level));
       result.Printf(reference_template.c_str(), str.raw(), type_name.c_str(),
                     "<First>", search_value_.raw());
     }
@@ -843,7 +937,7 @@ void FindReferencesCmd::ReferenceScanner::PrintRefs(
     if (err.Success() && second.raw() == search_value_.raw()) {
       std::string type_name = cons_str.GetTypeName(err);
 
-      std::string reference_template(GetPropertyReferenceString());
+      std::string reference_template(GetPropertyReferenceString(level));
       result.Printf(reference_template.c_str(), str.raw(), type_name.c_str(),
                     "<Second>", search_value_.raw());
     }
@@ -853,7 +947,7 @@ void FindReferencesCmd::ReferenceScanner::PrintRefs(
     if (err.Success() && actual.raw() == search_value_.raw()) {
       std::string type_name = thin_str.GetTypeName(err);
 
-      std::string reference_template(GetPropertyReferenceString());
+      std::string reference_template(GetPropertyReferenceString(level));
       result.Printf(reference_template.c_str(), str.raw(), type_name.c_str(),
                     "<Actual>", search_value_.raw());
     }
@@ -958,7 +1052,8 @@ ReferencesVector* FindReferencesCmd::ReferenceScanner::GetReferences() {
 
 
 void FindReferencesCmd::PropertyScanner::PrintRefs(
-    SBCommandReturnObject& result, v8::JSObject& js_obj, Error& err) {
+    SBCommandReturnObject& result, v8::JSObject& js_obj, Error& err,
+    int level) {
   // (Note: We skip array elements as they don't have names.)
 
   // Walk all the properties in this object.
@@ -1021,7 +1116,7 @@ ReferencesVector* FindReferencesCmd::PropertyScanner::GetReferences() {
 
 void FindReferencesCmd::StringScanner::PrintRefs(SBCommandReturnObject& result,
                                                  v8::JSObject& js_obj,
-                                                 Error& err) {
+                                                 Error& err, int level) {
   v8::LLV8* v8 = js_obj.v8();
 
   int64_t length = js_obj.GetArrayLength(err);
@@ -1081,10 +1176,11 @@ void FindReferencesCmd::StringScanner::PrintRefs(SBCommandReturnObject& result,
           std::string type_name = js_obj.GetTypeName(err);
 
           std::stringstream ss;
-          ss << rang::fg::cyan << "0x" << std::hex << js_obj.raw()
-             << rang::fg::reset << std::dec << ": " << type_name.c_str() << "."
-             << key.c_str() << "=" << std::hex << entry.second.raw() << std::dec
-             << " '" << value.c_str() << "'" << std::endl;
+          ss << rang::fg::cyan << "0x" << std::hex << js_obj.raw() << std::dec
+             << rang::fg::reset << ": " << type_name.c_str() << "."
+             << key.c_str() << "=" << rang::fg::cyan << "0x" << std::hex
+             << entry.second.raw() << std::dec << rang::fg::reset << " '"
+             << value.c_str() << "'" << std::endl;
 
           result.Printf("%s", ss.str().c_str());
         }
@@ -1095,7 +1191,8 @@ void FindReferencesCmd::StringScanner::PrintRefs(SBCommandReturnObject& result,
 
 
 void FindReferencesCmd::StringScanner::PrintRefs(SBCommandReturnObject& result,
-                                                 v8::String& str, Error& err) {
+                                                 v8::String& str, Error& err,
+                                                 int level) {
   v8::LLV8* v8 = str.v8();
 
   // Concatenated and sliced strings refer to other strings so

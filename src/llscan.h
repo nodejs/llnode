@@ -76,6 +76,17 @@ class NodeInfoCmd : public CommandBase {
   LLScan* llscan_;
 };
 
+class ScanOptions {
+ public:
+  // Defines what are we looking for
+  enum ScanType { kFieldValue, kPropertyName, kStringValue, kBadOption };
+
+  ScanOptions() : scan_type(ScanType::kFieldValue), recursive_scan(false) {}
+
+  ScanType scan_type;
+  bool recursive_scan;
+};
+
 class FindReferencesCmd : public CommandBase {
  public:
   FindReferencesCmd(LLScan* llscan) : llscan_(llscan) {}
@@ -84,9 +95,7 @@ class FindReferencesCmd : public CommandBase {
   bool DoExecute(lldb::SBDebugger d, char** cmd,
                  lldb::SBCommandReturnObject& result) override;
 
-  enum ScanType { kFieldValue, kPropertyName, kStringValue, kBadOption };
-
-  char** ParseScanOptions(char** cmd, ScanType* type);
+  char** ParseScanOptions(char** cmd, ScanOptions* options);
 
   class ObjectScanner {
    public:
@@ -100,21 +109,36 @@ class FindReferencesCmd : public CommandBase {
     virtual void ScanRefs(v8::String& str, Error& err){};
 
     virtual void PrintRefs(lldb::SBCommandReturnObject& result,
-                           v8::JSObject& js_obj, Error& err) {}
+                           v8::JSObject& js_obj, Error& err, int level = 0) {}
+
     virtual void PrintRefs(lldb::SBCommandReturnObject& result, v8::String& str,
-                           Error& err) {}
+                           Error& err, int level = 0) {}
 
     virtual void PrintContextRefs(lldb::SBCommandReturnObject& result,
-                                  Error& err) {}
+                                  Error& err, FindReferencesCmd* cli_cmd_,
+                                  ScanOptions* options,
+                                  ReferencesVector* already_visited_references,
+                                  int level = 0) {}
 
-    std::string GetPropertyReferenceString();
-    std::string GetArrayReferenceString();
+    std::string GetPropertyReferenceString(int level = 0);
+    std::string GetArrayReferenceString(int level = 0);
   };
 
   void PrintReferences(lldb::SBCommandReturnObject& result,
-                       ReferencesVector* references, ObjectScanner* scanner);
+                       ReferencesVector* references, ObjectScanner* scanner,
+                       ScanOptions* options,
+                       ReferencesVector* already_visited_references,
+                       int level = 0);
 
   void ScanForReferences(ObjectScanner* scanner);
+
+  void PrintRecursiveReferences(
+    lldb::SBCommandReturnObject& result,
+    ScanOptions* options,
+    ReferencesVector* visited_references,
+    uint64_t address,
+    int level
+  );
 
   class ReferenceScanner : public ObjectScanner {
    public:
@@ -129,12 +153,14 @@ class FindReferencesCmd : public CommandBase {
     void ScanRefs(v8::String& str, Error& err) override;
 
     void PrintRefs(lldb::SBCommandReturnObject& result, v8::JSObject& js_obj,
-                   Error& err) override;
+                   Error& err, int level = 0) override;
     void PrintRefs(lldb::SBCommandReturnObject& result, v8::String& str,
-                   Error& err) override;
+                   Error& err, int level = 0) override;
 
-    void PrintContextRefs(lldb::SBCommandReturnObject& result,
-                          Error& err) override;
+    void PrintContextRefs(lldb::SBCommandReturnObject& result, Error& err,
+                          FindReferencesCmd* cli_cmd_, ScanOptions* options,
+                          ReferencesVector* already_visited_references,
+                          int level = 0) override;
 
    private:
     LLScan* llscan_;
@@ -155,7 +181,7 @@ class FindReferencesCmd : public CommandBase {
     // We only scan properties on objects not Strings, use default no-op impl
     // of PrintRefs for Strings.
     void PrintRefs(lldb::SBCommandReturnObject& result, v8::JSObject& js_obj,
-                   Error& err) override;
+                   Error& err, int level = 0) override;
 
    private:
     LLScan* llscan_;
@@ -176,9 +202,9 @@ class FindReferencesCmd : public CommandBase {
     void ScanRefs(v8::String& str, Error& err) override;
 
     void PrintRefs(lldb::SBCommandReturnObject& result, v8::JSObject& js_obj,
-                   Error& err) override;
+                   Error& err, int level = 0) override;
     void PrintRefs(lldb::SBCommandReturnObject& result, v8::String& str,
-                   Error& err) override;
+                   Error& err, int level = 0) override;
 
     static const char* const property_reference_template;
     static const char* const array_reference_template;

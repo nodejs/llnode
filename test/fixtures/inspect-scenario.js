@@ -84,8 +84,15 @@ function closure() {
     this.name = "Class B";
   }
 
+  function Class_C(class_b_array) {
+    this.arr = class_b_array;
+    this.my_class_c = "My Class C";
+  }
+
   const arr = new Array();
   for(let i=0; i < 10; i++) arr.push(new Class_B());
+
+  let classC = new Class_C(arr);
 
   c.method();
 }

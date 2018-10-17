@@ -20,12 +20,16 @@ class Settings {
   Settings& operator=(const Settings&) = delete;
 
   std::string color = "auto";
+  int tree_padding = 2;
+
 
  public:
   static Settings* GetSettings();
   std::string SetColor(std::string option);
   std::string GetColor() { return color; };
   bool ShouldUseColor();
+  int GetTreePadding() { return tree_padding; };
+  int SetTreePadding(int option);
 };
 
 }  // namespace llnode
