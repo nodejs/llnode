@@ -134,6 +134,34 @@ bool SetPropertyColorCmd::DoExecute(SBDebugger d, char** cmd,
   return false;
 }
 
+bool SetTreePaddingCmd::DoExecute(SBDebugger d, char** cmd,
+                                  SBCommandReturnObject& result) {
+  if (cmd == nullptr || *cmd == nullptr) {
+    result.SetError("USAGE: v8 settings set tree-padding [1..10]");
+    return false;
+  }
+  Settings* settings = Settings::GetSettings();
+  std::stringstream option(cmd[0]);
+  int padding;
+
+  // Extraction operator (>>) parses option and tries to interpret it
+  // as an `int` value. If an error occur, an internal state flag will be
+  // set. Not (!) operator will evaluate to true if `failbit` or `badbit`
+  // is set
+  if (!(option >> padding)) {
+    result.SetError("unable to convert provided value.");
+    return false;
+  };
+
+  // This is just an opinated range limit, to avoid negative values
+  // or big number, these values would produce a bad visualization experience
+  if (padding < 1) padding = 1;
+  if (padding > 10) padding = 10;
+  padding = settings->SetTreePadding(padding);
+  result.Printf("Tree padding set to %u\n", padding);
+  return true;
+}
+
 
 bool PrintCmd::DoExecute(SBDebugger d, char** cmd,
                          SBCommandReturnObject& result) {
@@ -451,6 +479,9 @@ bool PluginInitialize(SBDebugger d) {
 
   setPropertyCmd.AddCommand("color", new llnode::SetPropertyColorCmd(),
                             "Set color property value");
+  setPropertyCmd.AddCommand("tree-padding",
+                            new llnode::SetTreePaddingCmd(&llv8),
+                            "Set tree-padding value");
 
   interpreter.AddCommand("findjsobjects", new llnode::FindObjectsCmd(&llscan),
                          "Alias for `v8 findjsobjects`");
@@ -485,6 +516,7 @@ bool PluginInitialize(SBDebugger d) {
       " * -n, --name  name     - all properties with the specified name\n"
       " * -s, --string string  - all properties that refer to the specified "
       "JavaScript string value\n"
+      " * -r, --recursive      - walk through references tree recursively\n"
       "\n");
 
   v8.AddCommand("getactivehandles",
