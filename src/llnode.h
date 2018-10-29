@@ -26,14 +26,8 @@ class BacktraceCmd : public CommandBase {
 
 class SetPropertyColorCmd : public CommandBase {
  public:
-  SetPropertyColorCmd(v8::LLV8* llv8) : llv8_(llv8) {}
-  ~SetPropertyColorCmd() override {}
-
   bool DoExecute(lldb::SBDebugger d, char** cmd,
                  lldb::SBCommandReturnObject& result) override;
-
- private:
-  v8::LLV8* llv8_;
 };
 
 class PrintCmd : public CommandBase {

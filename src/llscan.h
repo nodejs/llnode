@@ -7,6 +7,7 @@
 
 #include "src/error.h"
 #include "src/llnode.h"
+#include "src/printer.h"
 
 namespace llnode {
 
@@ -30,7 +31,7 @@ struct cmd_pagination_t {
   std::string command = "";
 };
 
-char** ParseInspectOptions(char** cmd, v8::Value::InspectOptions* options);
+char** ParsePrinterOptions(char** cmd, Printer::PrinterOptions* options);
 
 class FindObjectsCmd : public CommandBase {
  public:
@@ -50,8 +51,7 @@ class FindObjectsCmd : public CommandBase {
 class FindInstancesCmd : public CommandBase {
  public:
   FindInstancesCmd(LLScan* llscan, bool detailed)
-      : llscan_(llscan), detailed_(detailed) {
-  }
+      : llscan_(llscan), detailed_(detailed) {}
   ~FindInstancesCmd() override {}
 
   bool DoExecute(lldb::SBDebugger d, char** cmd,
