@@ -17,6 +17,7 @@ class Environment;
 }
 }  // namespace node
 
+class Inspector;
 class FindJSObjectsVisitor;
 class FindReferencesCmd;
 class FindObjectsCmd;
@@ -38,30 +39,6 @@ class CodeMap;
 
 class Value {
  public:
-  class InspectOptions {
-   public:
-    InspectOptions()
-        : detailed(false),
-          print_map(false),
-          print_source(false),
-          length(kLength),
-          indent_depth(1),
-          output_limit(0) {}
-
-    static const unsigned int kLength = 16;
-    static const unsigned int kIndentSize = 2;
-    inline std::string get_indent_spaces() {
-      return std::string(indent_depth * kIndentSize, ' ');
-    }
-
-    bool detailed;
-    bool print_map;
-    bool print_source;
-    unsigned int length;
-    unsigned int indent_depth;
-    int output_limit;
-  };
-
   Value(const Value& v) = default;
   Value(Value& v) = default;
   Value() : v8_(nullptr), raw_(-1) {}
@@ -75,7 +52,6 @@ class Value {
   bool IsHoleOrUndefined(Error& err);
   bool IsHole(Error& err);
 
-  std::string Inspect(InspectOptions* options, Error& err);
   std::string GetTypeName(Error& err);
   std::string ToString(Error& err);
 
@@ -94,7 +70,6 @@ class Smi : public Value {
   inline int64_t GetValue() const;
 
   std::string ToString(Error& err);
-  std::string Inspect(Error& err);
 };
 
 class HeapObject : public Value {
@@ -112,7 +87,6 @@ class HeapObject : public Value {
   inline int64_t GetType(Error& err);
 
   std::string ToString(Error& err);
-  std::string Inspect(InspectOptions* options, Error& err);
   std::string GetTypeName(Error& err);
 
   inline bool IsJSErrorType(Error& err);
@@ -135,7 +109,6 @@ class Map : public HeapObject {
   inline bool IsJSObjectMap(Error& err);
   inline int64_t NumberOfOwnDescriptors(Error& err);
 
-  std::string Inspect(InspectOptions* options, Error& err);
   HeapObject Constructor(Error& err);
 };
 
@@ -148,7 +121,6 @@ class String : public HeapObject {
   inline Smi Length(Error& err);
 
   std::string ToString(Error& err);
-  std::string Inspect(InspectOptions* options, Error& err);
 
   static inline bool IsString(LLV8* v8, HeapObject heap_object, Error& err);
 };
@@ -248,7 +220,6 @@ class HeapNumber : public HeapObject {
   inline double GetValue(Error& err);
 
   std::string ToString(bool whole, Error& err);
-  std::string Inspect(Error& err);
 };
 
 class JSObject : public HeapObject {
@@ -258,15 +229,6 @@ class JSObject : public HeapObject {
   inline HeapObject Properties(Error& err);
   inline HeapObject Elements(Error& err);
 
-  std::string Inspect(InspectOptions* options, Error& err);
-  virtual std::string InspectAllProperties(InspectOptions* options, Error& err);
-  std::string InspectInternalFields(Error& err);
-  std::string InspectProperties(Error& err);
-
-  std::string InspectElements(Error& err);
-  std::string InspectElements(int64_t length, Error& err);
-  std::string InspectDictionary(Error& err);
-  std::string InspectDescriptors(Map map, Error& err);
   void Keys(std::vector<std::string>& keys, Error& err);
 
   /** Return all the key/value pairs for properties on a JSObject
@@ -282,6 +244,7 @@ class JSObject : public HeapObject {
   static inline bool IsObjectType(LLV8* v8, int64_t type);
 
  protected:
+  friend class llnode::Inspector;
   template <class T>
   T GetInObjectValue(int64_t size, int index, Error& err);
   void ElementKeys(std::vector<std::string>& keys, Error& err);
@@ -296,9 +259,6 @@ class JSObject : public HeapObject {
 class JSError : public JSObject {
  public:
   V8_VALUE_DEFAULT_METHODS(JSError, JSObject);
-
-  std::string InspectAllProperties(InspectOptions* options,
-                                   Error& err) override;
 };
 
 class JSArray : public JSObject {
@@ -306,8 +266,6 @@ class JSArray : public JSObject {
   V8_VALUE_DEFAULT_METHODS(JSArray, JSObject);
 
   inline Smi Length(Error& err);
-
-  std::string Inspect(InspectOptions* options, Error& err);
 };
 
 class JSFunction : public JSObject {
@@ -319,7 +277,6 @@ class JSFunction : public JSObject {
   inline std::string Name(Error& err);
 
   std::string GetDebugLine(std::string args, Error& err);
-  std::string Inspect(InspectOptions* options, Error& err);
   std::string GetSource(Error& err);
 };
 
@@ -328,8 +285,6 @@ class JSRegExp : public JSObject {
   V8_VALUE_DEFAULT_METHODS(JSRegExp, JSObject);
 
   inline String GetSource(Error& err);
-
-  std::string Inspect(InspectOptions* options, Error& err);
 };
 
 class JSDate : public JSObject {
@@ -337,8 +292,6 @@ class JSDate : public JSObject {
   V8_VALUE_DEFAULT_METHODS(JSDate, JSObject);
 
   inline Value GetValue(Error& err);
-
-  std::string Inspect(Error& err);
 };
 
 class FixedArrayBase : public HeapObject {
@@ -356,11 +309,6 @@ class FixedArray : public FixedArrayBase {
   inline T Get(int index, Error& err);
 
   inline int64_t LeaData() const;
-
-  std::string Inspect(InspectOptions* options, Error& err);
-
- private:
-  std::string InspectContents(int length, Error& err);
 };
 
 class FixedTypedArrayBase : public FixedArrayBase {
@@ -422,7 +370,6 @@ class Context : public FixedArray {
   inline T GetEmbedderData(int64_t index, Error& err);
   inline Value ContextSlot(int index, Error& err);
 
-  std::string Inspect(InspectOptions* options, Error& err);
   static inline bool IsContext(LLV8* v8, HeapObject heap_object, Error& err);
 
   // Iterator class to walk all local references on a context
@@ -437,14 +384,9 @@ class Context : public FixedArray {
       inline Iterator(int current, Locals* outer)
           : current_(current), outer_(outer){};
 
-      String LocalName(Error& err) {
-        return outer_->scope_info_.ContextLocalName(
-            current_, outer_->param_count_, outer_->stack_count_, err);
-      }
+      String LocalName(Error& err);
 
-      Value GetValue(Error& err) {
-        return outer_->context_->ContextSlot(current_, err);
-      }
+      Value GetValue(Error& err);
 
      private:
       int current_;
@@ -465,6 +407,7 @@ class Context : public FixedArray {
   };
 
  private:
+  friend class llnode::Inspector;
   inline JSFunction Closure(Error& err);
 };
 
@@ -476,8 +419,6 @@ class Oddball : public HeapObject {
   inline Smi Kind(Error& err);
   inline bool IsHoleOrUndefined(Error& err);
   inline bool IsHole(Error& err);
-
-  std::string Inspect(Error& err);
 };
 
 class JSArrayBuffer : public JSObject {
@@ -489,8 +430,6 @@ class JSArrayBuffer : public JSObject {
   inline Smi ByteLength(Error& err);
 
   inline bool WasNeutered(Error& err);
-
-  std::string Inspect(InspectOptions* options, Error& err);
 };
 
 class JSArrayBufferView : public JSObject {
@@ -500,8 +439,6 @@ class JSArrayBufferView : public JSObject {
   inline JSArrayBuffer Buffer(Error& err);
   inline Smi ByteOffset(Error& err);
   inline Smi ByteLength(Error& err);
-
-  std::string Inspect(InspectOptions* options, Error& err);
 };
 
 class JSFrame : public Value {
@@ -516,11 +453,10 @@ class JSFrame : public Value {
   uint32_t GetSourceForDisplay(bool set_line, uint32_t line_start,
                                uint32_t line_limit, std::string lines[],
                                uint32_t& lines_found, Error& err);
-  std::string Inspect(bool with_args, Error& err);
-  std::string InspectArgs(JSFunction fn, Error& err);
 
  private:
   Smi FromFrameMarker(Value value) const;
+  friend class llnode::Inspector;
 };
 
 class LLV8 {
@@ -609,6 +545,7 @@ class LLV8 {
   friend class JSRegExp;
   friend class JSDate;
   friend class CodeMap;
+  friend class llnode::Inspector;
   friend class llnode::FindJSObjectsVisitor;
   friend class llnode::FindObjectsCmd;
   friend class llnode::FindReferencesCmd;

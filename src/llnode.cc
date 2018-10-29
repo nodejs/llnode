@@ -9,8 +9,8 @@
 
 #include <lldb/API/SBExpressionOptions.h>
 
-#include "deps/rang/include/rang.hpp"
 #include "src/error.h"
+#include "src/inspector.h"
 #include "src/llnode.h"
 #include "src/llscan.h"
 #include "src/llv8.h"
@@ -72,7 +72,8 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
     if (!frame.GetSymbol().IsValid()) {
       Error err;
       v8::JSFrame v8_frame(llv8_, static_cast<int64_t>(frame.GetFP()));
-      std::string res = v8_frame.Inspect(true, err);
+      Inspector inspector(llv8_);
+      std::string res = inspector.Inspect(v8_frame, err);
       if (err.Success()) {
         result.Printf("  %c frame #%u: 0x%016" PRIx64 " %s\n", star, i, pc,
                       res.c_str());
@@ -153,7 +154,7 @@ bool PrintCmd::DoExecute(SBDebugger d, char** cmd,
     return false;
   }
 
-  v8::Value::InspectOptions inspect_options;
+  Inspector::InspectOptions inspect_options;
 
   inspect_options.detailed = detailed_;
 
@@ -178,7 +179,8 @@ bool PrintCmd::DoExecute(SBDebugger d, char** cmd,
 
   v8::Value v8_value(llv8_, value.GetValueAsSigned());
   Error err;
-  std::string res = v8_value.Inspect(&inspect_options, err);
+  Inspector inspector(llv8_, inspect_options);
+  std::string res = inspector.Inspect(v8_value, err);
   if (err.Fail()) {
     result.SetError(err.GetMessage());
     return false;
@@ -313,7 +315,7 @@ bool WorkqueueCmd::DoExecute(SBDebugger d, char** cmd,
 std::string GetActiveHandlesCmd::GetResultMessage(node::Environment* env,
                                                   Error& err) {
   int active_handles = 0;
-  v8::Value::InspectOptions inspect_options;
+  Inspector::InspectOptions inspect_options;
   inspect_options.detailed = true;
   std::ostringstream result_message;
 
@@ -326,7 +328,8 @@ std::string GetActiveHandlesCmd::GetResultMessage(node::Environment* env,
     if (err.Fail()) break;
 
     v8::JSObject v8_object(llv8(), raw_object);
-    std::string res = v8_object.Inspect(&inspect_options, err);
+    Inspector inspector(llv8(), inspect_options);
+    std::string res = inspector.Inspect(v8_object, err);
     if (err.Fail()) {
       Error::PrintInDebugMode("Failed to load object at address %" PRIx64,
                               raw_object);
@@ -345,7 +348,7 @@ std::string GetActiveHandlesCmd::GetResultMessage(node::Environment* env,
 std::string GetActiveRequestsCmd::GetResultMessage(node::Environment* env,
                                                    Error& err) {
   int active_requests = 0;
-  v8::Value::InspectOptions inspect_options;
+  Inspector::InspectOptions inspect_options;
   inspect_options.detailed = true;
   std::ostringstream result_message;
 
@@ -358,7 +361,8 @@ std::string GetActiveRequestsCmd::GetResultMessage(node::Environment* env,
     if (err.Fail()) break;
 
     v8::JSObject v8_object(llv8(), raw_object);
-    std::string res = v8_object.Inspect(&inspect_options, err);
+    Inspector inspector(llv8(), inspect_options);
+    std::string res = inspector.Inspect(v8_object, err);
     if (err.Fail()) {
       Error::PrintInDebugMode("Failed to load object at address %" PRIx64,
                               raw_object);
@@ -455,7 +459,7 @@ bool PluginInitialize(SBDebugger d) {
   SBCommand setPropertyCmd =
       settingsCmd.AddMultiwordCommand("set", "Set a property");
 
-  setPropertyCmd.AddCommand("color", new llnode::SetPropertyColorCmd(&llv8),
+  setPropertyCmd.AddCommand("color", new llnode::SetPropertyColorCmd(),
                             "Set color property value");
 
   interpreter.AddCommand("findjsobjects", new llnode::FindObjectsCmd(&llscan),

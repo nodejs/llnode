@@ -7,10 +7,10 @@
 #include <cinttypes>
 #include <fstream>
 #include <iomanip>
+#include <iostream>
 #include <sstream>
 #include <string>
 #include <vector>
-#include <iostream>
 
 #include <lldb/API/SBExpressionOptions.h>
 
@@ -34,7 +34,7 @@ using lldb::eReturnStatusFailed;
 using lldb::eReturnStatusSuccessFinishResult;
 
 
-char** ParseInspectOptions(char** cmd, v8::Value::InspectOptions* options) {
+char** ParseInspectOptions(char** cmd, Inspector::InspectOptions* options) {
   static struct option opts[] = {
       {"full-string", no_argument, nullptr, 'F'},
       {"string-length", required_argument, nullptr, 'l'},
@@ -112,7 +112,7 @@ bool FindObjectsCmd::DoExecute(SBDebugger d, char** cmd,
     return false;
   }
 
-  v8::Value::InspectOptions inspect_options;
+  Inspector::InspectOptions inspect_options;
   ParseInspectOptions(cmd, &inspect_options);
 
   if (inspect_options.detailed) {
@@ -215,7 +215,7 @@ bool FindInstancesCmd::DoExecute(SBDebugger d, char** cmd,
     return false;
   }
 
-  v8::Value::InspectOptions inspect_options;
+  Inspector::InspectOptions inspect_options;
 
   inspect_options.detailed = detailed_;
 
@@ -231,8 +231,6 @@ bool FindInstancesCmd::DoExecute(SBDebugger d, char** cmd,
       llscan_->GetMapsToInstances().find(type_name);
 
   if (instance_it != llscan_->GetMapsToInstances().end()) {
-
-
     TypeRecord* t = instance_it->second;
 
     // Update pagination options
@@ -272,7 +270,8 @@ bool FindInstancesCmd::DoExecute(SBDebugger d, char** cmd,
          ++it) {
       Error err;
       v8::Value v8_value(llscan_->v8(), *it);
-      std::string res = v8_value.Inspect(&inspect_options, err);
+      Inspector inspector(llscan_->v8(), inspect_options);
+      std::string res = inspector.Inspect(v8_value, err);
       result.Printf("%s\n", res.c_str());
     }
     if (it != t->GetInstances().end()) {

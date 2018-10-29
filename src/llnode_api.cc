@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <cstring>
 
+#include "src/inspector.h"
 #include "src/llnode_api.h"
 #include "src/llscan.h"
 #include "src/llv8.h"
@@ -112,7 +113,8 @@ std::string LLNodeApi::GetFrame(size_t thread_index, size_t frame_index) {
     llnode::Error err;
     llnode::v8::JSFrame v8_frame(llscan->v8(),
                                  static_cast<int64_t>(frame.GetFP()));
-    std::string frame_str = v8_frame.Inspect(true, err);
+    Inspector inspector(llscan->v8());
+    std::string frame_str = inspector.Inspect(v8_frame, err);
 
     // Skip invalid frames
     if (err.Fail() || frame_str.size() == 0 || frame_str[0] == '<') {
@@ -183,12 +185,13 @@ std::set<uint64_t>* LLNodeApi::GetTypeInstances(size_t type_index) {
 
 std::string LLNodeApi::GetObject(uint64_t address) {
   v8::Value v8_value(llscan->v8(), address);
-  v8::Value::InspectOptions inspect_options;
+  Inspector::InspectOptions inspect_options;
   inspect_options.detailed = true;
   inspect_options.length = 16;
+  Inspector inspector(llscan->v8(), inspect_options);
 
   llnode::Error err;
-  std::string result = v8_value.Inspect(&inspect_options, err);
+  std::string result = inspector.Inspect(v8_value, err);
   if (err.Fail()) {
     return "Failed to get object";
   }
