@@ -185,6 +185,8 @@ void JSDate::Load() {
 
 
 void SharedInfo::Load() {
+  kFunctionDataOffset =
+      LoadConstant("class_SharedFunctionInfo__function_data__Object");
   kNameOrScopeInfoOffset =
       LoadConstant("class_SharedFunctionInfo__name_or_scope_info__Object");
   kNameOffset = LoadConstant("class_SharedFunctionInfo__raw_name__Object",
@@ -193,6 +195,8 @@ void SharedInfo::Load() {
       LoadConstant("class_SharedFunctionInfo__inferred_name__String",
                    "class_SharedFunctionInfo__function_identifier__Object");
   kScriptOffset = LoadConstant("class_SharedFunctionInfo__script__Object");
+  kScriptOrDebugInfoOffset =
+      LoadConstant("class_SharedFunctionInfo__script_or_debug_info__Object");
   kStartPositionOffset =
       LoadConstant("class_SharedFunctionInfo__start_position_and_type__int",
                    "class_SharedFunctionInfo__start_position_and_type__SMI");
@@ -201,11 +205,12 @@ void SharedInfo::Load() {
                    "class_SharedFunctionInfo__end_position__SMI");
   kParameterCountOffset = LoadConstant(
       "class_SharedFunctionInfo__internal_formal_parameter_count__int",
-      "class_SharedFunctionInfo__internal_formal_parameter_count__SMI");
+      "class_SharedFunctionInfo__internal_formal_parameter_count__uint16_t");
 
   if (kParameterCountOffset == -1) {
-    kParameterCountOffset =
-        LoadConstant("class_SharedFunctionInfo__formal_parameter_count__SMI");
+    kParameterCountOffset = LoadConstant(
+        "class_SharedFunctionInfo__internal_formal_parameter_count__SMI",
+        "class_SharedFunctionInfo__formal_parameter_count__SMI");
   }
 
   // NOTE: Could potentially be -1 on v4 and v5 node, should check in llv8
@@ -229,6 +234,16 @@ void SharedInfo::Load() {
 }
 
 
+void UncompiledData::Load() {
+  kInferredNameOffset =
+      LoadConstant("class_UncompiledData__inferred_name__String");
+  kStartPositionOffset =
+      LoadConstant("class_UncompiledData__start_position__int32_t");
+  kEndPositionOffset =
+      LoadConstant("class_UncompiledData__end_position__int32_t");
+}
+
+
 void Code::Load() {
   kStartOffset = LoadConstant("class_Code__instruction_start__uintptr_t");
   kSizeOffset = LoadConstant("class_Code__instruction_size__int");
@@ -238,6 +253,7 @@ void Code::Load() {
 void ScopeInfo::Load() {
   kParameterCountOffset = LoadConstant("scopeinfo_idx_nparams");
   kStackLocalCountOffset = LoadConstant("scopeinfo_idx_nstacklocals");
+  kEmbeddedParamAndStackLocals = kStackLocalCountOffset != -1;
   kContextLocalCountOffset = LoadConstant("scopeinfo_idx_ncontextlocals");
   kVariablePartIndex = LoadConstant("scopeinfo_idx_first_vars");
 }
@@ -516,6 +532,12 @@ void Types::Load() {
   kJSDateType = LoadConstant("type_JSDate__JS_DATE_TYPE");
   kSharedFunctionInfoType =
       LoadConstant("type_SharedFunctionInfo__SHARED_FUNCTION_INFO_TYPE");
+  kUncompiledDataWithoutPreParsedScopeType = LoadConstant(
+      "type_UncompiledDataWithoutPreParsedScope__UNCOMPILED_DATA_WITHOUT_PRE_"
+      "PARSED_SCOPE_TYPE");
+  kUncompiledDataWithPreParsedScopeType = LoadConstant(
+      "type_UncompiledDataWithPreParsedScope__UNCOMPILED_DATA_WITH_PRE_PARSED_"
+      "SCOPE_TYPE");
   kScriptType = LoadConstant("type_Script__SCRIPT_TYPE");
   kScopeInfoType = LoadConstant("type_ScopeInfo__SCOPE_INFO_TYPE");
   kSymbolType = LoadConstant("type_Symbol__SYMBOL_TYPE");

@@ -12,21 +12,13 @@ function testWorkqueueCommands(t, sess) {
     let match = line.match(/<Object: TCP/i);
     t.ok(match, 'TCP handler should be an Object');
 
-    sess.send('v8 getactivehandles');
-  });
-
-  sess.wait(/Timer/, (err, line) => {
-    t.error(err);
-    let match = line.match(/<Object: Timer/i);
-    t.ok(match, 'Timer handler should be an Object');
-
     sess.send('v8 getactiverequests');
   });
 
-  sess.wait(/FSReqWrap/, (err, line) => {
+  sess.wait(/FSReq[a-zA-Z]*/, (err, line) => {
     t.error(err);
-    let match = line.match(/<Object: FSReqWrap/i);
-    t.ok(match, 'FSReqWrap handler should be an Object');
+    let match = line.match(/<Object: FSReq[a-zA-Z]*/i);
+    t.ok(match, 'FSReq[a-zA-Z]* handler should be an Object');
 
     sess.quit();
     t.end();

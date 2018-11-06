@@ -85,7 +85,7 @@ function verifyBasicTypes(llnode, t) {
   const heapTypes = llnode.getHeapTypes();
   const basicTypes = [
     // basic JS types
-    '(Array)', '(String)', 'Object', '(Object)', '(ArrayBufferView)',
+    '(Array)', '(String)', 'Object', '(ArrayBufferView)',
     // Node types
     'process', 'NativeModule'
   ].sort();

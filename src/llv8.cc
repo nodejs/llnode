@@ -39,6 +39,7 @@ void LLV8::Load(SBTarget target) {
   js_array.Assign(target, &common);
   js_function.Assign(target, &common);
   shared_info.Assign(target, &common);
+  uncompiled_data.Assign(target, &common);
   code.Assign(target, &common);
   scope_info.Assign(target, &common);
   context.Assign(target, &common);
@@ -361,8 +362,8 @@ std::string SharedFunctionInfo::ProperName(Error& err) {
 
   std::string res = name.ToString(err);
   if (err.Fail() || res.empty()) {
-    Value inferred = InferredName(err);
-    if (err.Fail()) return std::string();
+    Value inferred = GetInferredName(err);
+    if (err.Fail() || inferred.raw() == -1) return std::string();
 
     // Function may not have inferred name
     if (!inferred.IsHoleOrUndefined(err) && !err.Fail())
@@ -378,7 +379,7 @@ std::string SharedFunctionInfo::ProperName(Error& err) {
 
 std::string SharedFunctionInfo::GetPostfix(Error& err) {
   Script script = GetScript(err);
-  if (err.Fail()) return std::string();
+  if (err.Fail() || script.raw() == -1) return std::string();
 
   // There is no `Script` for functions created in C++ (and possibly others)
   int64_t type = script.GetType(err);
@@ -766,15 +767,9 @@ Context::Locals::Locals(Context* context, Error& err) {
   if (err.Fail()) return;
 
   scope_info_ = ScopeInfo(scope_obj);
-  Smi param_count_smi = scope_info_.ParameterCount(err);
-  if (err.Fail()) return;
-  Smi stack_count_smi = scope_info_.StackLocalCount(err);
-  if (err.Fail()) return;
   Smi local_count_smi = scope_info_.ContextLocalCount(err);
   if (err.Fail()) return;
 
-  param_count_ = param_count_smi.GetValue();
-  stack_count_ = stack_count_smi.GetValue();
   local_count_ = local_count_smi.GetValue();
 }
 
@@ -799,8 +794,7 @@ v8::Value Context::Locals::Iterator::operator*() {
 }
 
 String Context::Locals::Iterator::LocalName(Error& err) {
-  return outer_->scope_info_.ContextLocalName(current_, outer_->param_count_,
-                                              outer_->stack_count_, err);
+  return outer_->scope_info_.ContextLocalName(current_, err);
 }
 
 Value Context::Locals::Iterator::GetValue(Error& err) {
