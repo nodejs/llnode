@@ -57,6 +57,14 @@ class Value {
 
   static inline const char* ClassName() { return "Value"; }
 
+  // Type check methods
+  // TODO (mmarchini): Move all ToType methods to class Value to stay coherent
+  // with V8 API.
+  inline bool IsSmi(Error& err);
+  inline bool IsScript(Error& err);
+  inline bool IsScopeInfo(Error& err);
+  inline bool IsUncompiledData(Error& err);
+
  protected:
   LLV8* v8_;
   int64_t raw_ = 0x0;
@@ -162,12 +170,12 @@ class SharedFunctionInfo : public HeapObject {
   V8_VALUE_DEFAULT_METHODS(SharedFunctionInfo, HeapObject)
 
   inline String Name(Error& err);
-  inline Value InferredName(Error& err);
   inline Script GetScript(Error& err);
   inline HeapObject GetScopeInfo(Error& err);
   inline int64_t ParameterCount(Error& err);
   inline int64_t StartPosition(Error& err);
   inline int64_t EndPosition(Error& err);
+  inline Value GetInferredName(Error& err);
 
   std::string ProperName(Error& err);
   std::string GetPostfix(Error& err);
@@ -175,8 +183,21 @@ class SharedFunctionInfo : public HeapObject {
 
  private:
   inline String name(Error& err);
+  inline Script script(Error& err);
+  inline HeapObject script_or_debug_info(Error& err);
+  inline Value inferred_name(Error& err);
+  inline Value function_data(Error& err);
   inline HeapObject scope_info(Error& err);
   inline HeapObject name_or_scope_info(Error& err);
+};
+
+class UncompiledData : public HeapObject {
+ public:
+  V8_VALUE_DEFAULT_METHODS(UncompiledData, HeapObject)
+
+  inline int32_t start_position(Error& err);
+  inline int32_t end_position(Error& err);
+  inline Value inferred_name(Error& err);
 };
 
 class OneByteString : public String {
@@ -431,12 +452,19 @@ class ScopeInfo : public FixedArray {
  public:
   V8_VALUE_DEFAULT_METHODS(ScopeInfo, FixedArray)
 
+  struct PositionInfo {
+    int64_t start_position;
+    int64_t end_position;
+    bool is_valid;
+  };
+
   inline Smi ParameterCount(Error& err);
   inline Smi StackLocalCount(Error& err);
   inline Smi ContextLocalCount(Error& err);
+  inline int ContextLocalIndex(Error& err);
+  inline PositionInfo MaybePositionInfo(Error& err);
 
-  inline String ContextLocalName(int index, int param_count, int stack_count,
-                                 Error& err);
+  inline String ContextLocalName(int index, Error& err);
   inline HeapObject MaybeFunctionName(Error& err);
 };
 
@@ -482,8 +510,6 @@ class Context : public FixedArray {
 
    private:
     int local_count_;
-    int param_count_;
-    int stack_count_;
     Context* context_;
     ScopeInfo scope_info_;
   };
@@ -572,6 +598,7 @@ class LLV8 {
   constants::JSArray js_array;
   constants::JSFunction js_function;
   constants::SharedInfo shared_info;
+  constants::UncompiledData uncompiled_data;
   constants::Code code;
   constants::ScopeInfo scope_info;
   constants::Context context;
@@ -604,6 +631,7 @@ class LLV8 {
   friend class String;
   friend class Script;
   friend class SharedFunctionInfo;
+  friend class UncompiledData;
   friend class Code;
   friend class JSFunction;
   friend class OneByteString;

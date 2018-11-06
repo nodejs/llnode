@@ -157,14 +157,28 @@ class SharedInfo : public Module {
   int64_t kNameOffset;
   int64_t kInferredNameOffset;
   int64_t kScriptOffset;
+  int64_t kScriptOrDebugInfoOffset;
   int64_t kStartPositionOffset;
   int64_t kEndPositionOffset;
   int64_t kParameterCountOffset;
   int64_t kScopeInfoOffset;
+  int64_t kFunctionDataOffset;
 
   int64_t kStartPositionMask;
   int64_t kStartPositionShift;
   int64_t kEndPositionShift;
+
+ protected:
+  void Load();
+};
+
+class UncompiledData : public Module {
+ public:
+  CONSTANTS_DEFAULT_METHODS(UncompiledData);
+
+  int64_t kInferredNameOffset;
+  int64_t kStartPositionOffset;
+  int64_t kEndPositionOffset;
 
  protected:
   void Load();
@@ -188,6 +202,7 @@ class ScopeInfo : public Module {
   int64_t kParameterCountOffset;
   int64_t kStackLocalCountOffset;
   int64_t kContextLocalCountOffset;
+  bool kEmbeddedParamAndStackLocals;
   int64_t kVariablePartIndex;
 
  protected:
@@ -508,6 +523,8 @@ class Types : public Module {
   int64_t kJSRegExpType;
   int64_t kJSDateType;
   int64_t kSharedFunctionInfoType;
+  int64_t kUncompiledDataWithoutPreParsedScopeType;
+  int64_t kUncompiledDataWithPreParsedScopeType;
   int64_t kScriptType;
   int64_t kScopeInfoType;
   int64_t kSymbolType;

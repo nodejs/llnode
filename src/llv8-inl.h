@@ -12,6 +12,11 @@ inline double LLV8::LoadValue<double>(int64_t addr, Error& err) {
   return LoadDouble(addr, err);
 }
 
+template <>
+inline int32_t LLV8::LoadValue<int32_t>(int64_t addr, Error& err) {
+  return LoadUnsigned(addr, 4, err);
+}
+
 template <class T>
 inline T LLV8::LoadValue(int64_t addr, Error& err) {
   int64_t ptr;
@@ -56,6 +61,11 @@ inline int64_t HeapObject::LoadField(int64_t off, Error& err) {
 
 
 template <>
+inline int32_t HeapObject::LoadFieldValue<int32_t>(int64_t off, Error& err) {
+  return v8()->LoadValue<int32_t>(LeaField(off), err);
+}
+
+template <>
 inline double HeapObject::LoadFieldValue<double>(int64_t off, Error& err) {
   return v8()->LoadValue<double>(LeaField(off), err);
 }
@@ -81,6 +91,54 @@ inline int64_t HeapObject::GetType(Error& err) {
 
   Map map(obj);
   return map.GetType(err);
+}
+
+inline bool Value::IsSmi(Error& err) {
+  Smi smi(*this);
+  return smi.Check();
+}
+
+
+inline bool Value::IsScript(Error& err) {
+  Smi smi(*this);
+  if (smi.Check()) return false;
+
+  HeapObject heap_object(*this);
+  if (!heap_object.Check()) return false;
+
+  int64_t type = heap_object.GetType(err);
+  if (err.Fail()) return false;
+
+  return type == v8()->types()->kScriptType;
+}
+
+
+inline bool Value::IsScopeInfo(Error& err) {
+  Smi smi(*this);
+  if (smi.Check()) return false;
+
+  HeapObject heap_object(*this);
+  if (!heap_object.Check()) return false;
+
+  int64_t type = heap_object.GetType(err);
+  if (err.Fail()) return false;
+
+  return type == v8()->types()->kScopeInfoType;
+}
+
+
+inline bool Value::IsUncompiledData(Error& err) {
+  Smi smi(*this);
+  if (smi.Check()) return false;
+
+  HeapObject heap_object(*this);
+  if (!heap_object.Check()) return false;
+
+  int64_t type = heap_object.GetType(err);
+  if (err.Fail()) return false;
+
+  return type == v8()->types()->kUncompiledDataWithoutPreParsedScopeType ||
+         type == v8()->types()->kUncompiledDataWithPreParsedScopeType;
 }
 
 
@@ -308,14 +366,49 @@ ACCESSOR(Script, LineOffset, script()->kLineOffsetOffset, Smi)
 ACCESSOR(Script, Source, script()->kSourceOffset, HeapObject)
 ACCESSOR(Script, LineEnds, script()->kLineEndsOffset, HeapObject)
 
-ACCESSOR(SharedFunctionInfo, name, shared_info()->kNameOffset, String)
-ACCESSOR(SharedFunctionInfo, InferredName, shared_info()->kInferredNameOffset,
+ACCESSOR(SharedFunctionInfo, function_data, shared_info()->kFunctionDataOffset,
          Value)
-ACCESSOR(SharedFunctionInfo, GetScript, shared_info()->kScriptOffset, Script)
+ACCESSOR(SharedFunctionInfo, name, shared_info()->kNameOffset, String)
+ACCESSOR(SharedFunctionInfo, inferred_name, shared_info()->kInferredNameOffset,
+         Value)
+ACCESSOR(SharedFunctionInfo, script, shared_info()->kScriptOffset, Script)
+ACCESSOR(SharedFunctionInfo, script_or_debug_info,
+         shared_info()->kScriptOrDebugInfoOffset, HeapObject)
 ACCESSOR(SharedFunctionInfo, scope_info, shared_info()->kScopeInfoOffset,
          HeapObject)
 ACCESSOR(SharedFunctionInfo, name_or_scope_info,
          shared_info()->kNameOrScopeInfoOffset, HeapObject)
+
+ACCESSOR(UncompiledData, inferred_name, uncompiled_data()->kInferredNameOffset,
+         Value)
+ACCESSOR(UncompiledData, start_position,
+         uncompiled_data()->kStartPositionOffset, int32_t)
+ACCESSOR(UncompiledData, end_position, uncompiled_data()->kEndPositionOffset,
+         int32_t)
+
+Value SharedFunctionInfo::GetInferredName(Error& err) {
+  if (v8()->uncompiled_data()->kInferredNameOffset == -1)
+    return inferred_name(err);
+
+  HeapObject maybe_scope_info = GetScopeInfo(err);
+  if (!err.Fail()) {
+    ScopeInfo scope_info(maybe_scope_info);
+
+    Value maybe_inferred_name = scope_info.MaybeFunctionName(err);
+    if (!(err.Fail() && String::IsString(v8(), maybe_inferred_name, err)))
+      return maybe_inferred_name;
+  }
+
+  err = Error::Ok();
+  Value maybe_uncompiled_data = function_data(err);
+  if (!maybe_uncompiled_data.IsUncompiledData(err)) {
+    Error::PrintInDebugMode("Couldn't get UncompiledData");
+    return Value();
+  }
+
+  UncompiledData uncompiled_data(maybe_uncompiled_data);
+  return uncompiled_data.inferred_name(err);
+}
 
 HeapObject SharedFunctionInfo::GetScopeInfo(Error& err) {
   if (v8()->shared_info()->kNameOrScopeInfoOffset == -1) return scope_info(err);
@@ -325,6 +418,16 @@ HeapObject SharedFunctionInfo::GetScopeInfo(Error& err) {
 
   err = Error::Failure("Couldn't get ScopeInfo");
   return HeapObject();
+}
+
+Script SharedFunctionInfo::GetScript(Error& err) {
+  if (v8()->shared_info()->kScriptOrDebugInfoOffset == -1) return script(err);
+
+  HeapObject maybe_script = script_or_debug_info(err);
+  if (maybe_script.IsScript(err)) return maybe_script;
+
+  Error::PrintInDebugMode("Couldn't get Script in SharedFunctionInfo");
+  return Script();
 }
 
 String SharedFunctionInfo::Name(Error& err) {
@@ -338,9 +441,12 @@ String SharedFunctionInfo::Name(Error& err) {
 
   if (err.Fail()) return String();
 
-  HeapObject maybe_function_name =
+  Value maybe_function_name =
       ScopeInfo(maybe_scope_info).MaybeFunctionName(err);
-  if (err.Fail()) return String();
+  if (err.Fail()) {
+    err = Error::Ok();
+    return String();
+  }
 
   if (String::IsString(v8(), maybe_function_name, err))
     return maybe_function_name;
@@ -374,17 +480,68 @@ ACCESSOR(JSArrayBufferView, ByteOffset,
 ACCESSOR(JSArrayBufferView, ByteLength,
          js_array_buffer_view()->kByteLengthOffset, Smi)
 
+inline ScopeInfo::PositionInfo ScopeInfo::MaybePositionInfo(Error& err) {
+  ScopeInfo::PositionInfo position_info = {
+      .start_position = 0, .end_position = 0, .is_valid = false};
+  int proper_index = ContextLocalIndex(err);
+  if (err.Fail()) return position_info;
+
+  Smi context_local_count = ContextLocalCount(err);
+  if (err.Fail()) return position_info;
+  proper_index += context_local_count.GetValue() * 2;
+
+  int tries = 5;
+  while (tries > 0 && proper_index < (Length(err).GetValue() - 1)) {
+    err = Error();
+
+    Smi maybe_start_position = Get<Smi>(proper_index, err);
+    if (err.Success() && maybe_start_position.IsSmi(err)) {
+      proper_index++;
+      Smi maybe_end_position = Get<Smi>(proper_index, err);
+      if (err.Success() && maybe_end_position.IsSmi(err)) {
+        position_info.start_position = maybe_start_position.GetValue();
+        position_info.end_position = maybe_end_position.GetValue();
+        position_info.is_valid = true;
+        return position_info;
+      }
+    }
+
+    tries--;
+    proper_index++;
+  }
+  return position_info;
+}
+
 // TODO(indutny): this field is a Smi on 32bit
 inline int64_t SharedFunctionInfo::ParameterCount(Error& err) {
   int64_t field = LoadField(v8()->shared_info()->kParameterCountOffset, err);
   if (err.Fail()) return -1;
 
-  field &= 0xffffffff;
+  field &= 0xffff;
   return field;
 }
 
 // TODO(indutny): this field is a Smi on 32bit
 inline int64_t SharedFunctionInfo::StartPosition(Error& err) {
+  if (v8()->uncompiled_data()->kStartPositionOffset != -1) {
+    Value maybe_scope_info = name_or_scope_info(err);
+    if (err.Fail()) return -1;
+    if (maybe_scope_info.IsScopeInfo(err)) {
+      ScopeInfo scope_info(maybe_scope_info);
+      auto position_info = scope_info.MaybePositionInfo(err);
+      if (err.Fail()) return -1;
+      if (position_info.is_valid) return position_info.start_position;
+    }
+
+    Value maybe_uncompiled_data = function_data(err);
+    if (!maybe_uncompiled_data.IsUncompiledData(err)) {
+      return 0;
+    }
+
+    UncompiledData uncompiled_data(maybe_uncompiled_data);
+    return uncompiled_data.start_position(err);
+  }
+
   int64_t field = LoadField(v8()->shared_info()->kStartPositionOffset, err);
   if (err.Fail()) return -1;
 
@@ -397,6 +554,26 @@ inline int64_t SharedFunctionInfo::StartPosition(Error& err) {
 
 // TODO (hhellyer): as above, this field is different on 32bit.
 inline int64_t SharedFunctionInfo::EndPosition(Error& err) {
+  if (v8()->uncompiled_data()->kEndPositionOffset != -1) {
+    Value maybe_scope_info = name_or_scope_info(err);
+    if (err.Fail()) return -1;
+    if (maybe_scope_info.IsScopeInfo(err)) {
+      ScopeInfo scope_info(maybe_scope_info);
+      auto position_info = scope_info.MaybePositionInfo(err);
+      if (err.Fail()) return -1;
+      if (position_info.is_valid) return position_info.end_position;
+    }
+
+    Value maybe_uncompiled_data = function_data(err);
+    if (!maybe_uncompiled_data.IsUncompiledData(err)) {
+      err = Error::Failure("Couldn't get ScopeInfo");
+      return -1;
+    }
+
+    UncompiledData uncompiled_data(maybe_uncompiled_data);
+    return uncompiled_data.end_position(err);
+  }
+
   int64_t field = LoadField(v8()->shared_info()->kEndPositionOffset, err);
   if (err.Fail()) return -1;
 
@@ -657,6 +834,9 @@ inline Smi ScopeInfo::ParameterCount(Error& err) {
 }
 
 inline Smi ScopeInfo::StackLocalCount(Error& err) {
+  if (v8()->scope_info()->kStackLocalCountOffset == -1) {
+    return Smi(v8(), 0);
+  }
   return FixedArray::Get<Smi>(v8()->scope_info()->kStackLocalCountOffset, err);
 }
 
@@ -665,24 +845,41 @@ inline Smi ScopeInfo::ContextLocalCount(Error& err) {
                               err);
 }
 
-inline String ScopeInfo::ContextLocalName(int index, int param_count,
-                                          int stack_count, Error& err) {
-  int proper_index = index + stack_count + 1 + param_count;
-  proper_index += v8()->scope_info()->kVariablePartIndex;
+inline int ScopeInfo::ContextLocalIndex(Error& err) {
+  int context_local_index = v8()->scope_info()->kVariablePartIndex;
+
+  if (v8()->scope_info()->kEmbeddedParamAndStackLocals) {
+    Smi param_count = ParameterCount(err);
+    if (err.Fail()) return -1;
+    context_local_index += param_count.GetValue() + 1;
+
+    Smi stack_local = StackLocalCount(err);
+    if (err.Fail()) return -1;
+    context_local_index += stack_local.GetValue();
+  }
+  return context_local_index;
+}
+
+inline String ScopeInfo::ContextLocalName(int index, Error& err) {
+  int proper_index = ContextLocalIndex(err) + index;
+  if (err.Fail()) return String();
   return FixedArray::Get<String>(proper_index, err);
 }
 
 inline HeapObject ScopeInfo::MaybeFunctionName(Error& err) {
-  int proper_index = v8()->scope_info()->kVariablePartIndex +
-                     ParameterCount(err).GetValue() + 1 +
-                     StackLocalCount(err).GetValue() +
-                     (ContextLocalCount(err).GetValue() * 2);
+  int proper_index = ContextLocalIndex(err);
+  if (err.Fail()) return HeapObject();
+
+  Smi context_local_count = ContextLocalCount(err);
+  if (err.Fail()) return HeapObject();
+  proper_index += context_local_count.GetValue() * 2;
+
   // NOTE(mmarchini): FunctionName can be stored either in the first, second or
   // third slot after ContextLocalCount. Since there are missing postmortem
   // metadata to determine in which slot its being stored for the present
   // ScopeInfo, we try to find it heuristically.
   int tries = 3;
-  while (tries > 0) {
+  while (tries > 0 && proper_index < Length(err).GetValue()) {
     err = Error();
 
     HeapObject maybe_function_name =
