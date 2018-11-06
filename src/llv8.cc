@@ -785,12 +785,6 @@ HeapObject Map::Constructor(Error& err) {
   return current;
 }
 
-template <class T>
-T JSObject::GetInObjectValue(int64_t size, int index, Error& err) {
-  return LoadFieldValue<T>(size + index * v8()->common()->kPointerSize, err);
-}
-
-
 /* Returns the set of keys on an object - similar to Object.keys(obj) in
  * Javascript. That includes array indices but not special fields like
  * "length" on an array.

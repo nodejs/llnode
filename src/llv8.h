@@ -246,7 +246,7 @@ class JSObject : public HeapObject {
  protected:
   friend class llnode::Printer;
   template <class T>
-  T GetInObjectValue(int64_t size, int index, Error& err);
+  inline T GetInObjectValue(int64_t size, int index, Error& err);
   void ElementKeys(std::vector<std::string>& keys, Error& err);
   void DictionaryKeys(std::vector<std::string>& keys, Error& err);
   void DescriptorKeys(std::vector<std::string>& keys, Map map, Error& err);

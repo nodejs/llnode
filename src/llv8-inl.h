@@ -240,6 +240,13 @@ inline bool JSObject::IsObjectType(LLV8* v8, int64_t type) {
          type == v8->types()->kJSSpecialAPIObjectType;
 }
 
+template <class T>
+inline T JSObject::GetInObjectValue(int64_t size, int index, Error& err) {
+  return LoadFieldValue<T>(size + index * v8()->common()->kPointerSize, err);
+}
+
+
+
 ACCESSOR(HeapNumber, GetValue, heap_number()->kValueOffset, double)
 
 ACCESSOR(JSArray, Length, js_array()->kLengthOffset, Smi)
