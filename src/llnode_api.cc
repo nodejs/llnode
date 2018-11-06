@@ -13,10 +13,10 @@
 #include <algorithm>
 #include <cstring>
 
-#include "src/printer.h"
 #include "src/llnode_api.h"
 #include "src/llscan.h"
 #include "src/llv8.h"
+#include "src/printer.h"
 
 namespace llnode {
 

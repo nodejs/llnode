@@ -6,8 +6,8 @@
 #include <set>
 
 #include "src/error.h"
-#include "src/printer.h"
 #include "src/llnode.h"
+#include "src/printer.h"
 
 namespace llnode {
 

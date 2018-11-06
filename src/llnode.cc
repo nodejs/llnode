@@ -10,11 +10,11 @@
 #include <lldb/API/SBExpressionOptions.h>
 
 #include "src/error.h"
-#include "src/printer.h"
 #include "src/llnode.h"
 #include "src/llscan.h"
 #include "src/llv8.h"
 #include "src/node-inl.h"
+#include "src/printer.h"
 #include "src/settings.h"
 
 namespace llnode {

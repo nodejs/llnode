@@ -2,8 +2,8 @@
 #include <sstream>
 
 #include "deps/rang/include/rang.hpp"
-#include "src/printer.h"
 #include "src/llv8-inl.h"
+#include "src/printer.h"
 
 namespace llnode {
 
@@ -537,7 +537,8 @@ std::string Printer::Stringify(v8::Map map, Error& err) {
 }
 
 template <>
-std::string Printer::StringifyAllProperties(v8::JSObject js_object, Error& err) {
+std::string Printer::StringifyAllProperties(v8::JSObject js_object,
+                                            Error& err) {
   std::string res = std::string();
   // Print properties in detailed mode
   if (options_.detailed) {
@@ -656,8 +657,6 @@ std::string Printer::StringifyAllProperties(v8::JSError js_error, Error& err) {
 }
 
 
-
-
 template <typename T = v8::JSObject, typename Actual>
 std::string Printer::Stringify(T js_object, Error& err) {
   v8::HeapObject map_obj = js_object.GetMap(err);
@@ -683,8 +682,8 @@ std::string Printer::Stringify(T js_object, Error& err) {
   if (err.Fail()) return std::string();
 
   // Print properties in detailed mode
-  output << StringifyAllProperties<Actual>(js_object, err) << rang::fg::yellow << ">"
-         << rang::fg::reset;
+  output << StringifyAllProperties<Actual>(js_object, err) << rang::fg::yellow
+         << ">" << rang::fg::reset;
   return output.str();
 }
 

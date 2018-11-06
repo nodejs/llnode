@@ -246,7 +246,6 @@ inline T JSObject::GetInObjectValue(int64_t size, int index, Error& err) {
 }
 
 
-
 ACCESSOR(HeapNumber, GetValue, heap_number()->kValueOffset, double)
 
 ACCESSOR(JSArray, Length, js_array()->kLengthOffset, Smi)

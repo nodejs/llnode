@@ -52,17 +52,20 @@ class Printer {
   std::string StringifyAllProperties(T value, Error& err);
 
   std::string StringifyElements(v8::JSObject js_obj, Error& err);
-  std::string StringifyElements(v8::JSObject js_obj, int64_t length, Error& err);
+  std::string StringifyElements(v8::JSObject js_obj, int64_t length,
+                                Error& err);
   std::string StringifyDictionary(v8::JSObject js_obj, Error& err);
-  std::string StringifyDescriptors(v8::JSObject js_obj, v8::Map map, Error& err);
+  std::string StringifyDescriptors(v8::JSObject js_obj, v8::Map map,
+                                   Error& err);
 
 
   // FixedArray Specific Methods
   std::string StringifyContents(v8::FixedArray fixed_array, int length,
-                              Error& err);
+                                Error& err);
 
   // JSFrame Specific Methods
-  std::string StringifyArgs(v8::JSFrame js_frame, v8::JSFunction fn, Error& err);
+  std::string StringifyArgs(v8::JSFrame js_frame, v8::JSFunction fn,
+                            Error& err);
 
  private:
   v8::LLV8* llv8_;
