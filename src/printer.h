@@ -10,11 +10,11 @@
 
 namespace llnode {
 
-class Inspector {
+class Printer {
  public:
-  class InspectOptions {
+  class PrinterOptions {
    public:
-    InspectOptions()
+    PrinterOptions()
         : detailed(false),
           print_map(false),
           print_source(false),
@@ -37,36 +37,36 @@ class Inspector {
     bool with_args;
   };
 
-  Inspector(v8::LLV8* llv8) : llv8_(llv8), options_(){};
-  Inspector(v8::LLV8* llv8, const InspectOptions options)
+  Printer(v8::LLV8* llv8) : llv8_(llv8), options_(){};
+  Printer(v8::LLV8* llv8, const PrinterOptions options)
       : llv8_(llv8), options_(options){};
 
   template <typename T, typename Actual = T>
-  std::string Inspect(T value, Error& err);
+  std::string Stringify(T value, Error& err);
 
   // JSObject Specific Methods
-  std::string InspectInternalFields(v8::JSObject js_obj, Error& err);
-  std::string InspectProperties(v8::JSObject js_obj, Error& err);
+  std::string StringifyInternalFields(v8::JSObject js_obj, Error& err);
+  std::string StringifyProperties(v8::JSObject js_obj, Error& err);
 
   template <typename T>
-  std::string InspectAllProperties(T value, Error& err);
+  std::string StringifyAllProperties(T value, Error& err);
 
-  std::string InspectElements(v8::JSObject js_obj, Error& err);
-  std::string InspectElements(v8::JSObject js_obj, int64_t length, Error& err);
-  std::string InspectDictionary(v8::JSObject js_obj, Error& err);
-  std::string InspectDescriptors(v8::JSObject js_obj, v8::Map map, Error& err);
+  std::string StringifyElements(v8::JSObject js_obj, Error& err);
+  std::string StringifyElements(v8::JSObject js_obj, int64_t length, Error& err);
+  std::string StringifyDictionary(v8::JSObject js_obj, Error& err);
+  std::string StringifyDescriptors(v8::JSObject js_obj, v8::Map map, Error& err);
 
 
   // FixedArray Specific Methods
-  std::string InspectContents(v8::FixedArray fixed_array, int length,
+  std::string StringifyContents(v8::FixedArray fixed_array, int length,
                               Error& err);
 
   // JSFrame Specific Methods
-  std::string InspectArgs(v8::JSFrame js_frame, v8::JSFunction fn, Error& err);
+  std::string StringifyArgs(v8::JSFrame js_frame, v8::JSFunction fn, Error& err);
 
  private:
   v8::LLV8* llv8_;
-  const InspectOptions options_;
+  const PrinterOptions options_;
 };
 
 }  // namespace llnode

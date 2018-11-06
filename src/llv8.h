@@ -17,7 +17,7 @@ class Environment;
 }
 }  // namespace node
 
-class Inspector;
+class Printer;
 class FindJSObjectsVisitor;
 class FindReferencesCmd;
 class FindObjectsCmd;
@@ -244,7 +244,7 @@ class JSObject : public HeapObject {
   static inline bool IsObjectType(LLV8* v8, int64_t type);
 
  protected:
-  friend class llnode::Inspector;
+  friend class llnode::Printer;
   template <class T>
   T GetInObjectValue(int64_t size, int index, Error& err);
   void ElementKeys(std::vector<std::string>& keys, Error& err);
@@ -407,7 +407,7 @@ class Context : public FixedArray {
   };
 
  private:
-  friend class llnode::Inspector;
+  friend class llnode::Printer;
   inline JSFunction Closure(Error& err);
 };
 
@@ -456,7 +456,7 @@ class JSFrame : public Value {
 
  private:
   Smi FromFrameMarker(Value value) const;
-  friend class llnode::Inspector;
+  friend class llnode::Printer;
 };
 
 class LLV8 {
@@ -545,7 +545,7 @@ class LLV8 {
   friend class JSRegExp;
   friend class JSDate;
   friend class CodeMap;
-  friend class llnode::Inspector;
+  friend class llnode::Printer;
   friend class llnode::FindJSObjectsVisitor;
   friend class llnode::FindObjectsCmd;
   friend class llnode::FindReferencesCmd;

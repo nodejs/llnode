@@ -10,7 +10,7 @@
 #include <lldb/API/SBExpressionOptions.h>
 
 #include "src/error.h"
-#include "src/inspector.h"
+#include "src/printer.h"
 #include "src/llnode.h"
 #include "src/llscan.h"
 #include "src/llv8.h"
@@ -72,8 +72,8 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
     if (!frame.GetSymbol().IsValid()) {
       Error err;
       v8::JSFrame v8_frame(llv8_, static_cast<int64_t>(frame.GetFP()));
-      Inspector inspector(llv8_);
-      std::string res = inspector.Inspect(v8_frame, err);
+      Printer printer(llv8_);
+      std::string res = printer.Stringify(v8_frame, err);
       if (err.Success()) {
         result.Printf("  %c frame #%u: 0x%016" PRIx64 " %s\n", star, i, pc,
                       res.c_str());
@@ -154,11 +154,11 @@ bool PrintCmd::DoExecute(SBDebugger d, char** cmd,
     return false;
   }
 
-  Inspector::InspectOptions inspect_options;
+  Printer::PrinterOptions printer_options;
 
-  inspect_options.detailed = detailed_;
+  printer_options.detailed = detailed_;
 
-  char** start = ParseInspectOptions(cmd, &inspect_options);
+  char** start = ParsePrinterOptions(cmd, &printer_options);
 
   std::string full_cmd;
   for (; start != nullptr && *start != nullptr; start++) full_cmd += *start;
@@ -179,8 +179,8 @@ bool PrintCmd::DoExecute(SBDebugger d, char** cmd,
 
   v8::Value v8_value(llv8_, value.GetValueAsSigned());
   Error err;
-  Inspector inspector(llv8_, inspect_options);
-  std::string res = inspector.Inspect(v8_value, err);
+  Printer printer(llv8_, printer_options);
+  std::string res = printer.Stringify(v8_value, err);
   if (err.Fail()) {
     result.SetError(err.GetMessage());
     return false;
@@ -315,8 +315,8 @@ bool WorkqueueCmd::DoExecute(SBDebugger d, char** cmd,
 std::string GetActiveHandlesCmd::GetResultMessage(node::Environment* env,
                                                   Error& err) {
   int active_handles = 0;
-  Inspector::InspectOptions inspect_options;
-  inspect_options.detailed = true;
+  Printer::PrinterOptions printer_options;
+  printer_options.detailed = true;
   std::ostringstream result_message;
 
   for (auto w : env->handle_wrap_queue()) {
@@ -328,8 +328,8 @@ std::string GetActiveHandlesCmd::GetResultMessage(node::Environment* env,
     if (err.Fail()) break;
 
     v8::JSObject v8_object(llv8(), raw_object);
-    Inspector inspector(llv8(), inspect_options);
-    std::string res = inspector.Inspect(v8_object, err);
+    Printer printer(llv8(), printer_options);
+    std::string res = printer.Stringify(v8_object, err);
     if (err.Fail()) {
       Error::PrintInDebugMode("Failed to load object at address %" PRIx64,
                               raw_object);
@@ -348,8 +348,8 @@ std::string GetActiveHandlesCmd::GetResultMessage(node::Environment* env,
 std::string GetActiveRequestsCmd::GetResultMessage(node::Environment* env,
                                                    Error& err) {
   int active_requests = 0;
-  Inspector::InspectOptions inspect_options;
-  inspect_options.detailed = true;
+  Printer::PrinterOptions printer_options;
+  printer_options.detailed = true;
   std::ostringstream result_message;
 
   for (auto w : env->req_wrap_queue()) {
@@ -361,8 +361,8 @@ std::string GetActiveRequestsCmd::GetResultMessage(node::Environment* env,
     if (err.Fail()) break;
 
     v8::JSObject v8_object(llv8(), raw_object);
-    Inspector inspector(llv8(), inspect_options);
-    std::string res = inspector.Inspect(v8_object, err);
+    Printer printer(llv8(), printer_options);
+    std::string res = printer.Stringify(v8_object, err);
     if (err.Fail()) {
       Error::PrintInDebugMode("Failed to load object at address %" PRIx64,
                               raw_object);

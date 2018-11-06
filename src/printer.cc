@@ -2,23 +2,23 @@
 #include <sstream>
 
 #include "deps/rang/include/rang.hpp"
-#include "src/inspector.h"
+#include "src/printer.h"
 #include "src/llv8-inl.h"
 
 namespace llnode {
 
 // Forward declarations
 template <>
-std::string Inspector::Inspect(v8::Context ctx, Error& err);
+std::string Printer::Stringify(v8::Context ctx, Error& err);
 
 template <>
-std::string Inspector::Inspect(v8::Value value, Error& err);
+std::string Printer::Stringify(v8::Value value, Error& err);
 
 template <>
-std::string Inspector::Inspect(v8::HeapObject heap_object, Error& err);
+std::string Printer::Stringify(v8::HeapObject heap_object, Error& err);
 
 template <>
-std::string Inspector::Inspect(v8::JSFrame js_frame, Error& err) {
+std::string Printer::Stringify(v8::JSFrame js_frame, Error& err) {
   v8::Value context = llv8_->LoadValue<v8::Value>(
       js_frame.raw() + llv8_->frame()->kContextOffset, err);
   if (err.Fail()) return std::string();
@@ -67,7 +67,7 @@ std::string Inspector::Inspect(v8::JSFrame js_frame, Error& err) {
 
   std::string args;
   if (options_.with_args) {
-    args = InspectArgs(js_frame, fn, err);
+    args = StringifyArgs(js_frame, fn, err);
     if (err.Fail()) return std::string();
   }
 
@@ -78,7 +78,7 @@ std::string Inspector::Inspect(v8::JSFrame js_frame, Error& err) {
 
 
 template <>
-std::string Inspector::Inspect(v8::JSFunction js_function, Error& err) {
+std::string Printer::Stringify(v8::JSFunction js_function, Error& err) {
   std::string res =
       "<function: " + js_function.GetDebugLine(std::string(), err);
 
@@ -98,11 +98,11 @@ std::string Inspector::Inspect(v8::JSFunction js_function, Error& err) {
     res = ss.str();
 
     {
-      InspectOptions ctx_options;
+      PrinterOptions ctx_options;
       ctx_options.detailed = true;
       ctx_options.indent_depth = options_.indent_depth + 1;
-      Inspector inspector(llv8_, ctx_options);
-      std::string context_str = inspector.Inspect(context, err);
+      Printer printer(llv8_, ctx_options);
+      std::string context_str = printer.Stringify(context, err);
       if (err.Fail()) return std::string();
 
       if (!context_str.empty()) res += ":" + context_str;
@@ -135,7 +135,7 @@ std::string Inspector::Inspect(v8::JSFunction js_function, Error& err) {
 
 
 template <>
-std::string Inspector::Inspect(v8::JSDate js_date, Error& err) {
+std::string Printer::Stringify(v8::JSDate js_date, Error& err) {
   std::string pre = "<JSDate: ";
 
   v8::Value val = js_date.GetValue(err);
@@ -167,7 +167,7 @@ std::string Inspector::Inspect(v8::JSDate js_date, Error& err) {
 }
 
 template <>
-std::string Inspector::Inspect(v8::Smi smi, Error& err) {
+std::string Printer::Stringify(v8::Smi smi, Error& err) {
   std::stringstream ss;
   ss << rang::fg::yellow << "<Smi: " + smi.ToString(err) + ">"
      << rang::fg::reset;
@@ -175,7 +175,7 @@ std::string Inspector::Inspect(v8::Smi smi, Error& err) {
 }
 
 template <>
-std::string Inspector::Inspect(v8::HeapNumber heap_number, Error& err) {
+std::string Printer::Stringify(v8::HeapNumber heap_number, Error& err) {
   std::stringstream ss;
   ss << rang::fg::yellow << "<Number: " + heap_number.ToString(true, err) + ">"
      << rang::fg::reset;
@@ -183,7 +183,7 @@ std::string Inspector::Inspect(v8::HeapNumber heap_number, Error& err) {
 }
 
 template <>
-std::string Inspector::Inspect(v8::String str, Error& err) {
+std::string Printer::Stringify(v8::String str, Error& err) {
   std::string val = str.ToString(err);
   if (err.Fail()) return std::string();
 
@@ -198,7 +198,7 @@ std::string Inspector::Inspect(v8::String str, Error& err) {
 
 
 template <>
-std::string Inspector::Inspect(v8::FixedArray fixed_array, Error& err) {
+std::string Printer::Stringify(v8::FixedArray fixed_array, Error& err) {
   v8::Smi length_smi = fixed_array.Length(err);
   if (err.Fail()) return std::string();
 
@@ -209,7 +209,7 @@ std::string Inspector::Inspect(v8::FixedArray fixed_array, Error& err) {
     std::stringstream ss;
     ss << rang::fg::magenta << res;
     std::string contents =
-        InspectContents(fixed_array, length_smi.GetValue(), err);
+        StringifyContents(fixed_array, length_smi.GetValue(), err);
     if (!contents.empty()) {
       ss << " contents" << rang::fg::reset << "={\n" + contents + "}";
       res = ss.str();
@@ -225,7 +225,7 @@ std::string Inspector::Inspect(v8::FixedArray fixed_array, Error& err) {
 
 
 template <>
-std::string Inspector::Inspect(v8::Context ctx, Error& err) {
+std::string Printer::Stringify(v8::Context ctx, Error& err) {
   // Not enough postmortem information, return bare minimum
   if (llv8_->shared_info()->kScopeInfoOffset == -1 &&
       llv8_->shared_info()->kNameOrScopeInfoOffset == -1)
@@ -272,8 +272,8 @@ std::string Inspector::Inspect(v8::Context ctx, Error& err) {
        << rang::fg::reset << " {";
     res += ss.str();
 
-    Inspector inspector(llv8_);
-    res += inspector.Inspect(closure, err) + "}";
+    Printer printer(llv8_);
+    res += printer.Stringify(closure, err) + "}";
     if (err.Fail()) return std::string();
   } else {
     // Scope for string stream
@@ -319,8 +319,8 @@ std::string Inspector::Inspect(v8::Context ctx, Error& err) {
     v8::Value value = it.GetValue(err);
     if (err.Fail()) return std::string();
 
-    Inspector inspector(llv8_);
-    res += inspector.Inspect(value, err);
+    Printer printer(llv8_);
+    res += printer.Stringify(value, err);
     if (err.Fail()) return std::string();
   }
 
@@ -329,7 +329,7 @@ std::string Inspector::Inspect(v8::Context ctx, Error& err) {
 
 
 template <>
-std::string Inspector::Inspect(v8::Oddball oddball, Error& err) {
+std::string Printer::Stringify(v8::Oddball oddball, Error& err) {
   v8::Smi kind = oddball.Kind(err);
   if (err.Fail()) return std::string();
 
@@ -358,7 +358,7 @@ std::string Inspector::Inspect(v8::Oddball oddball, Error& err) {
 }
 
 template <>
-std::string Inspector::Inspect(v8::JSArrayBuffer js_array_buffer, Error& err) {
+std::string Printer::Stringify(v8::JSArrayBuffer js_array_buffer, Error& err) {
   bool neutered = js_array_buffer.WasNeutered(err);
   if (err.Fail()) return std::string();
 
@@ -413,7 +413,7 @@ std::string Inspector::Inspect(v8::JSArrayBuffer js_array_buffer, Error& err) {
 
 
 template <>
-std::string Inspector::Inspect(v8::JSArrayBufferView js_array_buffer_view,
+std::string Printer::Stringify(v8::JSArrayBufferView js_array_buffer_view,
                                Error& err) {
   v8::JSArrayBuffer buf = js_array_buffer_view.Buffer(err);
   if (err.Fail()) return std::string();
@@ -489,7 +489,7 @@ std::string Inspector::Inspect(v8::JSArrayBufferView js_array_buffer_view,
 
 
 template <>
-std::string Inspector::Inspect(v8::Map map, Error& err) {
+std::string Printer::Stringify(v8::Map map, Error& err) {
   v8::HeapObject descriptors_obj = map.InstanceDescriptors(err);
   if (err.Fail()) return std::string();
 
@@ -532,13 +532,12 @@ std::string Inspector::Inspect(v8::Map map, Error& err) {
   v8::DescriptorArray descriptors(descriptors_obj);
   if (err.Fail()) return std::string();
 
-  return std::string(tmp) + ":" + Inspect<v8::FixedArray>(descriptors, err) +
+  return std::string(tmp) + ":" + Stringify<v8::FixedArray>(descriptors, err) +
          ">";
 }
 
-
 template <>
-std::string Inspector::InspectAllProperties(v8::JSObject value, Error& err) {
+std::string Printer::StringifyAllProperties(v8::JSObject js_object, Error& err) {
   std::string res = std::string();
   // Print properties in detailed mode
   if (options_.detailed) {
@@ -546,10 +545,10 @@ std::string Inspector::InspectAllProperties(v8::JSObject value, Error& err) {
     ss << rang::fg::magenta << res << rang::fg::reset;
     res = ss.str();
 
-    res += " " + InspectProperties(value, err);
+    res += " " + StringifyProperties(js_object, err);
     if (err.Fail()) return std::string();
 
-    std::string fields = InspectInternalFields(value, err);
+    std::string fields = StringifyInternalFields(js_object, err);
     if (err.Fail()) return std::string();
 
     if (!fields.empty()) {
@@ -571,17 +570,17 @@ std::string Inspector::InspectAllProperties(v8::JSObject value, Error& err) {
 }
 
 template <>
-std::string Inspector::InspectAllProperties(v8::JSError value, Error& err) {
-  std::string res = InspectAllProperties(v8::JSObject(value), err);
+std::string Printer::StringifyAllProperties(v8::JSError js_error, Error& err) {
+  std::string res = StringifyAllProperties(v8::JSObject(js_error), err);
   if (options_.detailed) {
-    InspectOptions simple;
+    PrinterOptions simple;
 
     // TODO (mmarchini): once we have Symbol support we'll need to search for
     // <unnamed symbol>, since the stack symbol doesn't have an external name.
     // In the future we can add postmortem metadata on V8 regarding existing
     // symbols, but for now we'll use an heuristic to find the stack in the
     // error object.
-    v8::Value maybe_stack = value.GetProperty("<non-string>", err);
+    v8::Value maybe_stack = js_error.GetProperty("<non-string>", err);
 
     if (err.Fail()) {
       Error::PrintInDebugMode(
@@ -646,8 +645,8 @@ std::string Inspector::InspectAllProperties(v8::JSError value, Error& err) {
         continue;
       }
 
-      Inspector inspector(llv8_);
-      error_stack << "    " << inspector.Inspect(v8::HeapObject(maybe_fn), err)
+      Printer printer(llv8_);
+      error_stack << "    " << printer.Stringify(v8::HeapObject(maybe_fn), err)
                   << std::endl;
     }
     error_stack << "  }";
@@ -660,7 +659,7 @@ std::string Inspector::InspectAllProperties(v8::JSError value, Error& err) {
 
 
 template <typename T = v8::JSObject, typename Actual>
-std::string Inspector::Inspect(T js_object, Error& err) {
+std::string Printer::Stringify(T js_object, Error& err) {
   v8::HeapObject map_obj = js_object.GetMap(err);
   if (err.Fail()) return std::string();
 
@@ -684,13 +683,13 @@ std::string Inspector::Inspect(T js_object, Error& err) {
   if (err.Fail()) return std::string();
 
   // Print properties in detailed mode
-  output << InspectAllProperties<Actual>(js_object, err) << rang::fg::yellow << ">"
+  output << StringifyAllProperties<Actual>(js_object, err) << rang::fg::yellow << ">"
          << rang::fg::reset;
   return output.str();
 }
 
 template <>
-std::string Inspector::Inspect(v8::JSArray js_array, Error& err) {
+std::string Printer::Stringify(v8::JSArray js_array, Error& err) {
   int64_t length = js_array.GetArrayLength(err);
   if (err.Fail()) return std::string();
 
@@ -698,7 +697,7 @@ std::string Inspector::Inspect(v8::JSArray js_array, Error& err) {
 
   if (options_.detailed) {
     int64_t display_length = std::min<int64_t>(length, options_.length);
-    std::string elems = InspectElements(js_array, display_length, err);
+    std::string elems = StringifyElements(js_array, display_length, err);
     if (err.Fail()) return std::string();
 
     std::stringstream ss;
@@ -717,10 +716,9 @@ std::string Inspector::Inspect(v8::JSArray js_array, Error& err) {
 
 
 template <>
-std::string Inspector::Inspect(v8::JSRegExp regexp, Error& err) {
+std::string Printer::Stringify(v8::JSRegExp regexp, Error& err) {
   if (llv8_->js_regexp()->kSourceOffset == -1)
-    return Inspect<v8::JSObject>(regexp, err);
-  // return v8::JSObject::Inspect(options, err);
+    return Stringify<v8::JSObject>(regexp, err);
 
   std::string res = "<JSRegExp ";
 
@@ -735,7 +733,7 @@ std::string Inspector::Inspect(v8::JSRegExp regexp, Error& err) {
     ss << rang::fg::magenta << res << rang::fg::reset;
     res = ss.str();
 
-    res += " " + InspectProperties(regexp, err);
+    res += " " + StringifyProperties(regexp, err);
     res += ">";
     if (err.Fail()) return std::string();
   } else {
@@ -747,7 +745,7 @@ std::string Inspector::Inspect(v8::JSRegExp regexp, Error& err) {
 }
 
 template <>
-std::string Inspector::Inspect(v8::HeapObject heap_object, Error& err) {
+std::string Printer::Stringify(v8::HeapObject heap_object, Error& err) {
   int64_t type = heap_object.GetType(err);
   if (err.Fail()) return std::string();
 
@@ -786,73 +784,73 @@ std::string Inspector::Inspect(v8::HeapObject heap_object, Error& err) {
   }
   if (type == llv8_->types()->kMapType) {
     v8::Map m(heap_object);
-    return pre + Inspect(m, err);
+    return pre + Stringify(m, err);
   }
 
   if (heap_object.IsJSErrorType(err)) {
     v8::JSError error(heap_object);
-    return pre + Inspect<v8::JSObject, v8::JSError>(error, err);
+    return pre + Stringify<v8::JSObject, v8::JSError>(error, err);
   }
 
   if (v8::JSObject::IsObjectType(llv8_, type)) {
     v8::JSObject o(heap_object);
-    return pre + Inspect(o, err);
+    return pre + Stringify(o, err);
   }
 
   if (type == llv8_->types()->kHeapNumberType) {
     v8::HeapNumber n(heap_object);
-    return pre + Inspect(n, err);
+    return pre + Stringify(n, err);
   }
 
   if (type == llv8_->types()->kJSArrayType) {
     v8::JSArray arr(heap_object);
-    return pre + Inspect(arr, err);
+    return pre + Stringify(arr, err);
   }
 
   if (type == llv8_->types()->kOddballType) {
     v8::Oddball o(heap_object);
-    return pre + Inspect(o, err);
+    return pre + Stringify(o, err);
   }
 
   if (type == llv8_->types()->kJSFunctionType) {
     v8::JSFunction fn(heap_object);
-    return pre + Inspect(fn, err);
+    return pre + Stringify(fn, err);
   }
 
   if (type == llv8_->types()->kJSRegExpType) {
     v8::JSRegExp re(heap_object);
-    return pre + Inspect(re, err);
+    return pre + Stringify(re, err);
   }
 
   if (type < llv8_->types()->kFirstNonstringType) {
     v8::String str(heap_object);
-    return pre + Inspect(str, err);
+    return pre + Stringify(str, err);
   }
 
   if (type >= llv8_->types()->kFirstContextType &&
       type <= llv8_->types()->kLastContextType) {
     v8::Context ctx(heap_object);
-    return pre + Inspect(ctx, err);
+    return pre + Stringify(ctx, err);
   }
 
   if (type == llv8_->types()->kFixedArrayType) {
     v8::FixedArray arr(heap_object);
-    return pre + Inspect(arr, err);
+    return pre + Stringify(arr, err);
   }
 
   if (type == llv8_->types()->kJSArrayBufferType) {
     v8::JSArrayBuffer buf(heap_object);
-    return pre + Inspect(buf, err);
+    return pre + Stringify(buf, err);
   }
 
   if (type == llv8_->types()->kJSTypedArrayType) {
     v8::JSArrayBufferView view(heap_object);
-    return pre + Inspect(view, err);
+    return pre + Stringify(view, err);
   }
 
   if (type == llv8_->types()->kJSDateType) {
     v8::JSDate date(heap_object);
-    return pre + Inspect(date, err);
+    return pre + Stringify(date, err);
   }
 
   Error::PrintInDebugMode("Unknown HeapObject Type %" PRId64 " at 0x%016" PRIx64
@@ -865,9 +863,9 @@ std::string Inspector::Inspect(v8::HeapObject heap_object, Error& err) {
 }
 
 template <>
-std::string Inspector::Inspect(v8::Value value, Error& err) {
+std::string Printer::Stringify(v8::Value value, Error& err) {
   v8::Smi smi(value);
-  if (smi.Check()) return Inspect(smi, err);
+  if (smi.Check()) return Stringify(smi, err);
 
   v8::HeapObject obj(value);
   if (!obj.Check()) {
@@ -875,10 +873,10 @@ std::string Inspector::Inspect(v8::Value value, Error& err) {
     return std::string();
   }
 
-  return Inspect(obj, err);
+  return Stringify(obj, err);
 }
 
-std::string Inspector::InspectInternalFields(v8::JSObject js_object,
+std::string Printer::StringifyInternalFields(v8::JSObject js_object,
                                              Error& err) {
   v8::HeapObject map_obj = js_object.GetMap(err);
   if (err.Fail()) return std::string();
@@ -925,10 +923,10 @@ std::string Inspector::InspectInternalFields(v8::JSObject js_object,
 }
 
 
-std::string Inspector::InspectProperties(v8::JSObject js_object, Error& err) {
+std::string Printer::StringifyProperties(v8::JSObject js_object, Error& err) {
   std::string res;
 
-  std::string elems = InspectElements(js_object, err);
+  std::string elems = StringifyElements(js_object, err);
   if (err.Fail()) return std::string();
 
   if (!elems.empty()) {
@@ -949,9 +947,9 @@ std::string Inspector::InspectProperties(v8::JSObject js_object, Error& err) {
   if (err.Fail()) return std::string();
 
   if (is_dict)
-    props = InspectDictionary(js_object, err);
+    props = StringifyDictionary(js_object, err);
   else
-    props = InspectDescriptors(js_object, map, err);
+    props = StringifyDescriptors(js_object, map, err);
 
   if (err.Fail()) return std::string();
 
@@ -967,7 +965,7 @@ std::string Inspector::InspectProperties(v8::JSObject js_object, Error& err) {
   return res;
 }
 
-std::string Inspector::InspectElements(v8::JSObject js_object, Error& err) {
+std::string Printer::StringifyElements(v8::JSObject js_object, Error& err) {
   v8::HeapObject elements_obj = js_object.Elements(err);
   if (err.Fail()) return std::string();
 
@@ -977,17 +975,17 @@ std::string Inspector::InspectElements(v8::JSObject js_object, Error& err) {
   if (err.Fail()) return std::string();
 
   int64_t length = length_smi.GetValue();
-  return InspectElements(js_object, length, err);
+  return StringifyElements(js_object, length, err);
 }
 
 
-std::string Inspector::InspectElements(v8::JSObject js_object, int64_t length,
+std::string Printer::StringifyElements(v8::JSObject js_object, int64_t length,
                                        Error& err) {
   v8::HeapObject elements_obj = js_object.Elements(err);
   if (err.Fail()) return std::string();
   v8::FixedArray elements(elements_obj);
 
-  Inspector inspector(llv8_);
+  Printer printer(llv8_);
 
   std::string res;
   for (int64_t i = 0; i < length; i++) {
@@ -1008,14 +1006,14 @@ std::string Inspector::InspectElements(v8::JSObject js_object, int64_t length,
        << "=";
     res += ss.str();
 
-    res += inspector.Inspect(value, err);
+    res += printer.Stringify(value, err);
     if (err.Fail()) return std::string();
   }
 
   return res;
 }
 
-std::string Inspector::InspectDictionary(v8::JSObject js_object, Error& err) {
+std::string Printer::StringifyDictionary(v8::JSObject js_object, Error& err) {
   v8::HeapObject dictionary_obj = js_object.Properties(err);
   if (err.Fail()) return std::string();
 
@@ -1024,7 +1022,7 @@ std::string Inspector::InspectDictionary(v8::JSObject js_object, Error& err) {
   int64_t length = dictionary.Length(err);
   if (err.Fail()) return std::string();
 
-  Inspector inspector(llv8_);
+  Printer printer(llv8_);
 
   std::string res;
   std::stringstream ss;
@@ -1050,7 +1048,7 @@ std::string Inspector::InspectDictionary(v8::JSObject js_object, Error& err) {
     res += ss.str() + "=";
     if (err.Fail()) return std::string();
 
-    res += inspector.Inspect(value, err);
+    res += printer.Stringify(value, err);
     if (err.Fail()) return std::string();
   }
 
@@ -1058,7 +1056,7 @@ std::string Inspector::InspectDictionary(v8::JSObject js_object, Error& err) {
 }
 
 
-std::string Inspector::InspectDescriptors(v8::JSObject js_object, v8::Map map,
+std::string Printer::StringifyDescriptors(v8::JSObject js_object, v8::Map map,
                                           Error& err) {
   v8::HeapObject descriptors_obj = map.InstanceDescriptors(err);
   if (err.Fail()) return std::string();
@@ -1078,7 +1076,7 @@ std::string Inspector::InspectDescriptors(v8::JSObject js_object, v8::Map map,
 
   v8::FixedArray extra_properties(extra_properties_obj);
 
-  Inspector inspector(llv8_);
+  Printer printer(llv8_);
 
   std::string res;
   std::stringstream ss;
@@ -1105,7 +1103,7 @@ std::string Inspector::InspectDescriptors(v8::JSObject js_object, v8::Map map,
       value = descriptors.GetValue(i, err);
       if (err.Fail()) return std::string();
 
-      res += inspector.Inspect(value, err);
+      res += printer.Stringify(value, err);
       if (err.Fail()) return std::string();
       continue;
     }
@@ -1134,7 +1132,7 @@ std::string Inspector::InspectDescriptors(v8::JSObject js_object, v8::Map map,
 
       if (err.Fail()) return std::string();
 
-      res += inspector.Inspect(value, err);
+      res += printer.Stringify(value, err);
     }
     if (err.Fail()) return std::string();
   }
@@ -1142,10 +1140,10 @@ std::string Inspector::InspectDescriptors(v8::JSObject js_object, v8::Map map,
   return res;
 }
 
-std::string Inspector::InspectContents(v8::FixedArray fixed_array, int length,
+std::string Printer::StringifyContents(v8::FixedArray fixed_array, int length,
                                        Error& err) {
   std::string res;
-  Inspector inspector(llv8_);
+  Printer printer(llv8_);
 
   for (int i = 0; i < length; i++) {
     v8::Value value = fixed_array.Get<v8::Value>(i, err);
@@ -1156,14 +1154,14 @@ std::string Inspector::InspectContents(v8::FixedArray fixed_array, int length,
     std::stringstream ss;
     ss << rang::style::bold << rang::fg::yellow << "    [" << i << "]"
        << rang::fg::reset << rang::style::reset << "=";
-    res += ss.str() + inspector.Inspect(value, err);
+    res += ss.str() + printer.Stringify(value, err);
     if (err.Fail()) return std::string();
   }
 
   return res;
 }
 
-std::string Inspector::InspectArgs(v8::JSFrame js_frame, v8::JSFunction fn,
+std::string Printer::StringifyArgs(v8::JSFrame js_frame, v8::JSFunction fn,
                                    Error& err) {
   v8::SharedFunctionInfo info = fn.Info(err);
   if (err.Fail()) return std::string();
@@ -1174,16 +1172,16 @@ std::string Inspector::InspectArgs(v8::JSFrame js_frame, v8::JSFunction fn,
   v8::Value receiver = js_frame.GetReceiver(param_count, err);
   if (err.Fail()) return std::string();
 
-  Inspector inspector(llv8_);
+  Printer printer(llv8_);
 
-  std::string res = "this=" + inspector.Inspect(receiver, err);
+  std::string res = "this=" + printer.Stringify(receiver, err);
   if (err.Fail()) return std::string();
 
   for (int64_t i = 0; i < param_count; i++) {
     v8::Value param = js_frame.GetParam(i, param_count, err);
     if (err.Fail()) return std::string();
 
-    res += ", " + inspector.Inspect(param, err);
+    res += ", " + printer.Stringify(param, err);
     if (err.Fail()) return std::string();
   }
 

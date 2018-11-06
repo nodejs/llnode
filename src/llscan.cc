@@ -34,7 +34,7 @@ using lldb::eReturnStatusFailed;
 using lldb::eReturnStatusSuccessFinishResult;
 
 
-char** ParseInspectOptions(char** cmd, Inspector::InspectOptions* options) {
+char** ParsePrinterOptions(char** cmd, Printer::PrinterOptions* options) {
   static struct option opts[] = {
       {"full-string", no_argument, nullptr, 'F'},
       {"string-length", required_argument, nullptr, 'l'},
@@ -112,10 +112,10 @@ bool FindObjectsCmd::DoExecute(SBDebugger d, char** cmd,
     return false;
   }
 
-  Inspector::InspectOptions inspect_options;
-  ParseInspectOptions(cmd, &inspect_options);
+  Printer::PrinterOptions printer_options;
+  ParsePrinterOptions(cmd, &printer_options);
 
-  if (inspect_options.detailed) {
+  if (printer_options.detailed) {
     DetailedOutput(result);
   } else {
     SimpleOutput(result);
@@ -215,12 +215,12 @@ bool FindInstancesCmd::DoExecute(SBDebugger d, char** cmd,
     return false;
   }
 
-  Inspector::InspectOptions inspect_options;
+  Printer::PrinterOptions printer_options;
 
-  inspect_options.detailed = detailed_;
+  printer_options.detailed = detailed_;
 
   // Use same options as inspect?
-  char** start = ParseInspectOptions(cmd, &inspect_options);
+  char** start = ParsePrinterOptions(cmd, &printer_options);
 
   std::string full_cmd;
   for (; start != nullptr && *start != nullptr; start++) full_cmd += *start;
@@ -235,11 +235,11 @@ bool FindInstancesCmd::DoExecute(SBDebugger d, char** cmd,
 
     // Update pagination options
     if (full_cmd != pagination_.command ||
-        inspect_options.output_limit != pagination_.output_limit) {
+        printer_options.output_limit != pagination_.output_limit) {
       pagination_.total_entries = t->GetInstanceCount();
       pagination_.command = full_cmd;
       pagination_.current_page = 0;
-      pagination_.output_limit = inspect_options.output_limit;
+      pagination_.output_limit = printer_options.output_limit;
     } else {
       if (pagination_.output_limit <= 0 ||
           (pagination_.current_page + 1) * pagination_.output_limit >
@@ -251,7 +251,7 @@ bool FindInstancesCmd::DoExecute(SBDebugger d, char** cmd,
     }
 
     int initial_p_offset =
-        (pagination_.current_page * inspect_options.output_limit);
+        (pagination_.current_page * printer_options.output_limit);
     int final_p_offset =
         initial_p_offset +
         std::min(pagination_.output_limit,
@@ -270,8 +270,8 @@ bool FindInstancesCmd::DoExecute(SBDebugger d, char** cmd,
          ++it) {
       Error err;
       v8::Value v8_value(llscan_->v8(), *it);
-      Inspector inspector(llscan_->v8(), inspect_options);
-      std::string res = inspector.Inspect(v8_value, err);
+      Printer printer(llscan_->v8(), printer_options);
+      std::string res = printer.Stringify(v8_value, err);
       result.Printf("%s\n", res.c_str());
     }
     if (it != t->GetInstances().end()) {

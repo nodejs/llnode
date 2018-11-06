@@ -6,7 +6,7 @@
 #include <set>
 
 #include "src/error.h"
-#include "src/inspector.h"
+#include "src/printer.h"
 #include "src/llnode.h"
 
 namespace llnode {
@@ -31,7 +31,7 @@ struct cmd_pagination_t {
   std::string command = "";
 };
 
-char** ParseInspectOptions(char** cmd, Inspector::InspectOptions* options);
+char** ParsePrinterOptions(char** cmd, Printer::PrinterOptions* options);
 
 class FindObjectsCmd : public CommandBase {
  public:
