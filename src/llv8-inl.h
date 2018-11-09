@@ -44,6 +44,7 @@ inline bool HeapObject::Check() const {
   return (raw() & v8()->heap_obj()->kTagMask) == v8()->heap_obj()->kTag;
 }
 
+
 int64_t HeapObject::LeaField(int64_t off) const {
   return raw() - v8()->heap_obj()->kTag + off;
 }
@@ -83,18 +84,19 @@ inline int64_t HeapObject::GetType(Error& err) {
 }
 
 
-inline bool HeapObject::ISJSErrorType(Error& err) {
+inline bool HeapObject::IsJSErrorType(Error& err) {
   int64_t type = GetType(err);
+  if (err.Fail()) return false;
   if (type == v8()->types()->kJSErrorType) return true;
 
-  // NOTE (mmarchini): We don't have a JSErroType constant on Node.js v6.x,
+  // NOTE (mmarchini): We don't have a JSErrorType constant on Node.js v6.x,
   // thus we try to guess if the object is an Error object by checking if its
   // name is Error. Should work most of the time.
   if (!JSObject::IsObjectType(v8(), type)) return false;
-  JSObject obj(this);
-  if (obj.GetTypeName(err) != "Error" || err.Fail()) return false;
 
-  return true;
+  JSObject obj(this);
+  std::string type_name = obj.GetTypeName(err);
+  return err.Success() && type_name == "Error";
 }
 
 

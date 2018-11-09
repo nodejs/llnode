@@ -827,7 +827,7 @@ std::string HeapObject::Inspect(InspectOptions* options, Error& err) {
     return pre + m.Inspect(options, err);
   }
 
-  if (ISJSErrorType(err)) {
+  if (IsJSErrorType(err)) {
     JSError error(this);
     return pre + error.Inspect(options, err);
   }
@@ -1564,7 +1564,7 @@ std::string JSError::InspectAllProperties(InspectOptions* options, Error& err) {
 
     if (err.Fail()) {
       Error::PrintInDebugMode(
-          "Couldn't find a symbol property in the Error objcet.");
+          "Couldn't find a symbol property in the Error object.");
       return res;
     }
 

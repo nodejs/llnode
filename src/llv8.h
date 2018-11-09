@@ -115,7 +115,7 @@ class HeapObject : public Value {
   std::string Inspect(InspectOptions* options, Error& err);
   std::string GetTypeName(Error& err);
 
-  inline bool ISJSErrorType(Error& err);
+  inline bool IsJSErrorType(Error& err);
 };
 
 class Map : public HeapObject {
