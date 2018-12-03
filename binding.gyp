@@ -89,6 +89,32 @@
         "cflags!": [ "-fno-exceptions" ],
         "cflags_cc!": [ "-fno-exceptions" ],
         "conditions": [
+          [ "OS == 'mac'", {
+                "conditions": [
+                  [ "lldb_lib_dir == ''", {
+                    "variables": {
+                      "mac_shared_frameworks": "/Applications/Xcode.app/Contents/SharedFrameworks",
+                    },
+                    "xcode_settings": {
+                      "OTHER_LDFLAGS": [
+                        "-F<(mac_shared_frameworks)",
+                        "-Wl,-rpath,<(mac_shared_frameworks)",
+                        "-framework LLDB",
+                      ],
+                    },
+                  },
+                  # lldb_lib_dir != ""
+                  {
+                    "xcode_settings": {
+                      "OTHER_LDFLAGS": [
+                        "-Wl,-rpath,<(lldb_lib_dir)",
+                        "-L<(lldb_lib_dir)",
+                        "-l<(lldb_lib)",
+                      ],
+                    },
+                  }],
+                ]
+          }],
           [ "OS=='linux' or OS=='freebsd'", {
             "conditions": [
               # If we could not locate the lib dir, then we will have to search
