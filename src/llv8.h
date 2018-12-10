@@ -237,6 +237,8 @@ class JSObject : public HeapObject {
    */
   std::vector<std::pair<Value, Value>> Entries(Error& err);
 
+  inline std::string GetName(Error& err);
+
   Value GetProperty(std::string key_name, Error& err);
   int64_t GetArrayLength(Error& err);
   Value GetArrayElement(int64_t pos, Error& err);

@@ -537,42 +537,28 @@ std::string Printer::Stringify(v8::Map map, Error& err) {
 }
 
 template <>
-std::string Printer::StringifyAllProperties(v8::JSObject js_object,
-                                            Error& err) {
-  std::string res = std::string();
+std::string Printer::Stringify(v8::JSError js_error, Error& err) {
+  std::string name = js_error.GetName(err);
+  if (err.Fail()) return std::string();
+
+  std::stringstream output;
+
+  output << rang::fg::yellow << "<Object: " << name;
+
   // Print properties in detailed mode
   if (options_.detailed) {
-    std::stringstream ss;
-    ss << rang::fg::magenta << res << rang::fg::reset;
-    res = ss.str();
-
-    res += " " + StringifyProperties(js_object, err);
+    output << rang::fg::reset << " " << StringifyProperties(js_error, err);
     if (err.Fail()) return std::string();
 
-    std::string fields = StringifyInternalFields(js_object, err);
+    std::string fields = StringifyInternalFields(js_error, err);
     if (err.Fail()) return std::string();
 
     if (!fields.empty()) {
-      std::stringstream ss;
-      ss << rang::fg::magenta << "\n  internal fields" << rang::fg::reset
-         << " {" << std::endl
-         << fields << "}";
-      res += ss.str();
+      output << std::endl << rang::fg::magenta << "  internal fields"
+          << rang::fg::reset << " {" << std::endl << fields << "}";
     }
-    return res;
-  } else {
-    std::stringstream ss;
-    ss << rang::fg::yellow << res << rang::fg::reset;
-    res = ss.str();
-    return res;
   }
 
-  return res;
-}
-
-template <>
-std::string Printer::StringifyAllProperties(v8::JSError js_error, Error& err) {
-  std::string res = StringifyAllProperties(v8::JSObject(js_error), err);
   if (options_.detailed) {
     PrinterOptions simple;
 
@@ -586,20 +572,23 @@ std::string Printer::StringifyAllProperties(v8::JSError js_error, Error& err) {
     if (err.Fail()) {
       Error::PrintInDebugMode(
           "Couldn't find a symbol property in the Error object.");
-      return res;
+      output << rang::fg::yellow << ">" << rang::fg::reset;
+      return output.str();
     }
 
     int64_t type = v8::HeapObject(maybe_stack).GetType(err);
 
     if (err.Fail()) {
       Error::PrintInDebugMode("Symbol property references an invalid object.");
-      return res;
+      output << rang::fg::yellow << ">" << rang::fg::reset;
+      return output.str();
     }
 
     // NOTE (mmarchini): The stack is stored as a JSArray
     if (type != llv8_->types()->kJSArrayType) {
       Error::PrintInDebugMode("Symbol property doesn't have the right type.");
-      return res;
+      output << rang::fg::yellow << ">" << rang::fg::reset;
+      return output.str();
     }
 
     v8::JSArray arr(maybe_stack);
@@ -609,7 +598,8 @@ std::string Printer::StringifyAllProperties(v8::JSError js_error, Error& err) {
     if (err.Fail()) {
       Error::PrintInDebugMode(
           "Couldn't get the first element from the stack array");
-      return res;
+      output << rang::fg::yellow << ">" << rang::fg::reset;
+      return output.str();
     }
 
     int64_t stack_len = v8::Smi(maybe_stack_len).GetValue();
@@ -627,7 +617,8 @@ std::string Printer::StringifyAllProperties(v8::JSError js_error, Error& err) {
             "JSArray doesn't look like a Stack Frames array. stack_len: %lld "
             "array_len: %lld",
             stack_len, arr.GetArrayLength(err));
-        return res;
+        output << rang::fg::yellow << ">" << rang::fg::reset;
+        return output.str();
       }
       stack_len = (arr.GetArrayLength(err) - 1) / multiplier;
     }
@@ -651,39 +642,38 @@ std::string Printer::StringifyAllProperties(v8::JSError js_error, Error& err) {
                   << std::endl;
     }
     error_stack << "  }";
-    res += error_stack.str();
+    output << error_stack.str();
   }
-  return res;
+
+  output << rang::fg::yellow << ">" << rang::fg::reset;
+  return output.str();
 }
 
 
-template <typename T = v8::JSObject, typename Actual>
-std::string Printer::Stringify(T js_object, Error& err) {
-  v8::HeapObject map_obj = js_object.GetMap(err);
-  if (err.Fail()) return std::string();
-
-  v8::Map map(map_obj);
-  v8::HeapObject constructor_obj = map.Constructor(err);
-  if (err.Fail()) return std::string();
-
-  int64_t constructor_type = constructor_obj.GetType(err);
+template <>
+std::string Printer::Stringify(v8::JSObject js_object, Error& err) {
+  std::string name = js_object.GetName(err);
   if (err.Fail()) return std::string();
 
   std::stringstream output;
-  if (constructor_type != llv8_->types()->kJSFunctionType) {
-    output << rang::fg::yellow << "<Object: " << rang::fg::gray
-           << "no constructor" << rang::fg::yellow << ">" << rang::fg::reset;
-    return output.str();
-  }
 
-  v8::JSFunction constructor(constructor_obj);
-
-  output << rang::fg::yellow << "<Object: " << constructor.Name(err);
-  if (err.Fail()) return std::string();
+  output << rang::fg::yellow << "<Object: " << name;
 
   // Print properties in detailed mode
-  output << StringifyAllProperties<Actual>(js_object, err) << rang::fg::yellow
-         << ">" << rang::fg::reset;
+  if (options_.detailed) {
+    output << rang::fg::reset << " " << StringifyProperties(js_object, err);
+    if (err.Fail()) return std::string();
+
+    std::string fields = StringifyInternalFields(js_object, err);
+    if (err.Fail()) return std::string();
+
+    if (!fields.empty()) {
+      output << std::endl << rang::fg::magenta << "  internal fields"
+          << rang::fg::reset << " {" << std::endl << fields << "}";
+    }
+  }
+  output << rang::fg::yellow << ">" << rang::fg::reset;
+
   return output.str();
 }
 
@@ -788,7 +778,7 @@ std::string Printer::Stringify(v8::HeapObject heap_object, Error& err) {
 
   if (heap_object.IsJSErrorType(err)) {
     v8::JSError error(heap_object);
-    return pre + Stringify<v8::JSObject, v8::JSError>(error, err);
+    return pre + Stringify(error, err);
   }
 
   if (v8::JSObject::IsObjectType(llv8_, type)) {

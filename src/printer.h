@@ -48,9 +48,6 @@ class Printer {
   std::string StringifyInternalFields(v8::JSObject js_obj, Error& err);
   std::string StringifyProperties(v8::JSObject js_obj, Error& err);
 
-  template <typename T>
-  std::string StringifyAllProperties(T value, Error& err);
-
   std::string StringifyElements(v8::JSObject js_obj, Error& err);
   std::string StringifyElements(v8::JSObject js_obj, int64_t length,
                                 Error& err);

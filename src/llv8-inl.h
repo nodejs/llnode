@@ -240,6 +240,29 @@ inline bool JSObject::IsObjectType(LLV8* v8, int64_t type) {
          type == v8->types()->kJSSpecialAPIObjectType;
 }
 
+inline std::string JSObject::GetName(Error& err) {
+  v8::HeapObject map_obj = GetMap(err);
+  if (err.Fail()) return std::string();
+
+  v8::Map map(map_obj);
+  v8::HeapObject constructor_obj = map.Constructor(err);
+  if (err.Fail()) return std::string();
+
+  int64_t constructor_type = constructor_obj.GetType(err);
+  if (err.Fail()) return std::string();
+
+  if (constructor_type != v8()->types()->kJSFunctionType) {
+    return "no constructor";
+  }
+
+  v8::JSFunction constructor(constructor_obj);
+
+  std::string name = constructor.Name(err);
+  if (err.Fail()) return std::string();
+
+  return name;
+}
+
 template <class T>
 inline T JSObject::GetInObjectValue(int64_t size, int index, Error& err) {
   return LoadFieldValue<T>(size + index * v8()->common()->kPointerSize, err);
