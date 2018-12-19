@@ -567,7 +567,8 @@ std::string Printer::Stringify(v8::JSError js_error, Error& err) {
     // In the future we can add postmortem metadata on V8 regarding existing
     // symbols, but for now we'll use an heuristic to find the stack in the
     // error object.
-    v8::Value maybe_stack = js_error.GetProperty("Symbol()", err);
+    std::string stack_property = llv8_->types()->kSymbolType != -1 ? "Symbol()" : "<non-string>";
+    v8::Value maybe_stack = js_error.GetProperty(stack_property, err);
 
     if (err.Fail() || maybe_stack.raw() == -1) {
       Error::PrintInDebugMode(
