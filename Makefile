@@ -44,6 +44,12 @@ plugin: configure
 addon: configure-with-addon
 	node-gyp rebuild
 
+.PHONY: coverage
+coverage:
+	lcov --capture --directory build/ --output-file coverage-cc.info
+	lcov --remove coverage-cc.info "/usr/*" "*/deps/*" "*/node_modules/*" --output-file coverage-cc.info # filter system-files
+	lcov --list coverage-cc.info
+
 .PHONY: clean
 clean:
 	$(RM) -r build

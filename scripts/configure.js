@@ -19,14 +19,23 @@ function main() {
 
 main();
 
-// Do not build addon by default until it's less experimental
 function configureBuildOptions(config) {
+  // Do not build addon by default until it's less experimental
   const build_addon = (process.env.npm_config_llnode_build_addon ||
     process.env.LLNODE_BUILD_ADDON);
   if (build_addon) {
     config.variables.build_addon = build_addon;
   } else {
     config.variables.build_addon = 'false';
+  }
+
+  // Optionally build with support for gcov
+  const coverage = (process.env.npm_config_llnode_coverage ||
+    process.env.LLNODE_COVERAGE);
+  if (coverage) {
+    config.variables.coverage = coverage;
+  } else {
+    config.variables.coverage = 'false';
   }
 }
 

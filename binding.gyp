@@ -10,6 +10,7 @@
       "lldb_lib_dir%": "",
       "lldb_lib_so%": "",
       "build_addon": "false",
+      "coverage": "false",
   },
 
   "target_defaults": {
@@ -38,6 +39,10 @@
         "libraries": [
           "<(lldb_lib_dir)/<(lldb_lib)",
         ],
+      }],
+      [ "coverage == 'true'", {
+        "cflags": [ "--coverage" ],
+        "ldflags" : [ "--coverage" ],
       }],
     ]
   },

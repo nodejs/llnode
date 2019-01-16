@@ -10,31 +10,42 @@ matrix:
       dist: trusty
       before_install:
         - sudo apt-get -qq update
-        - sudo apt-get install lldb-3.9 liblldb-3.9-dev -y
-      install: npm install --llnode_build_addon=true
+        - sudo apt-get install lldb-3.9 liblldb-3.9-dev lcov -y
+      install:
+        - npm install --llnode_build_addon=true --llnode_coverage=true
       script: TEST_LLDB_BINARY=`which lldb-3.9` npm run test-all
       node_js: "6"
+      after_success:
+        - npm run coverage
+        - npm run codecov-upload
 
     - name: "[Trusty] Node.js v8.x"
       sudo: required
       dist: trusty
       before_install:
         - sudo apt-get -qq update
-        - sudo apt-get install lldb-3.9 liblldb-3.9-dev -y
-      install: npm install --llnode_build_addon=true
+        - sudo apt-get install lldb-3.9 liblldb-3.9-dev lcov -y
+      install:
+        - npm install --llnode_build_addon=true
       script: TEST_LLDB_BINARY=`which lldb-3.9` npm run test-all
       node_js: "8"
+      after_success:
+        - npm run coverage
+        - npm run codecov-upload
 
     - name: "[Trusty] Node.js v10.x"
       sudo: required
       dist: trusty
       before_install:
         - sudo apt-get -qq update
-        - sudo apt-get install lldb-3.9 liblldb-3.9-dev -y
-      install: npm install --llnode_build_addon=true
+        - sudo apt-get install lldb-3.9 liblldb-3.9-dev lcov -y
+      install:
+        - npm install --llnode_build_addon=true --llnode_coverage=true
       script: TEST_LLDB_BINARY=`which lldb-3.9` npm run test-all
       node_js: "10"
-
+      after_success:
+        - npm run coverage
+        - npm run codecov-upload
 
     ###########################
     # Nightlies & V8 Canaries #
@@ -47,13 +58,16 @@ matrix:
       dist: trusty
       before_install:
         - sudo apt-get -qq update
-        - sudo apt-get install lldb-3.9 liblldb-3.9-dev -y
+        - sudo apt-get install lldb-3.9 liblldb-3.9-dev lcov -y
       install:
         - npm install --nodedir=$(dirname $(dirname $(which node)))/include/node
-      script: TEST_LLDB_BINARY=`which lldb-3.9` npm run test-plugin
+      script: TEST_LLDB_BINARY=`which lldb-3.9` npm run test
       env:
         - NVM_NODEJS_ORG_MIRROR=https://nodejs.org/download/nightly
         - NODEJS_ORG_MIRROR=https://nodejs.org/download/nightly
+      after_success:
+        - npm run coverage
+        - npm run codecov-upload
 
     # Addon is not tested due to lack of node-addon-api
     - name: "[Trusty] Node.js V8 Canary"
@@ -62,13 +76,16 @@ matrix:
       dist: trusty
       before_install:
         - sudo apt-get -qq update
-        - sudo apt-get install lldb-3.9 liblldb-3.9-dev -y
+        - sudo apt-get install lldb-3.9 liblldb-3.9-dev lcov -y
       install:
         - npm install --nodedir=$(dirname $(dirname $(which node)))/include/node
-      script: TEST_LLDB_BINARY=`which lldb-3.9` npm run test-plugin
+      script: TEST_LLDB_BINARY=`which lldb-3.9` npm run test
       env:
         - NVM_NODEJS_ORG_MIRROR=https://nodejs.org/download/v8-canary
         - NODEJS_ORG_MIRROR=https://nodejs.org/download/v8-canary
+      after_success:
+        - npm run coverage
+        - npm run codecov-upload
 
     ########
     # OS X #
