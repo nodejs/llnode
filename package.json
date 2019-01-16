@@ -16,7 +16,9 @@
     "test-plugin": "tape test/plugin/*-test.js",
     "test-addon": "tape test/addon/*-test.js",
     "test-all": "npm run test-addon && npm run test-plugin",
-    "test": "npm run test-plugin"
+    "test": "npm run test-plugin",
+    "coverage": "make coverage",
+    "codecov-upload": "codecov --disable=gcov --file=coverage-cc.info"
   },
   "repository": {
     "type": "git",
@@ -44,6 +46,7 @@
   },
   "homepage": "https://github.com/nodejs/llnode#readme",
   "devDependencies": {
+    "codecov": "^3.1.0",
     "tape": "^4.4.0"
   },
   "dependencies": {
