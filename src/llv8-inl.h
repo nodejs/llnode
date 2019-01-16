@@ -722,6 +722,18 @@ inline bool JSArrayBuffer::WasNeutered(Error& err) {
   return field != 0;
 }
 
+inline std::string JSError::stack_trace_property() {
+  // TODO (mmarchini): once we have Symbol support we'll need to search for
+  // <unnamed symbol>, since the stack symbol doesn't have an external name.
+  // In the future we can add postmortem metadata on V8 regarding existing
+  // symbols, but for now we'll use an heuristic to find the stack in the
+  // error object.
+  return v8()->types()->kSymbolType != -1 ? "Symbol()" : "<non-string>";
+}
+
+inline int StackTrace::GetFrameCount() { return len_; }
+
+
 #undef ACCESSOR
 
 }  // namespace v8
