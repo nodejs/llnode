@@ -74,6 +74,9 @@ function closure() {
   let scopedAPI = zlib.createDeflate()._handle;
   let scopedArray = [ 0, scopedAPI ];
 
+  c.hashmap['date_1'] = new Date('2000-01-01');
+  c.hashmap['date_2'] = new Date(1);
+
   exports.holder = scopedAPI;
 
   c.hashmap.scoped = function name() {

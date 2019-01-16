@@ -345,7 +345,18 @@ const hashMapTests = {
         cb(null);
       });
     }
+  },
+  // .date_1=<JSDate: >
+  'date_1': {
+    re: /\.date_1=0x[0-9a-f]+:<JSDate: 946684800000\.000000>/,
+    desc: ".date_2 JSDate element"
+  },
+  // .date_2=<JSDate: 1>
+  'date_2' : {
+    re: /\.date_2=0x[0-9a-f]+:<JSDate: 1>/,
+    desc: ".date_2 JSDate element",
   }
+
 };
 
 const contextTests = {

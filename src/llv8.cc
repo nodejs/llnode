@@ -679,6 +679,31 @@ std::string HeapNumber::ToString(bool whole, Error& err) {
   return buf;
 }
 
+std::string JSDate::ToString(Error& err) {
+  v8::Value val(GetValue(err));
+
+  // Check if it is SMI
+  // e.g: date = new Date(1)
+  v8::Smi smi(val);
+  if (smi.Check()) {
+    std::string s = smi.ToString(err);
+    if (err.Fail()) return "";
+    return s;
+  }
+
+  // Check if it is HeapNumber
+  // e.g: date = new Date()
+  v8::HeapNumber hn(val);
+  if (hn.Check()) {
+    std::string s = hn.ToString(true, err);
+    if (err.Fail()) return "";
+    return s;
+  }
+
+  Error::PrintInDebugMode("JSDate is not a Smi neither a HeapNumber");
+  return "";
+}
+
 
 std::string Symbol::ToString(Error& err) {
   if (!String::IsString(v8(), Name(err), err)) {

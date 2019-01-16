@@ -373,6 +373,7 @@ class JSDate : public JSObject {
   V8_VALUE_DEFAULT_METHODS(JSDate, JSObject);
 
   inline Value GetValue(Error& err);
+  std::string ToString(Error& err);
 };
 
 class FixedArrayBase : public HeapObject {

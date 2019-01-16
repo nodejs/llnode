@@ -1,5 +1,6 @@
 #include <cinttypes>
 #include <sstream>
+#include <iostream>
 
 #include "deps/rang/include/rang.hpp"
 #include "src/llv8-inl.h"
@@ -136,34 +137,10 @@ std::string Printer::Stringify(v8::JSFunction js_function, Error& err) {
 
 template <>
 std::string Printer::Stringify(v8::JSDate js_date, Error& err) {
-  std::string pre = "<JSDate: ";
-
-  v8::Value val = js_date.GetValue(err);
-
-  v8::Smi smi(val);
-  if (smi.Check()) {
-    std::string s = smi.ToString(err);
-    if (err.Fail()) {
-      return pre + ">";
-    }
-
-    return pre + s + ">";
-  }
-
-  v8::HeapNumber hn(val);
-  if (hn.Check()) {
-    std::string s = hn.ToString(true, err);
-    if (err.Fail()) {
-      return pre + ">";
-    }
-    return pre + s + ">";
-  }
-
-  double d = static_cast<double>(val.raw());
-  char buf[128];
-  snprintf(buf, sizeof(buf), "%f", d);
-
-  return pre + ">";
+  std::stringstream ss;
+  ss << rang::fg::yellow << "<JSDate: " + js_date.ToString(err) + ">"
+     << rang::fg::reset;
+  return ss.str();
 }
 
 template <>
