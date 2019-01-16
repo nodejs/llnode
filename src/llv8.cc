@@ -1202,5 +1202,109 @@ v8::Value JSObject::GetArrayElement(int64_t pos, Error& err) {
 }
 
 
+bool JSError::HasStackTrace(Error& err) {
+  StackTrace stack_trace = GetStackTrace(err);
+
+  return stack_trace.GetFrameCount() > -1;
+}
+
+
+JSArray JSError::GetFrameArray(Error& err) {
+  v8::Value maybe_stack = GetProperty(stack_trace_property(), err);
+
+  if (err.Fail() || maybe_stack.raw() == -1) {
+    Error::PrintInDebugMode(
+        "Couldn't find a symbol property in the Error object.");
+    return JSArray();
+  }
+
+  int64_t type = v8::HeapObject(maybe_stack).GetType(err);
+
+  if (err.Fail()) {
+    Error::PrintInDebugMode("Symbol property references an invalid object.");
+    return JSArray();
+  }
+
+  // NOTE (mmarchini): The stack is stored as a JSArray
+  if (type != v8()->types()->kJSArrayType) {
+    Error::PrintInDebugMode("Symbol property doesn't have the right type.");
+    return JSArray();
+  }
+
+  v8::JSArray arr(maybe_stack);
+
+  return arr;
+}
+
+
+StackTrace::Iterator StackTrace::begin() {
+  Error err;
+  return StackTrace::Iterator(this, err);
+}
+
+StackTrace::Iterator StackTrace::end() {
+  Error err;
+  return StackTrace::Iterator(this, GetFrameCount(), err);
+}
+
+StackTrace::StackTrace(JSArray frame_array, Error& err)
+    : frame_array_(frame_array) {
+  v8::Value maybe_stack_len = frame_array.GetArrayElement(0, err);
+
+  if (err.Fail()) {
+    Error::PrintInDebugMode(
+        "Couldn't get the first element from the stack array");
+    return;
+  }
+
+  len_ = v8::Smi(maybe_stack_len).GetValue();
+
+  multiplier_ = 5;
+  // On Node.js v8.x, the first array element is the stack size, and each
+  // stack frame use 5 elements.
+  if ((len_ * multiplier_ + 1) != frame_array_.GetArrayLength(err)) {
+    // On Node.js v6.x, the first array element is zero, and each stack frame
+    // use 4 element.
+    multiplier_ = 4;
+    if ((len_ != 0) ||
+        ((frame_array_.GetArrayLength(err) - 1) % multiplier_ != 0)) {
+      Error::PrintInDebugMode(
+          "JSArray doesn't look like a Stack Frames array. stack_len: %lld "
+          "array_len: %lld",
+          len_, frame_array_.GetArrayLength(err));
+      len_ = -1;
+      multiplier_ = -1;
+    }
+  }
+}
+
+
+StackTrace JSError::GetStackTrace(Error& err) {
+  return StackTrace(GetFrameArray(err), err);
+}
+
+
+StackFrame StackTrace::GetFrame(uint32_t index, Error& err) {
+  return StackFrame(this, index);
+}
+
+StackFrame::StackFrame(StackTrace* stack_trace, int index)
+    : stack_trace_(stack_trace), index_(index) {}
+
+JSFunction StackFrame::GetFunction(Error& err) {
+  JSArray frame_array = stack_trace_->frame_array_;
+  v8::Value maybe_fn = frame_array.GetArrayElement(frame_array_index(), err);
+  if (err.Fail()) return JSFunction();
+  return JSFunction(maybe_fn);
+}
+
+int StackFrame::frame_array_index() {
+  int multiplier = stack_trace_->multiplier_;
+  const int js_function_pos = 1;
+  const int begin_offset = 1;
+  return begin_offset + js_function_pos + (index_ * multiplier);
+}
+
+
 }  // namespace v8
 }  // namespace llnode

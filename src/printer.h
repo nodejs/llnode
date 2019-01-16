@@ -55,6 +55,7 @@ class Printer {
   std::string StringifyDescriptors(v8::JSObject js_obj, v8::Map map,
                                    Error& err);
 
+  std::string StringifyJSObjectFields(v8::JSObject js_obj, Error& err);
 
   // FixedArray Specific Methods
   std::string StringifyContents(v8::FixedArray fixed_array, int length,

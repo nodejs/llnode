@@ -59,7 +59,7 @@ class Value {
 
  protected:
   LLV8* v8_;
-  int64_t raw_;
+  int64_t raw_ = 0x0;
 };
 
 class Smi : public Value {
@@ -267,17 +267,87 @@ class JSObject : public HeapObject {
   Value GetDescriptorProperty(std::string key_name, Map map, Error& err);
 };
 
-class JSError : public JSObject {
- public:
-  V8_VALUE_DEFAULT_METHODS(JSError, JSObject);
-};
-
+class StackTrace;
+class StackFrame;
+class JSFunction;
 class JSArray : public JSObject {
  public:
   V8_VALUE_DEFAULT_METHODS(JSArray, JSObject);
 
   inline Smi Length(Error& err);
 };
+
+class JSError : public JSObject {
+ public:
+  V8_VALUE_DEFAULT_METHODS(JSError, JSObject);
+
+  bool HasStackTrace(Error& err);
+  StackTrace GetStackTrace(Error& err);
+
+ private:
+  JSArray GetFrameArray(Error& err);
+
+  inline std::string stack_trace_property();
+};
+
+class StackFrame {
+ public:
+  JSFunction GetFunction(Error& err);
+
+ private:
+  friend StackTrace;
+  StackFrame() = delete;
+  StackFrame(StackTrace*, int);
+
+  StackTrace* stack_trace_;
+  int index_ = -1;
+
+  int frame_array_index();
+};
+
+
+class StackTrace {
+ public:
+  class Iterator {
+   public:
+    StackFrame operator*() { return stack_trace_->GetFrame(index_, err_); };
+    inline const StackTrace::Iterator operator++() {
+      return StackTrace::Iterator(stack_trace_, ++index_, err_);
+    };
+    bool operator!=(StackTrace::Iterator that) {
+      return index() != that.index();
+    };
+
+    inline Iterator(StackTrace* stack_trace, Error& err)
+        : stack_trace_(stack_trace), err_(err){};
+
+    inline Iterator(StackTrace* stack_trace, int index, Error& err)
+        : stack_trace_(stack_trace), index_(index), err_(err){};
+
+    int index() { return index_; };
+
+   private:
+    StackTrace* stack_trace_;
+    int index_ = 0;
+    Error err_;
+  };
+  Iterator begin();
+  Iterator end();
+
+  StackTrace() = delete;
+  StackTrace(JSArray frame_array, Error& err);
+
+  StackFrame GetFrame(uint32_t index, Error& err);
+
+  inline int GetFrameCount();
+
+ private:
+  friend StackFrame;
+  JSArray frame_array_;
+  int multiplier_ = -1;
+  int len_ = -1;
+};
+
 
 class JSFunction : public JSObject {
  public:

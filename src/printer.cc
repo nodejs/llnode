@@ -547,99 +547,25 @@ std::string Printer::Stringify(v8::JSError js_error, Error& err) {
 
   // Print properties in detailed mode
   if (options_.detailed) {
-    output << rang::fg::reset << " " << StringifyProperties(js_error, err);
-    if (err.Fail()) return std::string();
+    output << StringifyJSObjectFields(js_error, err);
 
-    std::string fields = StringifyInternalFields(js_error, err);
-    if (err.Fail()) return std::string();
-
-    if (!fields.empty()) {
-      output << std::endl << rang::fg::magenta << "  internal fields"
-          << rang::fg::reset << " {" << std::endl << fields << "}";
-    }
-  }
-
-  if (options_.detailed) {
-    PrinterOptions simple;
-
-    // TODO (mmarchini): once we have Symbol support we'll need to search for
-    // <unnamed symbol>, since the stack symbol doesn't have an external name.
-    // In the future we can add postmortem metadata on V8 regarding existing
-    // symbols, but for now we'll use an heuristic to find the stack in the
-    // error object.
-    std::string stack_property = llv8_->types()->kSymbolType != -1 ? "Symbol()" : "<non-string>";
-    v8::Value maybe_stack = js_error.GetProperty(stack_property, err);
-
-    if (err.Fail() || maybe_stack.raw() == -1) {
-      Error::PrintInDebugMode(
-          "Couldn't find a symbol property in the Error object.");
-      output << rang::fg::yellow << ">" << rang::fg::reset;
-      return output.str();
-    }
-
-    int64_t type = v8::HeapObject(maybe_stack).GetType(err);
-
-    if (err.Fail()) {
-      Error::PrintInDebugMode("Symbol property references an invalid object.");
-      output << rang::fg::yellow << ">" << rang::fg::reset;
-      return output.str();
-    }
-
-    // NOTE (mmarchini): The stack is stored as a JSArray
-    if (type != llv8_->types()->kJSArrayType) {
-      Error::PrintInDebugMode("Symbol property doesn't have the right type.");
-      output << rang::fg::yellow << ">" << rang::fg::reset;
-      return output.str();
-    }
-
-    v8::JSArray arr(maybe_stack);
-
-    v8::Value maybe_stack_len = arr.GetArrayElement(0, err);
-
-    if (err.Fail()) {
-      Error::PrintInDebugMode(
-          "Couldn't get the first element from the stack array");
-      output << rang::fg::yellow << ">" << rang::fg::reset;
-      return output.str();
-    }
-
-    int64_t stack_len = v8::Smi(maybe_stack_len).GetValue();
-
-    int multiplier = 5;
-    // On Node.js v8.x, the first array element is the stack size, and each
-    // stack frame use 5 elements.
-    if ((stack_len * multiplier + 1) != arr.GetArrayLength(err)) {
-      // On Node.js v6.x, the first array element is zero, and each stack frame
-      // use 4 element.
-      multiplier = 4;
-      if ((stack_len != 0) ||
-          ((arr.GetArrayLength(err) - 1) % multiplier != 0)) {
-        Error::PrintInDebugMode(
-            "JSArray doesn't look like a Stack Frames array. stack_len: %lld "
-            "array_len: %lld",
-            stack_len, arr.GetArrayLength(err));
-        output << rang::fg::yellow << ">" << rang::fg::reset;
-        return output.str();
-      }
-      stack_len = (arr.GetArrayLength(err) - 1) / multiplier;
-    }
+    v8::StackTrace stack_trace = js_error.GetStackTrace(err);
 
     std::stringstream error_stack;
     error_stack << std::endl
                 << rang::fg::red << "  error stack" << rang::fg::reset << " {"
                 << std::endl;
 
-    // TODO (mmarchini): Refactor: create an StackIterator which returns
-    // StackFrame objects
-    for (int64_t i = 0; i < stack_len; i++) {
-      v8::Value maybe_fn = arr.GetArrayElement(2 + (i * multiplier), err);
+    Printer printer(llv8_);
+    for (v8::StackFrame frame : stack_trace) {
+      v8::JSFunction js_function = frame.GetFunction(err);
       if (err.Fail()) {
         error_stack << rang::fg::gray << "    <unknown>" << std::endl;
         continue;
       }
 
-      Printer printer(llv8_);
-      error_stack << "    " << printer.Stringify(v8::HeapObject(maybe_fn), err)
+      error_stack << "    "
+                  << printer.Stringify<v8::HeapObject>(js_function, err)
                   << std::endl;
     }
     error_stack << "  }";
@@ -661,19 +587,29 @@ std::string Printer::Stringify(v8::JSObject js_object, Error& err) {
   output << rang::fg::yellow << "<Object: " << name;
 
   // Print properties in detailed mode
-  if (options_.detailed) {
-    output << rang::fg::reset << " " << StringifyProperties(js_object, err);
-    if (err.Fail()) return std::string();
+  if (options_.detailed) output << StringifyJSObjectFields(js_object, err);
 
-    std::string fields = StringifyInternalFields(js_object, err);
-    if (err.Fail()) return std::string();
-
-    if (!fields.empty()) {
-      output << std::endl << rang::fg::magenta << "  internal fields"
-          << rang::fg::reset << " {" << std::endl << fields << "}";
-    }
-  }
   output << rang::fg::yellow << ">" << rang::fg::reset;
+
+  return output.str();
+}
+
+std::string Printer::StringifyJSObjectFields(v8::JSObject js_object,
+                                             Error& err) {
+  std::stringstream output;
+
+  output << rang::fg::reset << " " << StringifyProperties(js_object, err);
+  if (err.Fail()) return std::string();
+
+  std::string fields = StringifyInternalFields(js_object, err);
+  if (err.Fail()) return std::string();
+
+  if (!fields.empty()) {
+    output << std::endl
+           << rang::fg::magenta << "  internal fields" << rang::fg::reset
+           << " {" << std::endl
+           << fields << "}";
+  }
 
   return output.str();
 }
