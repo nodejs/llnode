@@ -279,6 +279,18 @@ ACCESSOR(JSRegExp, GetSource, js_regexp()->kSourceOffset, String)
 
 ACCESSOR(JSDate, GetValue, js_date()->kValueOffset, Value)
 
+bool JSDate::IsSmi(Error& err) {
+  v8::Value val(GetValue(err));
+  v8::Smi smi(val);
+  return smi.Check();
+}
+
+bool JSDate::IsHeapNumber(Error& err) {
+  v8::Value val(GetValue(err));
+  v8::HeapNumber heap_number(val);
+  return heap_number.Check();
+}
+
 bool String::IsString(LLV8* v8, HeapObject heap_object, Error& err) {
   if (!heap_object.Check()) return false;
 
