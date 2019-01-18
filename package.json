@@ -24,7 +24,8 @@
     "coverage": "npm run coverage-cc && npm run coverage-js",
     "codecov-upload-cc": "codecov --disable=gcov --file=coverage-cc.info",
     "codecov-upload-js": "codecov --disable=gcov --file=coverage-js.lcov",
-    "codecov-upload": "npm run codecov-upload-cc && npm run codecov-upload-js"
+    "codecov-upload": "npm run codecov-upload-cc && npm run codecov-upload-js",
+    "format": "clang-format -i src/*"
   },
   "repository": {
     "type": "git",
@@ -54,6 +55,7 @@
   "devDependencies": {
     "codecov": "^3.1.0",
     "nyc": "^13.1.0",
+    "clang-format": "1.2.4",
     "tape": "^4.4.0"
   },
   "nyc": {
