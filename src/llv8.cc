@@ -1274,7 +1274,9 @@ StackTrace::StackTrace(JSArray frame_array, Error& err)
           len_, frame_array_.GetArrayLength(err));
       len_ = -1;
       multiplier_ = -1;
+      return;
     }
+    len_ = (frame_array_.GetArrayLength(err) - 1) / multiplier_;
   }
 }
 
