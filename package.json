@@ -25,6 +25,7 @@
     "codecov-upload-cc": "codecov --disable=gcov --file=coverage-cc.info",
     "codecov-upload-js": "codecov --disable=gcov --file=coverage-js.lcov",
     "codecov-upload": "npm run codecov-upload-cc && npm run codecov-upload-js",
+    "linter": "node scripts/linter.js",
     "format": "clang-format -i src/*"
   },
   "repository": {
