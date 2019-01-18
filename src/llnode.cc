@@ -194,11 +194,6 @@ bool PrintCmd::DoExecute(SBDebugger d, char** cmd,
 
 bool ListCmd::DoExecute(SBDebugger d, char** cmd,
                         SBCommandReturnObject& result) {
-  if (cmd == nullptr || *cmd == nullptr) {
-    result.SetError("USAGE: v8 source list\n");
-    return false;
-  }
-
   static SBFrame last_frame;
   static uint64_t last_line = 0;
   SBTarget target = d.GetSelectedTarget();
@@ -212,22 +207,24 @@ bool ListCmd::DoExecute(SBDebugger d, char** cmd,
   bool grab_line = false;
   bool line_switch = false;
   int line_from_switch = 0;
-  for (char** start = cmd; *start != nullptr; start++) {
-    if (grab_line) {
-      grab_line = false;
-      line_switch = true;
-      errno = 0;
-      line_from_switch = strtol(*start, nullptr, 10);
-      if (errno) {
-        result.SetError("Invalid line number");
-        return false;
+  if (cmd != nullptr) {
+    for (char** start = cmd; *start != nullptr; start++) {
+      if (grab_line) {
+        grab_line = false;
+        line_switch = true;
+        errno = 0;
+        line_from_switch = strtol(*start, nullptr, 10);
+        if (errno) {
+          result.SetError("Invalid line number");
+          return false;
+        }
+        line_from_switch--;
       }
-      line_from_switch--;
+      if (strcmp(*start, "-l") == 0) {
+        grab_line = true;
+      }
+      full_cmd += *start;
     }
-    if (strcmp(*start, "-l") == 0) {
-      grab_line = true;
-    }
-    full_cmd += *start;
   }
   if (grab_line || (line_switch && line_from_switch < 0)) {
     result.SetError("Expected line number after -l");
@@ -434,8 +431,12 @@ bool PluginInitialize(SBDebugger d) {
   SBCommand source =
       v8.AddMultiwordCommand("source", "Source code information");
   source.AddCommand("list", new llnode::ListCmd(&llv8),
-                    "Print source lines around a selected JavaScript frame.\n\n"
-                    "Syntax: v8 source list\n");
+                    "Print source lines around the currently selected "
+                    "JavaScript frame.\n\n"
+                    "Syntax: v8 source list [flags]\n\n"
+                    "Flags:\n"
+                    " * -l <line> - Print source code below line <line>.\n"
+                    );
   interpreter.AddCommand("jssource", new llnode::ListCmd(&llv8),
                          "Alias for `v8 source list`");
 
