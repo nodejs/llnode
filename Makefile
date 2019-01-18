@@ -24,7 +24,7 @@ uninstall-linux:
 
 .PHONY: format
 format:
-	clang-format -i src/*
+	npm run format
 
 # This depends on the system setting e.g. $PATH so can't actually be skipped
 .PHONY: configure
