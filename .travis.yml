@@ -112,6 +112,20 @@ matrix:
       script: npm run test-all
       node_js: "10"
 
+    ##########
+    # Linter #
+    ##########
+
+    - name: "Linter"
+      sudo: required
+      dist: trusty
+      before_install:
+        - sudo apt-get -qq update
+        - sudo apt-get install lldb-3.9 liblldb-3.9-dev -y
+      install: npm install
+      script: npm run linter
+      node_js: "10"
+
   # Allow the nightly installs to fail
   allow_failures:
 
