@@ -262,7 +262,11 @@ The following subcommands are supported:
       print           -- Print short description of the JavaScript value.
 
                          Syntax: v8 print expr
-      source          -- Source code information
+      source list     -- Print source lines around the currently selected
+                         JavaScript frame.
+                         Syntax: v8 source list [flags]
+                         Flags:
+                         * -l <line> - Print source code below line <line>.
 
 For more help on any particular subcommand, type 'help <command> <subcommand>'.
 ```

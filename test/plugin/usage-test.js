@@ -20,13 +20,6 @@ tape('usage messages', (t) => {
     t.error(err);
     const re = /^error: USAGE: v8 print expr$/;
     t.ok(containsLine(lines, re), 'print usage message');
-    sess.send('v8 source list');
-  });
-
-  sess.stderr.linesUntil(/USAGE/, (err, lines) => {
-    t.error(err);
-    const re = /^error: USAGE: v8 source list$/;
-    t.ok(containsLine(lines, re), 'list usage message');
     sess.send('v8 findjsinstances');
   });
 
