@@ -553,7 +553,8 @@ bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
      * - Objects that refer to a particular string literal.
      *   (lldb) findreferences -s "Hello World!"
      */
-    case ScanType::kBadOption: {
+    case ScanType::kBadOption:
+    default: {
       result.SetError("Invalid search type");
       result.SetStatus(eReturnStatusFailed);
       return false;
@@ -1540,7 +1541,6 @@ inline static ByteOrder GetHostByteOrder() {
 }
 
 void LLScan::ScanMemoryRanges(FindJSObjectsVisitor& v) {
-  bool done = false;
 
   const uint64_t addr_size = process_.GetAddressByteSize();
   bool swap_bytes = process_.GetByteOrder() != GetHostByteOrder();
@@ -1550,6 +1550,7 @@ void LLScan::ScanMemoryRanges(FindJSObjectsVisitor& v) {
   unsigned char* block = new unsigned char[block_size];
 
 #ifndef LLDB_SBMemoryRegionInfoList_h_
+  bool done = false;
   MemoryRange* head = ranges_;
 
   while (head != nullptr && !done) {
@@ -1614,7 +1615,9 @@ void LLScan::ScanMemoryRanges(FindJSObjectsVisitor& v) {
       }
 
       if (increment == 0) {
+#ifndef LLDB_SBMemoryRegionInfoList_h_
         done = true;
+#endif  // LLDB_SBMemoryRegionInfoList_h_
         break;
       }
     }

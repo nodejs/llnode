@@ -99,9 +99,9 @@ int64_t LLV8::LoadUnsigned(int64_t addr, uint32_t byte_size, Error& err) {
 
 double LLV8::LoadDouble(int64_t addr, Error& err) {
   SBError sberr;
-  int64_t value = process_.ReadUnsignedFromMemory(static_cast<addr_t>(addr),
-                                                  sizeof(double), sberr);
-  if (sberr.Fail()) {
+  double value;
+  size_t result = process_.ReadMemory(static_cast<addr_t>(addr), &value, sizeof(double), sberr);
+  if (sberr.Fail() || result != sizeof(double)) {
     err = Error::Failure(
         "Failed to load double from v8 memory, "
         "addr=0x%016" PRIx64,
@@ -110,7 +110,7 @@ double LLV8::LoadDouble(int64_t addr, Error& err) {
   }
 
   err = Error::Ok();
-  return *reinterpret_cast<double*>(&value);
+  return value;
 }
 
 
@@ -1108,9 +1108,7 @@ Value JSObject::GetDescriptorProperty(std::string key_name, Map map,
 
     if (descriptors.IsConstFieldDetails(details) ||
         descriptors.IsDescriptorDetails(details)) {
-      Value value;
-
-      value = descriptors.GetValue(i, err);
+      descriptors.GetValue(i, err);
       if (err.Fail()) return Value();
 
       continue;
@@ -1127,11 +1125,10 @@ Value JSObject::GetDescriptorProperty(std::string key_name, Map map,
     int64_t index = descriptors.FieldIndex(details) - in_object_count;
 
     if (descriptors.IsDoubleField(details)) {
-      double value;
       if (index < 0) {
-        value = GetInObjectValue<double>(instance_size, index, err);
+        GetInObjectValue<double>(instance_size, index, err);
       } else {
-        value = extra_properties.Get<double>(index, err);
+        extra_properties.Get<double>(index, err);
       }
 
       if (err.Fail()) return Value();
