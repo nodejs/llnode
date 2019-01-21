@@ -615,8 +615,8 @@ std::string Printer::Stringify(v8::JSError js_error, Error& err) {
       if ((stack_len != 0) ||
           ((arr.GetArrayLength(err) - 1) % multiplier != 0)) {
         Error::PrintInDebugMode(
-            "JSArray doesn't look like a Stack Frames array. stack_len: %ld "
-            "array_len: %ld",
+            "JSArray doesn't look like a Stack Frames array. stack_len: %" PRId64 " "
+            "array_len: %" PRId64,
             stack_len, arr.GetArrayLength(err));
         output << rang::fg::yellow << ">" << rang::fg::reset;
         return output.str();
