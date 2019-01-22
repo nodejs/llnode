@@ -17,8 +17,14 @@
     "test-addon": "tape test/addon/*-test.js",
     "test-all": "npm run test-addon && npm run test-plugin",
     "test": "npm run test-plugin",
-    "coverage": "make coverage",
-    "codecov-upload": "codecov --disable=gcov --file=coverage-cc.info"
+    "nyc-test-all": "nyc npm run test-all",
+    "nyc-test": "nyc npm run test",
+    "coverage-cc": "make coverage",
+    "coverage-js": "nyc report --reporter=text-lcov > coverage-js.lcov",
+    "coverage": "npm run coverage-cc && npm run coverage-js",
+    "codecov-upload-cc": "codecov --disable=gcov --file=coverage-cc.info",
+    "codecov-upload-js": "codecov --disable=gcov --file=coverage-js.lcov",
+    "codecov-upload": "npm run codecov-upload-cc && npm run codecov-upload-js"
   },
   "repository": {
     "type": "git",
@@ -47,7 +53,18 @@
   "homepage": "https://github.com/nodejs/llnode#readme",
   "devDependencies": {
     "codecov": "^3.1.0",
+    "nyc": "^13.1.0",
     "tape": "^4.4.0"
+  },
+  "nyc": {
+    "include": [
+      "index.js",
+      "test/**/*.js"
+    ],
+    "exclude": [
+      "test/fixtures/**/*.js"
+    ],
+    "all": true
   },
   "dependencies": {
     "bindings": "^1.3.0",

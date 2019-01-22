@@ -13,7 +13,7 @@ matrix:
         - sudo apt-get install lldb-3.9 liblldb-3.9-dev lcov -y
       install:
         - npm install --llnode_build_addon=true --llnode_coverage=true
-      script: TEST_LLDB_BINARY=`which lldb-3.9` npm run test-all
+      script: TEST_LLDB_BINARY=`which lldb-3.9` npm run nyc-test-all
       node_js: "6"
       after_success:
         - npm run coverage
@@ -27,7 +27,7 @@ matrix:
         - sudo apt-get install lldb-3.9 liblldb-3.9-dev lcov -y
       install:
         - npm install --llnode_build_addon=true
-      script: TEST_LLDB_BINARY=`which lldb-3.9` npm run test-all
+      script: TEST_LLDB_BINARY=`which lldb-3.9` npm run nyc-test-all
       node_js: "8"
       after_success:
         - npm run coverage
@@ -41,7 +41,7 @@ matrix:
         - sudo apt-get install lldb-3.9 liblldb-3.9-dev lcov -y
       install:
         - npm install --llnode_build_addon=true --llnode_coverage=true
-      script: TEST_LLDB_BINARY=`which lldb-3.9` npm run test-all
+      script: TEST_LLDB_BINARY=`which lldb-3.9` npm run nyc-test-all
       node_js: "10"
       after_success:
         - npm run coverage
@@ -61,7 +61,7 @@ matrix:
         - sudo apt-get install lldb-3.9 liblldb-3.9-dev lcov -y
       install:
         - npm install --nodedir=$(dirname $(dirname $(which node)))/include/node
-      script: TEST_LLDB_BINARY=`which lldb-3.9` npm run test
+      script: TEST_LLDB_BINARY=`which lldb-3.9` npm run nyc-test
       env:
         - NVM_NODEJS_ORG_MIRROR=https://nodejs.org/download/nightly
         - NODEJS_ORG_MIRROR=https://nodejs.org/download/nightly
@@ -79,7 +79,7 @@ matrix:
         - sudo apt-get install lldb-3.9 liblldb-3.9-dev lcov -y
       install:
         - npm install --nodedir=$(dirname $(dirname $(which node)))/include/node
-      script: TEST_LLDB_BINARY=`which lldb-3.9` npm run test
+      script: TEST_LLDB_BINARY=`which lldb-3.9` npm run nyc-test
       env:
         - NVM_NODEJS_ORG_MIRROR=https://nodejs.org/download/v8-canary
         - NODEJS_ORG_MIRROR=https://nodejs.org/download/v8-canary
