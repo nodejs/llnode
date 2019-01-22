@@ -2,7 +2,7 @@
 
 const tape = require('tape');
 
-const common = require('./common');
+const common = require('../common');
 
 function testWorkqueueCommands(t, sess) {
   sess.send('v8 getactivehandles');
