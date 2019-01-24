@@ -18,7 +18,7 @@
       "<(lldb_include_dir)",
     ],
 
-    "cflags" : [ "-std=c++11" ],
+    "cflags" : [ "-std=c++14" ],
 
     "conditions": [
       [ "OS == 'mac'", {
