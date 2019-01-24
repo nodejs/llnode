@@ -1420,48 +1420,22 @@ bool LLScan::ScanHeapForObjects(lldb::SBTarget target,
   // Reload process anyway
   process_ = target.GetProcess();
 
-  // Need to reload memory ranges (though this does assume the user has also
-  // updated
-  // LLNODE_RANGESFILE with data for the new dump or things won't match up).
+  // Need to reload memory regions.
   if (target_ != target) {
-    ClearMemoryRanges();
     ClearMapsToInstances();
     ClearReferences();
     target_ = target;
   }
 
-#ifndef LLDB_SBMemoryRegionInfoList_h_
-  /* Fall back to environment variable containing pre-parsed list of memory
-   * ranges. */
-  if (nullptr == ranges_) {
-    const char* segmentsfilename = getenv("LLNODE_RANGESFILE");
-
-    if (segmentsfilename == nullptr) {
-      result.SetError(
-          "No memory range information available for this process. Cannot scan "
-          "for objects.\n"
-          "Please set `LLNODE_RANGESFILE` environment variable\n");
-      return false;
-    }
-
-    if (!GenerateMemoryRanges(target, segmentsfilename)) {
-      result.SetError(
-          "No memory range information available for this process. Cannot scan "
-          "for objects.\n");
-      return false;
-    }
-  }
-#endif  // LLDB_SBMemoryRegionInfoList_h_
-
   /* If we've reached here we have access to information about the valid memory
-   * ranges in the process and can scan for objects.
+   * regions in the process and can scan for objects.
    */
 
   /* Populate the map of objects. */
   if (mapstoinstances_.empty()) {
     FindJSObjectsVisitor v(target, this);
 
-    ScanMemoryRanges(v);
+    ScanMemoryRegions(v);
   }
 
   return true;
@@ -1539,9 +1513,7 @@ inline static ByteOrder GetHostByteOrder() {
   return u.b == 1 ? ByteOrder::eByteOrderBig : ByteOrder::eByteOrderLittle;
 }
 
-void LLScan::ScanMemoryRanges(FindJSObjectsVisitor& v) {
-  bool done = false;
-
+void LLScan::ScanMemoryRegions(FindJSObjectsVisitor& v) {
   const uint64_t addr_size = process_.GetAddressByteSize();
   bool swap_bytes = process_.GetByteOrder() != GetHostByteOrder();
 
@@ -1549,15 +1521,6 @@ void LLScan::ScanMemoryRanges(FindJSObjectsVisitor& v) {
   const uint64_t block_size = 1024 * 1024 * addr_size;
   unsigned char* block = new unsigned char[block_size];
 
-#ifndef LLDB_SBMemoryRegionInfoList_h_
-  MemoryRange* head = ranges_;
-
-  while (head != nullptr && !done) {
-    uint64_t address = head->start_;
-    uint64_t len = head->length_;
-    head = head->next_;
-
-#else  // LLDB_SBMemoryRegionInfoList_h_
   lldb::SBMemoryRegionInfoList memory_regions = process_.GetMemoryRegions();
   lldb::SBMemoryRegionInfo region_info;
 
@@ -1571,7 +1534,6 @@ void LLScan::ScanMemoryRanges(FindJSObjectsVisitor& v) {
     uint64_t address = region_info.GetRegionBase();
     uint64_t len = region_info.GetRegionEnd() - region_info.GetRegionBase();
 
-#endif  // LLDB_SBMemoryRegionInfoList_h_
     /* Brute force search - query every address - but allow the visitor code to
      * say how far to move on so we don't read every byte.
      */
@@ -1614,7 +1576,6 @@ void LLScan::ScanMemoryRanges(FindJSObjectsVisitor& v) {
       }
 
       if (increment == 0) {
-        done = true;
         break;
       }
     }
@@ -1622,73 +1583,6 @@ void LLScan::ScanMemoryRanges(FindJSObjectsVisitor& v) {
 
   delete[] block;
 }
-
-
-/* Read a file of memory ranges parsed from the core dump.
- * This is a work around for the lack of an API to get the memory ranges
- * within lldb.
- * There are scripts for generating this file on Mac and Linux stored in
- * the scripts directory of the llnode repository.
- * Export the name or full path to the ranges file in the LLNODE_RANGESFILE
- * env var before starting lldb and loading the llnode plugin.
- */
-bool LLScan::GenerateMemoryRanges(lldb::SBTarget target,
-                                  const char* segmentsfilename) {
-  std::ifstream input(segmentsfilename);
-
-  if (!input.is_open()) {
-    return false;
-  }
-
-  uint64_t address = 0;
-  uint64_t len = 0;
-
-  MemoryRange** tailptr = &ranges_;
-
-  lldb::addr_t address_byte_size = target.GetProcess().GetAddressByteSize();
-
-  while (input >> std::hex >> address >> std::hex >> len) {
-    /* Check if the range is accessible.
-     * The structure of a core file means if you check the start and the end of
-     * a range then the middle will be there, ranges are contiguous in the file,
-     * but cores often get truncated due to file size limits so ranges can be
-     * missing or truncated. Sometimes shared memory segments are omitted so
-     * it's also possible an entire section could be missing from the middle.
-     */
-    lldb::SBError error;
-
-    target.GetProcess().ReadPointerFromMemory(address, error);
-    if (!error.Success()) {
-      /* Could not access first word, skip. */
-      continue;
-    }
-
-    target.GetProcess().ReadPointerFromMemory(
-        (address + len) - address_byte_size, error);
-    if (!error.Success()) {
-      /* Could not access last word, skip. */
-      continue;
-    }
-
-    MemoryRange* newRange = new MemoryRange(address, len);
-
-    *tailptr = newRange;
-    tailptr = &(newRange->next_);
-  }
-  return true;
-}
-
-
-void LLScan::ClearMemoryRanges() {
-  MemoryRange* head = ranges_;
-  while (head != nullptr) {
-    MemoryRange* range = head;
-    head = head->next_;
-    delete range;
-  }
-  ranges_ = nullptr;
-}
-
 
 void LLScan::ClearMapsToInstances() {
   TypeRecord* t;

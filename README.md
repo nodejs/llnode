@@ -230,10 +230,6 @@ The following subcommands are supported:
       findjsobjects   -- List all object types and instance counts grouped by typename and sorted by instance count. Use
                          -d or --detailed to get an output grouped by type name, properties, and array length, as well as
                          more information regarding each type.
-                         With lldb < 3.9, requires the `LLNODE_RANGESFILE` environment variable to be set to a file
-                         containing memory ranges for the core file being debugged.
-                         There are scripts for generating this file on Linux and Mac in the scripts directory of the llnode
-                         repository.
       findrefs        -- Finds all the object properties which meet the search criteria.
                          The default is to list all the object properties that reference the specified value.
                          Flags:
@@ -337,7 +333,7 @@ TEST_LLDB_BINARY=`which lldb-4.0` npm run test-all
 
 * `LLNODE_DEBUG=true` to see additional debug info from llnode
 * `TEST_LLNODE_DEBUG=true` to see additional debug info coming from the tests
-* `LLNODE_CORE=/path/to/core/dump LLNODE_NODE_EXE=/path/to/node LLNODE_NO_RANGES=true`
+* `LLNODE_CORE=/path/to/core/dump LLNODE_NODE_EXE=/path/to/node`
   to use a prepared core dump instead of generating one on-the-fly when running
   the tests.
 
@@ -356,7 +352,6 @@ To debug `test/scan-test.js` with a prepared core dump:
 LLNODE_DEBUG=true TEST_LLNODE_DEBUG=true \
   LLNODE_CORE=/path/to/core/dump/of/inspect/scenario.js \
   LLNODE_NODE_EXE=/path/to/node \
-  LLNODE_NO_RANGES=true \
   node test/scan-test.js
 ```
 

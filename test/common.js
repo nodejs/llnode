@@ -153,9 +153,6 @@ function Session(options) {
   const lldbBin = process.env.TEST_LLDB_BINARY || 'lldb';
   const env = Object.assign({}, process.env);
 
-  if (options.ranges)
-    env.LLNODE_RANGESFILE = options.ranges;
-
   debug('lldb binary:', lldbBin);
   if (options.scenario) {
     this.needToKill = true;  // need to send 'kill' when quitting
@@ -225,12 +222,7 @@ function saveCoreLLDB(scenario, core, cb) {
     }
     sess.quit();
 
-    if (process.env.LLNODE_NO_RANGES) {
-      cb(null);
-    } else {
-      const ranges = core + '.ranges';
-      exports.generateRanges(core, ranges, cb);
-    }
+    cb(null);
   });
 }
 
@@ -277,11 +269,9 @@ exports.saveCore = function saveCore(options, cb) {
 
 // Load the core dump with the executable
 Session.loadCore = function loadCore(executable, core, cb) {
-  const ranges = process.env.LLNODE_NO_RANGES ? undefined : core + '.ranges';
   const sess = new Session({
     executable: executable,
-    core: core,
-    ranges: ranges
+    core: core
   });
 
   sess.timeoutAfter(exports.loadCoreTimeout);
@@ -329,25 +319,5 @@ Session.prototype.hasSymbol = function hasSymbol(symbol, callback) {
     } else {
       return callback(err, false);
     }
-  });
-}
-
-exports.generateRanges = function generateRanges(core, dest, cb) {
-  let script;
-  if (process.platform === 'darwin')
-    script = path.join(__dirname, '..', 'scripts', 'otool2segments.py');
-  else
-    script = path.join(__dirname, '..', 'scripts', 'readelf2segments.py');
-
-  debug('[RANGES]', `${script}, ${core}, ${dest}`);
-  const proc = spawn(script, [core], {
-    stdio: [null, 'pipe', 'inherit']
-  });
-
-  proc.stdout.pipe(fs.createWriteStream(dest));
-
-  proc.on('exit', (status) => {
-    debug('[RANGES]', `Generated ${dest}`);
-    cb(status === 0 ? null : new Error('Failed to generate ranges'));
   });
 };
