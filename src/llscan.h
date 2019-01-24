@@ -321,8 +321,6 @@ class LLScan {
 
   bool ScanHeapForObjects(lldb::SBTarget target,
                           lldb::SBCommandReturnObject& result);
-  bool GenerateMemoryRanges(lldb::SBTarget target,
-                            const char* segmentsfilename);
 
   inline TypeRecordMap& GetMapsToInstances() { return mapstoinstances_; };
   inline DetailedTypeRecordMap& GetDetailedMapsToInstances() {
@@ -369,24 +367,12 @@ class LLScan {
   v8::LLV8* llv8_;
 
  private:
-  void ScanMemoryRanges(FindJSObjectsVisitor& v);
-  void ClearMemoryRanges();
+  void ScanMemoryRegions(FindJSObjectsVisitor& v);
   void ClearMapsToInstances();
   void ClearReferences();
 
-  class MemoryRange {
-   public:
-    MemoryRange(uint64_t start, uint64_t length)
-        : start_(start), length_(length), next_(nullptr) {}
-
-    uint64_t start_;
-    uint64_t length_;
-    MemoryRange* next_;
-  };
-
   lldb::SBTarget target_;
   lldb::SBProcess process_;
-  MemoryRange* ranges_ = nullptr;
   TypeRecordMap mapstoinstances_;
   DetailedTypeRecordMap detailedmapstoinstances_;
 

@@ -83,7 +83,6 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
       }
     }
 
-#ifdef LLDB_SBMemoryRegionInfoList_h_
     // Heuristic: a PC in WX memory is almost certainly a V8 builtin.
     // TODO(bnoordhuis) Find a way to map the PC to the builtin's name.
     {
@@ -95,7 +94,6 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
         continue;
       }
     }
-#endif  // LLDB_SBMemoryRegionInfoList_h_
 
     // C++ stack frame.
     SBStream desc;
@@ -445,13 +443,6 @@ bool PluginInitialize(SBDebugger d) {
                 "name and sorted by instance count. Use -d or --detailed to "
                 "get an output grouped by type name, properties, and array "
                 "length, as well as more information regarding each type.\n"
-#ifndef LLDB_SBMemoryRegionInfoList_h_
-                "Requires `LLNODE_RANGESFILE` environment variable to be set "
-                "to a file containing memory ranges for the core file being "
-                "debugged.\n"
-                "There are scripts for generating this file on Linux and Mac "
-                "in the scripts directory of the llnode repository."
-#endif  // LLDB_SBMemoryRegionInfoList_h_
   );
 
   SBCommand settingsCmd =
