@@ -47,6 +47,20 @@ matrix:
         - npm run coverage
         - npm run codecov-upload
 
+    - name: "[Trusty] Node.js v11.x"
+      sudo: required
+      dist: trusty
+      before_install:
+        - sudo apt-get -qq update
+        - sudo apt-get install lldb-3.9 liblldb-3.9-dev lcov -y
+      install:
+        - npm install --llnode_build_addon=true --llnode_coverage=true
+      script: TEST_LLDB_BINARY=`which lldb-3.9` npm run nyc-test-all
+      node_js: "11"
+      after_success:
+        - npm run coverage
+        - npm run codecov-upload
+
     ###########################
     # Nightlies & V8 Canaries #
     ###########################
@@ -111,6 +125,13 @@ matrix:
       install: npm install --llnode_build_addon=true
       script: npm run test-all
       node_js: "10"
+
+    - name: "[OSX] Node.js v11.x"
+      os: osx
+      osx_image: xcode9.3
+      install: npm install --llnode_build_addon=true
+      script: npm run test-all
+      node_js: "11"
 
     ##########
     # Linter #
