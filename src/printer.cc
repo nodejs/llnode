@@ -93,8 +93,8 @@ std::string Printer::Stringify(v8::JSFunction js_function, Error& err) {
     std::stringstream ss;
     ss << rang::fg::magenta << res << rang::fg::reset << rang::style::bold
        << rang::fg::yellow << "\n  context" << rang::fg::reset
-       << rang::style::reset << "=" << rang::fg::cyan << "0x%016" PRIx64
-       << rang::fg::reset;
+       << rang::style::reset << "=" << rang::fg::cyan << "0x" << std::hex
+       << context_obj.raw() << std::dec << rang::fg::reset;
     res = ss.str();
 
     {
