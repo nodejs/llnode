@@ -23,10 +23,10 @@ https://asciinema.org/a/29589
 
 ## Build Status
 
-| Version | v6.x                    | v8.x                    | v10.x                     | master                        | v8-canary                        |
-|---------|-------------------------|-------------------------|---------------------------|-------------------------------|----------------------------------|
-| **Trusty**  | [![v6.x badge][v6-trusty-badge]][travis] | [![v8.x badge][v8-trusty-badge]][travis] | [![v10.x badge][v10-trusty-badge]][travis] | [![master badge][master-trusty-badge]][travis] | [![v8-canary badge][canary-trusty-badge]][travis] |
-| **OS X**  | [![v6.x badge][v6-osx-badge]][travis] | [![v8.x badge][v8-osx-badge]][travis] | [![v10.x badge][v10-osx-badge]][travis] | - | - |
+| Version | v6.x                    | v8.x                    | v10.x                     | v11.x                     | master                        | v8-canary                        |
+|---------|-------------------------|-------------------------|---------------------------|---------------------------|-------------------------------|----------------------------------|
+| **Trusty**  | [![v6.x badge][v6-trusty-badge]][travis] | [![v8.x badge][v8-trusty-badge]][travis] | [![v10.x badge][v10-trusty-badge]][travis] | [![v11.x badge][v11-trusty-badge]][travis] | [![master badge][master-trusty-badge]][travis] | [![v8-canary badge][canary-trusty-badge]][travis] |
+| **OS X**  | [![v6.x badge][v6-osx-badge]][travis] | [![v8.x badge][v8-osx-badge]][travis] | [![v10.x badge][v10-osx-badge]][travis] | [![v11.x badge][v11-osx-badge]][travis] | - | - |
 
 We have nightly test runs against all Node.js active release lines. We also test
 against Node.js master and Node.js v8-canary nightly builds to help us identify
@@ -388,10 +388,12 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 [v6-trusty-badge]: https://travisci-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/1?use_travis_com=true
 [v8-trusty-badge]: https://travisci-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/2?use_travis_com=true
 [v10-trusty-badge]: https://travisci-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/3?use_travis_com=true
+[v11-trusty-badge]: https://travisci-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/4?use_travis_com=true
 
-[v6-osx-badge]: https://travisci-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/4?use_travis_com=true
-[v8-osx-badge]: https://travisci-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/5?use_travis_com=true
-[v10-osx-badge]: https://travisci-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/6?use_travis_com=true
+[v6-osx-badge]: https://travisci-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/5?use_travis_com=true
+[v8-osx-badge]: https://travisci-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/6?use_travis_com=true
+[v10-osx-badge]: https://travisci-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/7?use_travis_com=true
+[v11-osx-badge]: https://travisci-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/8?use_travis_com=true
 
-[master-trusty-badge]: https://travisci-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/7?use_travis_com=true
-[canary-trusty-badge]: https://travisci-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/8?use_travis_com=true
+[master-trusty-badge]: https://travisci-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/10?use_travis_com=true
+[canary-trusty-badge]: https://travisci-matrix-badges.herokuapp.com/repos/nodejs/llnode/branches/master/11?use_travis_com=true
