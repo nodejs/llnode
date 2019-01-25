@@ -349,6 +349,10 @@ const hashMapTests = {
 };
 
 const contextTests = {
+  'context': {
+    re: /context=(0x[0-9a-f]+)[^\n]+/,
+    desc: ''
+  },
   'previous': {
     re: /\(previous\)=(0x[0-9a-f]+)[^\n]+/,
     desc: '.(previous)'
