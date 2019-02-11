@@ -643,15 +643,17 @@ void FindReferencesCmd::PrintRecursiveReferences(
   int level
 )
 {
+  Settings* settings = Settings::GetSettings();
+  unsigned int padding = settings->GetTreePadding();
+
+  std::string branch = std::string(padding * level, ' ') + "+ ";
+
+  result.Printf("%s", branch.c_str());
+
   if (find(visited_references->begin(), visited_references->end(), address) != visited_references->end())
   {
-    Settings* settings = Settings::GetSettings();
-    unsigned int padding = settings->GetTreePadding();
     std::stringstream seen_str;
-    seen_str << std::string((level)*padding, ' ') << "|\n";
-    seen_str << std::string((level)*padding, ' ') << "+"
-      << std::string(padding, '-') << rang::fg::red
-      << " [seen above]" << rang::fg::reset << std::endl;
+    seen_str << rang::fg::red << " [seen above]" << rang::fg::reset << std::endl;
     result.Printf(seen_str.str().c_str());
   } else {
     visited_references->push_back(address);
@@ -810,14 +812,6 @@ void FindReferencesCmd::ReferenceScanner::PrintContextRefs(
 
 
         std::stringstream ss;
-        if (level > 0) {
-          Settings* settings = Settings::GetSettings();
-          unsigned int padding = settings->GetTreePadding();
-          ss << rang::fg::gray << std::string((level - 1) * padding, ' ')
-             << "|\n";
-          ss << std::string((level - 1) * padding, ' ') << "+"
-             << std::string(padding - 1, '-') << "+ " << rang::fg::reset;
-        }
         ss << rang::fg::cyan << "0x%" PRIx64 << rang::fg::reset << ": "
            << rang::fg::magenta << "Context" << rang::style::bold
            << rang::fg::yellow << ".%s" << rang::fg::reset << rang::style::reset
@@ -837,14 +831,6 @@ void FindReferencesCmd::ReferenceScanner::PrintContextRefs(
 std::string FindReferencesCmd::ObjectScanner::GetPropertyReferenceString(
     int level) {
   std::stringstream ss;
-  // Pretty print guide
-  if (level > 0) {
-    Settings* settings = Settings::GetSettings();
-    unsigned int padding = settings->GetTreePadding();
-    ss << rang::fg::gray << std::string((level - 1) * padding, ' ') << "|\n";
-    ss << std::string((level - 1) * padding, ' ') << "+"
-       << std::string(padding - 1, '-') << "+ " << rang::fg::reset;
-  }
   ss << rang::fg::cyan << "0x%" PRIx64 << rang::fg::reset << ": "
      << rang::fg::magenta << "%s" << rang::style::bold << rang::fg::yellow
      << ".%s" << rang::fg::reset << rang::style::reset << "=" << rang::fg::cyan
@@ -855,14 +841,6 @@ std::string FindReferencesCmd::ObjectScanner::GetPropertyReferenceString(
 std::string FindReferencesCmd::ObjectScanner::GetArrayReferenceString(
     int level) {
   std::stringstream ss;
-  // Pretty print guide
-  if (level > 0) {
-    Settings* settings = Settings::GetSettings();
-    unsigned int padding = settings->GetTreePadding();
-    ss << rang::fg::gray << std::string((level - 1) * padding, ' ') << "|\n";
-    ss << std::string((level - 1) * padding, ' ') << "+"
-       << std::string(padding, '-') << "+ " << rang::fg::reset;
-  }
   ss << rang::fg::cyan << "0x%" PRIx64 << rang::fg::reset << ": "
      << rang::fg::magenta << "%s" << rang::style::bold << rang::fg::yellow
      << "[%" PRId64 "]" << rang::fg::reset << rang::style::reset << "="
