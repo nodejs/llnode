@@ -571,6 +571,15 @@ bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
     ScanForReferences(scanner);
   }
 
+  // If we're using recursive findrefs, we have to make sure the
+  // RecursiveScanner is initialized as well.
+  if (scan_options.recursive_scan) {
+    auto ref_scanner = new ReferenceScanner(llscan_, v8::Value());
+    if (!ref_scanner->AreReferencesLoaded()) {
+      ScanForReferences(ref_scanner);
+    }
+  }
+
   // Store already visited references to avoid and infinite recursive loop
   // when `--recursive (-r)` option is set
   ReferencesVector already_visited_references;
