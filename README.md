@@ -245,7 +245,7 @@ The following subcommands are supported:
       getactivehandles  -- Print all pending handles in the queue. Equivalent to running process._getActiveHandles() on
                            the living process.
 
-      getactiverequests -- Print all pending handles in the queue. Equivalent to running process._getActiveHandles() on
+      getactiverequests -- Print all pending requests in the queue. Equivalent to running process._getActiveRequests() on
                            the living process.
 
       inspect         -- Print detailed description and contents of the JavaScript value.
