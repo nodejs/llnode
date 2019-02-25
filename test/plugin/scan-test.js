@@ -119,10 +119,14 @@ function test(executable, core, t) {
   sess.linesUntil(versionMark, (err, lines) => {
     t.error(err);
     t.ok(/Class_C\.arr/.test(lines.join('\n')), 'Should find parent reference with -r -n' );
-    sess.send('v8 findrefs -s "My Class C"');
+    // TODO(mmarchini) see comment below
+    // sess.send('v8 findrefs -s "My Class C"');
+    sess.send('v8 findjsinstances Zlib');
     sess.send('version');
   });
 
+  /* TODO(mmarchini) we need to fix
+   * https://github.com/nodejs/llnode/issues/267 before re-enabling this test
   // Test for findrefs -s
   sess.linesUntil(versionMark, (err, lines) => {
     t.error(err);
@@ -138,6 +142,7 @@ function test(executable, core, t) {
     sess.send('v8 findjsinstances Zlib');
     sess.send('version');
   });
+  */
 
   sess.linesUntil(versionMark, (err, lines) => {
     t.error(err);
