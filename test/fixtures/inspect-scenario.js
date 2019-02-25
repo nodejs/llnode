@@ -67,6 +67,8 @@ function closure() {
   c.hashmap['stringifiedError'] = new Error('test');
   c.hashmap['stringifiedErrorStack'] = c.hashmap['stringifiedError'].stack;
 
+  c.hashmap['promise'] = new Promise(() => {});
+
   c.hashmap[0] = null;
   c.hashmap[4] = undefined;
   c.hashmap[23] = /regexp/;
