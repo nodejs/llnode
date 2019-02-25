@@ -518,6 +518,13 @@ void Types::Load() {
   kLastContextType = LoadConstant("LastContextType");
 
   kJSErrorType = LoadConstant("type_JSError__JS_ERROR_TYPE");
+  kJSPromiseType = LoadConstant("type_JSPromise__JS_PROMISE_TYPE");
+  if (kJSPromiseType == -1) {
+    // NOTE(mmarchini): On Node.js v10.x, JS_PROMISE always comes after
+    // JS_MESSAGE_OBJECT_TYPE in the InstanceType enum.
+    kJSPromiseType =
+        LoadConstant("type_JSMessageObject__JS_MESSAGE_OBJECT_TYPE") + 1;
+  }
   kHeapNumberType = LoadConstant("type_HeapNumber__HEAP_NUMBER_TYPE");
   kMapType = LoadConstant("type_Map__MAP_TYPE");
   kGlobalObjectType =

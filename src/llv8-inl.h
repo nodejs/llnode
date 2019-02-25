@@ -314,6 +314,7 @@ inline bool JSObject::IsObjectType(LLV8* v8, int64_t type) {
   return type == v8->types()->kJSObjectType ||
          type == v8->types()->kJSAPIObjectType ||
          type == v8->types()->kJSErrorType ||
+         type == v8->types()->kJSPromiseType ||
          type == v8->types()->kJSSpecialAPIObjectType;
 }
 
