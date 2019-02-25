@@ -290,9 +290,14 @@ class JSError : public JSObject {
   inline std::string stack_trace_property();
 };
 
+class FixedArray;
 class StackFrame {
  public:
+  Value GetReceiver(Error& err);
   JSFunction GetFunction(Error& err);
+  FixedArray GetParameters(Error& err);
+
+  bool HasParameters(Error& err);
 
  private:
   friend StackTrace;
@@ -346,6 +351,7 @@ class StackTrace {
   JSArray frame_array_;
   int multiplier_ = -1;
   int len_ = -1;
+  int has_parameters_ = false;
 };
 
 

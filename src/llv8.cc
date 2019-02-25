@@ -1259,15 +1259,10 @@ StackTrace::StackTrace(JSArray frame_array, Error& err)
 
   len_ = v8::Smi(maybe_stack_len).GetValue();
 
-  multiplier_ = 5;
-  // On Node.js v8.x, the first array element is the stack size, and each
-  // stack frame use 5 elements.
-  if ((len_ * multiplier_ + 1) != frame_array_.GetArrayLength(err)) {
-    // On Node.js v6.x, the first array element is zero, and each stack frame
-    // use 4 element.
-    multiplier_ = 4;
-    if ((len_ != 0) ||
-        ((frame_array_.GetArrayLength(err) - 1) % multiplier_ != 0)) {
+  // On Node.js v6.x, the first array element is zero, and each stack frame
+  // use 4 element.
+  if (len_ == 0) {
+    if ((frame_array_.GetArrayLength(err) - 1) % multiplier_ != 0) {
       Error::PrintInDebugMode(
           "JSArray doesn't look like a Stack Frames array. stack_len: %lld "
           "array_len: %lld",
@@ -1276,7 +1271,24 @@ StackTrace::StackTrace(JSArray frame_array, Error& err)
       multiplier_ = -1;
       return;
     }
+    multiplier_ = 4;
     len_ = (frame_array_.GetArrayLength(err) - 1) / multiplier_;
+  } else {
+    // On Node.js v8.x and later, the first array element is the stack size,
+    // and each stack frame use 5 or 6 elements.
+    multiplier_ = (frame_array_.GetArrayLength(err) - 1) / len_;
+    if (multiplier_ == 6) {
+      // If stack frame has 6 elements, it has parameters information
+      has_parameters_ = true;
+    } else if (multiplier_ != 5) {
+      Error::PrintInDebugMode(
+          "JSArray doesn't look like a Stack Frames array. stack_len: %lld "
+          "array_len: %lld",
+          len_, frame_array_.GetArrayLength(err));
+      len_ = -1;
+      multiplier_ = -1;
+      return;
+    }
   }
 }
 
@@ -1294,17 +1306,40 @@ StackFrame::StackFrame(StackTrace* stack_trace, int index)
     : stack_trace_(stack_trace), index_(index) {}
 
 JSFunction StackFrame::GetFunction(Error& err) {
+  int js_function_pos = frame_array_index() + 1;
   JSArray frame_array = stack_trace_->frame_array_;
-  v8::Value maybe_fn = frame_array.GetArrayElement(frame_array_index(), err);
+  v8::Value maybe_fn = frame_array.GetArrayElement(js_function_pos, err);
   if (err.Fail()) return JSFunction();
   return JSFunction(maybe_fn);
 }
 
+Value StackFrame::GetReceiver(Error& err) {
+  int receiver_pos = frame_array_index();
+  JSArray frame_array = stack_trace_->frame_array_;
+  v8::Value maybe_receiver = frame_array.GetArrayElement(receiver_pos, err);
+  if (err.Fail()) return Value();
+  return maybe_receiver;
+}
+
+bool StackFrame::HasParameters(Error& err) {
+  return stack_trace_->has_parameters_;
+}
+
+FixedArray StackFrame::GetParameters(Error& err) {
+  if (!HasParameters(err)) {
+    return FixedArray();
+  }
+  const int parameters_pos = frame_array_index() + 5;
+  JSArray frame_array = stack_trace_->frame_array_;
+  v8::Value maybe_parameters = frame_array.GetArrayElement(parameters_pos, err);
+  if (err.Fail()) return FixedArray();
+  return FixedArray(maybe_parameters);
+}
+
 int StackFrame::frame_array_index() {
   int multiplier = stack_trace_->multiplier_;
-  const int js_function_pos = 1;
   const int begin_offset = 1;
-  return begin_offset + js_function_pos + (index_ * multiplier);
+  return begin_offset + (index_ * multiplier);
 }
 
 

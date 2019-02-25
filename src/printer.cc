@@ -559,14 +559,27 @@ std::string Printer::Stringify(v8::JSError js_error, Error& err) {
     Printer printer(llv8_);
     for (v8::StackFrame frame : stack_trace) {
       v8::JSFunction js_function = frame.GetFunction(err);
+      v8::Value receiver = frame.GetReceiver(err);
       if (err.Fail()) {
         error_stack << rang::fg::gray << "    <unknown>" << std::endl;
         continue;
       }
 
-      error_stack << "    "
+      error_stack << "    { fn="
                   << printer.Stringify<v8::HeapObject>(js_function, err)
-                  << std::endl;
+                  << ", this=" << printer.Stringify(receiver, err);
+      if (frame.HasParameters(err)) {
+        v8::FixedArray parameters = frame.GetParameters(err);
+        int64_t param_len = parameters.Length(err).GetValue();
+        error_stack << ", args=[";
+        for(int64_t p = 0; p < param_len; p++) {
+          v8::Value param = parameters.Get<v8::Value>(p, err);
+          error_stack << printer.Stringify(param, err);
+          if (p < param_len - 1) error_stack << ", ";
+        }
+        error_stack << "]";
+      }
+      error_stack << " }" << std::endl;
     }
     error_stack << "  }";
     output << error_stack.str();
