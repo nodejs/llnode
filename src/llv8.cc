@@ -15,9 +15,9 @@
 namespace llnode {
 namespace v8 {
 
+using lldb::addr_t;
 using lldb::SBError;
 using lldb::SBTarget;
-using lldb::addr_t;
 
 static std::string kConstantPrefix = "v8dbg_";
 

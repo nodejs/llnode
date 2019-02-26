@@ -23,6 +23,8 @@
 namespace llnode {
 
 using lldb::ByteOrder;
+using lldb::eReturnStatusFailed;
+using lldb::eReturnStatusSuccessFinishResult;
 using lldb::SBCommandReturnObject;
 using lldb::SBDebugger;
 using lldb::SBError;
@@ -30,8 +32,6 @@ using lldb::SBExpressionOptions;
 using lldb::SBStream;
 using lldb::SBTarget;
 using lldb::SBValue;
-using lldb::eReturnStatusFailed;
-using lldb::eReturnStatusSuccessFinishResult;
 
 
 char** ParsePrinterOptions(char** cmd, Printer::PrinterOptions* options) {
@@ -261,10 +261,9 @@ bool FindInstancesCmd::DoExecute(SBDebugger d, char** cmd,
       final_p_offset = pagination_.total_entries;
     }
 
-    auto it =
-        pagination_.current_page == 0
-            ? t->GetInstances().begin()
-            : std::next(t->GetInstances().begin(), initial_p_offset);
+    auto it = pagination_.current_page == 0
+                  ? t->GetInstances().begin()
+                  : std::next(t->GetInstances().begin(), initial_p_offset);
     for (; it != t->GetInstances().end() &&
            it != (std::next(t->GetInstances().begin(), final_p_offset));
          ++it) {

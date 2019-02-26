@@ -19,6 +19,8 @@
 
 namespace llnode {
 
+using lldb::eReturnStatusFailed;
+using lldb::eReturnStatusSuccessFinishResult;
 using lldb::SBCommandInterpreter;
 using lldb::SBCommandReturnObject;
 using lldb::SBDebugger;
@@ -30,8 +32,6 @@ using lldb::SBSymbol;
 using lldb::SBTarget;
 using lldb::SBThread;
 using lldb::SBValue;
-using lldb::eReturnStatusFailed;
-using lldb::eReturnStatusSuccessFinishResult;
 
 
 bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
@@ -433,8 +433,7 @@ bool PluginInitialize(SBDebugger d) {
                     "JavaScript frame.\n\n"
                     "Syntax: v8 source list [flags]\n\n"
                     "Flags:\n"
-                    " * -l <line> - Print source code below line <line>.\n"
-                    );
+                    " * -l <line> - Print source code below line <line>.\n");
   interpreter.AddCommand("jssource", new llnode::ListCmd(&llv8),
                          "Alias for `v8 source list`");
 
@@ -442,8 +441,7 @@ bool PluginInitialize(SBDebugger d) {
                 "List all object types and instance counts grouped by type "
                 "name and sorted by instance count. Use -d or --detailed to "
                 "get an output grouped by type name, properties, and array "
-                "length, as well as more information regarding each type.\n"
-  );
+                "length, as well as more information regarding each type.\n");
 
   SBCommand settingsCmd =
       v8.AddMultiwordCommand("settings", "Interpreter settings");
