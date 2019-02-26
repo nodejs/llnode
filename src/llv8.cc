@@ -684,8 +684,8 @@ std::string JSDate::ToString(Error& err) {
 
   // Check if it is SMI
   // e.g: date = new Date(1)
-  if (IsSmi(err)) {
-    v8::Smi smi(val);
+  v8::Smi smi(val);
+  if (smi.Check()) {
     std::string s = smi.ToString(err);
     if (err.Fail()) return "";
     return s;
@@ -693,8 +693,8 @@ std::string JSDate::ToString(Error& err) {
 
   // Check if it is HeapNumber
   // e.g: date = new Date()
-  if (IsHeapNumber(err)) {
-    v8::HeapNumber hn(val);
+  v8::HeapNumber hn(val);
+  if (hn.Check()) {
     std::string s = hn.ToString(true, err);
     if (err.Fail()) return "";
     return s;
