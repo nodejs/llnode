@@ -6,4 +6,5 @@ with the following exception:
 
 llnode Collaborators are allowed to approve their own Pull Requests if it has
 been opened for at least 7 days and there was no reviews from other
-collaborators.
+collaborators. All other landing criteria still have to be met even if its
+self-approved.
