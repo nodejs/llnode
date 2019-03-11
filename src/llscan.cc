@@ -635,13 +635,8 @@ void FindReferencesCmd::ScanForReferences(ObjectScanner* scanner) {
 }
 
 void FindReferencesCmd::PrintRecursiveReferences(
-  lldb::SBCommandReturnObject& result,
-  ScanOptions* options,
-  ReferencesVector* visited_references,
-  uint64_t address,
-  int level
-)
-{
+    lldb::SBCommandReturnObject& result, ScanOptions* options,
+    ReferencesVector* visited_references, uint64_t address, int level) {
   Settings* settings = Settings::GetSettings();
   unsigned int padding = settings->GetTreePadding();
 
@@ -649,24 +644,19 @@ void FindReferencesCmd::PrintRecursiveReferences(
 
   result.Printf("%s", branch.c_str());
 
-  if (find(visited_references->begin(), visited_references->end(), address) != visited_references->end())
-  {
+  if (find(visited_references->begin(), visited_references->end(), address) !=
+      visited_references->end()) {
     std::stringstream seen_str;
-    seen_str << rang::fg::red << " [seen above]" << rang::fg::reset << std::endl;
+    seen_str << rang::fg::red << " [seen above]" << rang::fg::reset
+             << std::endl;
     result.Printf(seen_str.str().c_str());
   } else {
     visited_references->push_back(address);
     v8::Value value(llscan_->v8(), address);
     ReferenceScanner scanner_(llscan_, value);
     ReferencesVector* references_ = scanner_.GetReferences();
-    PrintReferences(
-      result,
-      references_,
-      &scanner_,
-      options,
-      visited_references,
-      level + 1
-    );
+    PrintReferences(result, references_, &scanner_, options, visited_references,
+                    level + 1);
   }
 }
 
@@ -696,7 +686,8 @@ void FindReferencesCmd::PrintReferences(
       scanner->PrintRefs(result, js_obj, err, level);
 
       if (options->recursive_scan) {
-        PrintRecursiveReferences(result, options, already_visited_references, addr, level);
+        PrintRecursiveReferences(result, options, already_visited_references,
+                                 addr, level);
       }
 
     } else if (type < v8->types()->kFirstNonstringType) {
@@ -704,7 +695,8 @@ void FindReferencesCmd::PrintReferences(
       scanner->PrintRefs(result, str, err, level);
 
       if (options->recursive_scan) {
-        PrintRecursiveReferences(result, options, already_visited_references, addr, level);
+        PrintRecursiveReferences(result, options, already_visited_references,
+                                 addr, level);
       }
 
     } else if (type == v8->types()->kJSTypedArrayType) {
@@ -820,7 +812,8 @@ void FindReferencesCmd::ReferenceScanner::PrintContextRefs(
                       search_value_.raw());
 
         if (options->recursive_scan) {
-          cli_cmd_->PrintRecursiveReferences(result, options, already_visited_references, c.raw(), level);
+          cli_cmd_->PrintRecursiveReferences(
+              result, options, already_visited_references, c.raw(), level);
         }
       }
     }

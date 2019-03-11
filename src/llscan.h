@@ -132,13 +132,10 @@ class FindReferencesCmd : public CommandBase {
 
   void ScanForReferences(ObjectScanner* scanner);
 
-  void PrintRecursiveReferences(
-    lldb::SBCommandReturnObject& result,
-    ScanOptions* options,
-    ReferencesVector* visited_references,
-    uint64_t address,
-    int level
-  );
+  void PrintRecursiveReferences(lldb::SBCommandReturnObject& result,
+                                ScanOptions* options,
+                                ReferencesVector* visited_references,
+                                uint64_t address, int level);
 
   class ReferenceScanner : public ObjectScanner {
    public:
