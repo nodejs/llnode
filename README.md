@@ -169,7 +169,7 @@ loading a core dump or attaching to a process.
 
 Similar to the `~/.lldbinit` approach, this way LLDB will also load the plugin
 automatically on start-up. Doing this may require additional permissions
-to be able to copy the plugin libary to the system plugin directory.
+to be able to copy the plugin library to the system plugin directory.
 
 On Linux, run `make install-linux` in the project directory, or if
 installing with npm, copy `node_modules/llnode/llnode.so`
