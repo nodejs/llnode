@@ -192,10 +192,8 @@ bool PrintCmd::DoExecute(SBDebugger d, char** cmd,
   SBExpressionOptions options;
   SBValue value = target.EvaluateExpression(full_cmd.c_str(), options);
   if (value.GetError().Fail()) {
-    SBStream desc;
-    if (value.GetError().GetDescription(desc)) {
-      result.SetError(desc.GetData());
-    }
+    SBError error = value.GetError();
+    result.SetError(error);
     result.SetStatus(eReturnStatusFailed);
     return false;
   }

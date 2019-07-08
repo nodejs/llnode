@@ -22,6 +22,18 @@ tape('v8 findrefs and friends', (t) => {
   }
 });
 
+function testFindrefsForInvalidExpr(t, sess, next) {
+  sess.send('v8 findrefs invalid_expr');
+  sess.waitError(/error:/, (err, line) => {
+    t.error(err);
+    t.ok(
+      /error: error: use of undeclared identifier 'invalid_expr'/.test(line),
+      'invalid expression should return an error'
+    );
+    next();
+  });
+}
+
 function test(executable, core, t) {
   const sess = common.Session.loadCore(executable, core, (err) => {
     t.error(err);
@@ -31,7 +43,6 @@ function test(executable, core, t) {
     // Just a separator
     sess.send('version');
   });
-
 
   sess.linesUntil(versionMark, (err, lines) => {
     t.error(err);
@@ -157,7 +168,6 @@ function test(executable, core, t) {
       sess.send(`v8 findrefs ${match[1]}`);
     }
     t.ok(found, 'Zlib should be in findjsinstances');
-
     // Just a separator
     sess.send('version');
   });
@@ -181,8 +191,13 @@ function test(executable, core, t) {
       t.error(err)
       if(hasSymbol)
         t.ok(/Context\.scopedAPI/.test(lines.join('\n')), 'Should find reference #4');
-      sess.quit();
-      t.end();
+
+      // `waitError()` don't share the same `waitQueue` with `wait()` so that
+      // we add the function below to delay the event registration.
+      testFindrefsForInvalidExpr(t, sess, () => {
+        sess.quit();
+        t.end();
+      });
     });
   });
 }

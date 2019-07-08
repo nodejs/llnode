@@ -546,7 +546,7 @@ function verifyHashMap(t, sess) {
     const parent = 'hashmap';
     const addresses = collectMembers(
         t, lines.join('\n'), hashMapTests, parent);
-    verifyMembers(t, sess, addresses, hashMapTests, parent, teardown);
+    verifyMembers(t, sess, addresses, hashMapTests, parent, verifyInvalidExpr);
   });
 }
 
@@ -612,6 +612,20 @@ function verifyMembers(t, sess, addresses, tests, parent, next) {
 
   // Kickoff
   verifyProperty(t, sess, addresses, 0);
+}
+
+function verifyInvalidExpr(t, sess) {
+  sess.send('v8 inspect invalid_expr');
+  sess.waitError(/error:/, (err, line) => {
+    if (err) {
+      return teardown(t, sess, err);
+    }
+    t.ok(
+      /error: error: use of undeclared identifier 'invalid_expr'/.test(line),
+      'invalid expression should return an error'
+    );
+    teardown(t, sess);
+  });
 }
 
 tape('v8 inspect', (t) => {
