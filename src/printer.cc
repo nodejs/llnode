@@ -526,27 +526,31 @@ std::string Printer::Stringify(v8::JSError js_error, Error& err) {
   if (options_.detailed) {
     output << StringifyJSObjectFields(js_error, err);
 
-    v8::StackTrace stack_trace = js_error.GetStackTrace(err);
+    if (js_error.HasStackTrace(err)) {
+      v8::StackTrace stack_trace = js_error.GetStackTrace(err);
 
-    std::stringstream error_stack;
-    error_stack << std::endl
-                << rang::fg::red << "  error stack" << rang::fg::reset << " {"
-                << std::endl;
+      std::stringstream error_stack;
+      error_stack << std::endl
+                  << rang::fg::red << "  error stack" << rang::fg::reset << " {"
+                  << std::endl;
 
-    Printer printer(llv8_);
-    for (v8::StackFrame frame : stack_trace) {
-      v8::JSFunction js_function = frame.GetFunction(err);
-      if (err.Fail()) {
-        error_stack << rang::fg::gray << "    <unknown>" << std::endl;
-        continue;
+
+      Printer printer(llv8_);
+      for (v8::StackFrame frame : stack_trace) {
+        v8::JSFunction js_function = frame.GetFunction(err);
+        if (err.Fail()) {
+          error_stack << rang::fg::gray << "    <unknown>" << std::endl;
+          continue;
+        }
+
+        error_stack << "    "
+                    << printer.Stringify<v8::HeapObject>(js_function, err)
+                    << std::endl;
       }
 
-      error_stack << "    "
-                  << printer.Stringify<v8::HeapObject>(js_function, err)
-                  << std::endl;
+      error_stack << "  }";
+      output << error_stack.str();
     }
-    error_stack << "  }";
-    output << error_stack.str();
   }
 
   output << rang::fg::yellow << ">" << rang::fg::reset;

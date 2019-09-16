@@ -161,6 +161,28 @@ const hashMapTests = {
       });
     }
   },
+  // .stringifiedError=0x0000392d5d661119:<Object: Error>
+  'error': {
+    re: /.stringifiedError=(0x[0-9a-f]+):<Object: Error>/,
+    desc: '.stringifiedError Error property with stringified stack',
+    validator(t, sess, addresses, name, cb) {
+      const address = addresses[name];
+      sess.send(`v8 inspect ${address}`);
+
+      sess.linesUntil(/}>/, (err, lines) => {
+        if (err) return cb(err);
+        lines = lines.join('\n');
+
+        let strStackMatch = lines.match(/stack=(0x[0-9a-f]+):<String: /i);
+        t.ok(strStackMatch, 'hashmap.stringifiedError should have stringified stack');
+
+        let stackMatch  = lines.match(/error stack {/i);
+        t.notOk(stackMatch, 'Error object with stringified stack should not have an error stack');
+
+        cb(null);
+      });
+    }
+  },
   // .array=0x000003df9cbe7919:<Array: length=6>,
   'array': {
     re: /.array=(0x[0-9a-f]+):<Array: length=6>/,
