@@ -1271,6 +1271,13 @@ StackTrace::Iterator StackTrace::end() {
 
 StackTrace::StackTrace(JSArray frame_array, Error& err)
     : frame_array_(frame_array) {
+  if (!frame_array.Check()) {
+    PRINT_DEBUG("JS Array is not a valid object");
+    len_ = -1;
+    multiplier_ = -1;
+    return;
+  }
+
   v8::Value maybe_stack_len = frame_array.GetArrayElement(0, err);
 
   if (err.Fail()) {
