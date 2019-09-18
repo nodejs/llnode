@@ -79,8 +79,8 @@ int64_t Constants::LoadRawConstant(const char* name, int64_t def) {
   Error err;
   int64_t v = Constants::LookupConstant(target_, name, def, err);
   if (err.Fail()) {
-    Error::PrintInDebugMode(
-        "Failed to load raw constant %s, default to %" PRId64, name, def);
+    PRINT_DEBUG("Failed to load raw constant %s, default to %" PRId64, name,
+                def);
   }
 
   return v;
@@ -96,8 +96,7 @@ int64_t Constants::LoadConstant(const char* name, int64_t def) {
   Error err;
   int64_t v = LoadConstant(name, err, def);
   if (err.Fail()) {
-    Error::PrintInDebugMode("Failed to load constant %s, default to %" PRId64,
-                            name, def);
+    PRINT_DEBUG("Failed to load constant %s, default to %" PRId64, name, def);
   }
 
   return v;
@@ -109,9 +108,8 @@ int64_t Constants::LoadConstant(const char* name, const char* fallback,
   int64_t v = LoadConstant(name, err, def);
   if (err.Fail()) v = LoadConstant(fallback, err, def);
   if (err.Fail()) {
-    Error::PrintInDebugMode(
-        "Failed to load constant %s, fallback %s, default to %" PRId64, name,
-        fallback, def);
+    PRINT_DEBUG("Failed to load constant %s, fallback %s, default to %" PRId64,
+                name, fallback, def);
   }
 
   return v;

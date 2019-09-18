@@ -16,12 +16,14 @@ Error::Error(bool failed, const char* format, ...) {
 }
 
 
-void Error::PrintInDebugMode(const char* format, ...) {
+void Error::PrintInDebugMode(const char* file, int line, const char* funcname,
+                             const char* format, ...) {
   if (!is_debug_mode) {
     return;
   }
   char fmt[kMaxMessageLength];
-  snprintf(fmt, sizeof(fmt), "[llv8] %s\n", format);
+  snprintf(fmt, sizeof(fmt), "[llnode][%s %s:%lld] %s\n", funcname, file, line,
+           format);
   va_list arglist;
   va_start(arglist, format);
   vfprintf(stderr, fmt, arglist);
@@ -30,7 +32,9 @@ void Error::PrintInDebugMode(const char* format, ...) {
 
 
 Error Error::Failure(std::string msg) {
-  PrintInDebugMode("%s", msg.c_str());
+  // TODO(mmarchini): The file and function information here won't be relevant.
+  // But then again, maybe we should rethink Error::Failure.
+  PRINT_DEBUG("%s", msg.c_str());
   return Error(true, msg);
 }
 

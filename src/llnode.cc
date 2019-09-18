@@ -79,7 +79,7 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
                       res.c_str());
         continue;
       } else {
-        Error::PrintInDebugMode("%s", err.GetMessage());
+        PRINT_DEBUG("%s", err.GetMessage());
       }
     }
 
@@ -352,8 +352,7 @@ std::string GetActiveHandlesCmd::GetResultMessage(node::Environment* env,
     Printer printer(llv8(), printer_options);
     std::string res = printer.Stringify(v8_object, err);
     if (err.Fail()) {
-      Error::PrintInDebugMode("Failed to load object at address %" PRIx64,
-                              raw_object);
+      PRINT_DEBUG("Failed to load object at address %" PRIx64, raw_object);
       break;
     }
 
@@ -385,8 +384,7 @@ std::string GetActiveRequestsCmd::GetResultMessage(node::Environment* env,
     Printer printer(llv8(), printer_options);
     std::string res = printer.Stringify(v8_object, err);
     if (err.Fail()) {
-      Error::PrintInDebugMode("Failed to load object at address %" PRIx64,
-                              raw_object);
+      PRINT_DEBUG("Failed to load object at address %" PRIx64, raw_object);
       break;
     }
 

@@ -2,6 +2,10 @@
 #define SRC_ERROR_H_
 
 #include <string>
+#include <typeinfo>
+
+#define PRINT_DEBUG(format, ...) \
+  Error::PrintInDebugMode(__FILE__, __LINE__, __func__, format, ##__VA_ARGS__)
 
 namespace llnode {
 
@@ -16,8 +20,9 @@ class Error {
   static Error Failure(std::string msg);
   static Error Failure(const char* format, ...)
       __attribute__((format(printf, 1, 2)));
-  static void PrintInDebugMode(const char* format, ...)
-      __attribute__((format(printf, 1, 2)));
+  static void PrintInDebugMode(const char* file, int line, const char* funcname,
+                               const char* format, ...)
+      __attribute__((format(printf, 4, 5)));
 
   inline bool Success() const { return !Fail(); }
   inline bool Fail() const { return failed_; }

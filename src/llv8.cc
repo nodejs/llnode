@@ -705,7 +705,7 @@ std::string JSDate::ToString(Error& err) {
     return s;
   }
 
-  Error::PrintInDebugMode("JSDate is not a Smi neither a HeapNumber");
+  PRINT_DEBUG("JSDate is not a Smi neither a HeapNumber");
   return "";
 }
 
@@ -1236,21 +1236,20 @@ JSArray JSError::GetFrameArray(Error& err) {
   v8::Value maybe_stack = GetProperty(stack_trace_property(), err);
 
   if (err.Fail() || maybe_stack.raw() == -1) {
-    Error::PrintInDebugMode(
-        "Couldn't find a symbol property in the Error object.");
+    PRINT_DEBUG("Couldn't find a symbol property in the Error object.");
     return JSArray();
   }
 
   int64_t type = v8::HeapObject(maybe_stack).GetType(err);
 
   if (err.Fail()) {
-    Error::PrintInDebugMode("Symbol property references an invalid object.");
+    PRINT_DEBUG("Symbol property references an invalid object.");
     return JSArray();
   }
 
   // NOTE (mmarchini): The stack is stored as a JSArray
   if (type != v8()->types()->kJSArrayType) {
-    Error::PrintInDebugMode("Symbol property doesn't have the right type.");
+    PRINT_DEBUG("Symbol property doesn't have the right type.");
     return JSArray();
   }
 
@@ -1275,8 +1274,7 @@ StackTrace::StackTrace(JSArray frame_array, Error& err)
   v8::Value maybe_stack_len = frame_array.GetArrayElement(0, err);
 
   if (err.Fail()) {
-    Error::PrintInDebugMode(
-        "Couldn't get the first element from the stack array");
+    PRINT_DEBUG("Couldn't get the first element from the stack array");
     return;
   }
 
@@ -1291,7 +1289,7 @@ StackTrace::StackTrace(JSArray frame_array, Error& err)
     multiplier_ = 4;
     if ((len_ != 0) ||
         ((frame_array_.GetArrayLength(err) - 1) % multiplier_ != 0)) {
-      Error::PrintInDebugMode(
+      PRINT_DEBUG(
           "JSArray doesn't look like a Stack Frames array. stack_len: %d "
           "array_len: %ld",
           len_, frame_array_.GetArrayLength(err));

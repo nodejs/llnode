@@ -406,7 +406,7 @@ Value SharedFunctionInfo::GetInferredName(Error& err) {
   err = Error::Ok();
   Value maybe_uncompiled_data = function_data(err);
   if (!maybe_uncompiled_data.IsUncompiledData(err)) {
-    Error::PrintInDebugMode("Couldn't get UncompiledData");
+    PRINT_DEBUG("Couldn't get UncompiledData");
     return Value();
   }
 
@@ -430,7 +430,7 @@ Script SharedFunctionInfo::GetScript(Error& err) {
   HeapObject maybe_script = script_or_debug_info(err);
   if (maybe_script.IsScript(err)) return maybe_script;
 
-  Error::PrintInDebugMode("Couldn't get Script in SharedFunctionInfo");
+  PRINT_DEBUG("Couldn't get Script in SharedFunctionInfo");
   return Script();
 }
 
