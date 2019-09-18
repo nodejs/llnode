@@ -802,10 +802,9 @@ void FindReferencesCmd::ReferenceScanner::PrintContextRefs(
           if (err.Success())
             name = maybe_name;
           else
-            Error::PrintInDebugMode(
-                "Couldn't get the variable name for 0x%" PRIx64
-                " in context 0x%" PRIx64,
-                search_value_.raw(), c.raw());
+            PRINT_DEBUG("Couldn't get the variable name for 0x%" PRIx64
+                        " in context 0x%" PRIx64,
+                        search_value_.raw(), c.raw());
         }
 
         std::stringstream ss;

@@ -756,9 +756,8 @@ std::string Printer::Stringify(v8::HeapObject heap_object, Error& err) {
     return pre + Stringify(date, err);
   }
 
-  Error::PrintInDebugMode("Unknown HeapObject Type %" PRId64 " at 0x%016" PRIx64
-                          "",
-                          type, heap_object.raw());
+  PRINT_DEBUG("Unknown HeapObject Type %" PRId64 " at 0x%016" PRIx64 "", type,
+              heap_object.raw());
 
   std::stringstream ss;
   ss << rang::fg::yellow << "<unknown>" << rang::fg::reset;
