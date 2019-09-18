@@ -37,14 +37,41 @@ class CodeMap;
   NAME(Value* v) : PARENT(v->v8(), v->raw()) {}    \
   static inline const char* ClassName() { return #NAME; }
 
+#define RETURN_IF_INVALID(var, ret) \
+  if (!var.Check()) {               \
+    return ret;                     \
+  }
+
+#define RETURN_IF_THIS_INVALID(ret) \
+  if (!this->Check()) {             \
+    return ret;                     \
+  }
+
+template <typename T>
+class CheckedType {
+ public:
+  CheckedType() : valid_(false) {}
+  CheckedType(T val) : val_(val), valid_(true) {}
+
+  T operator*() {
+    // TODO(mmarchini): Check()
+    return val_;
+  }
+  inline bool Check() const { return valid_; }
+
+ private:
+  T val_;
+  bool valid_;
+};
+
 class Value {
  public:
   Value(const Value& v) = default;
   Value(Value& v) = default;
-  Value() : v8_(nullptr), raw_(-1) {}
+  Value() : v8_(nullptr), raw_(-1), valid_(false) {}
   Value(LLV8* v8, int64_t raw) : v8_(v8), raw_(raw) {}
 
-  inline bool Check() const { return true; }
+  inline bool Check() const { return valid_; }
 
   inline int64_t raw() const { return raw_; }
   inline LLV8* v8() const { return v8_; }
@@ -68,6 +95,7 @@ class Value {
  protected:
   LLV8* v8_;
   int64_t raw_ = 0x0;
+  bool valid_ = true;
 };
 
 class Smi : public Value {
@@ -134,7 +162,7 @@ class String : public HeapObject {
   V8_VALUE_DEFAULT_METHODS(String, HeapObject)
 
   inline int64_t Encoding(Error& err);
-  inline int64_t Representation(Error& err);
+  inline CheckedType<int64_t> Representation(Error& err);
   inline Smi Length(Error& err);
 
   std::string ToString(Error& err);

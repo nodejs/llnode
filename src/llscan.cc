@@ -892,11 +892,12 @@ void FindReferencesCmd::ReferenceScanner::PrintRefs(
     SBCommandReturnObject& result, v8::String& str, Error& err, int level) {
   v8::LLV8* v8 = str.v8();
 
-  int64_t repr = str.Representation(err);
+  v8::CheckedType<int64_t> repr = str.Representation(err);
+  RETURN_IF_INVALID(repr, );
 
   // Concatenated and sliced strings refer to other strings so
   // we need to check their references.
-  if (repr == v8->string()->kSlicedStringTag) {
+  if (*repr == v8->string()->kSlicedStringTag) {
     v8::SlicedString sliced_str(str);
     v8::String parent = sliced_str.Parent(err);
     if (err.Success() && parent.raw() == search_value_.raw()) {
@@ -906,7 +907,7 @@ void FindReferencesCmd::ReferenceScanner::PrintRefs(
       result.Printf(reference_template.c_str(), str.raw(), type_name.c_str(),
                     "<Parent>", search_value_.raw());
     }
-  } else if (repr == v8->string()->kConsStringTag) {
+  } else if (*repr == v8->string()->kConsStringTag) {
     v8::ConsString cons_str(str);
 
     v8::String first = cons_str.First(err);
@@ -926,7 +927,7 @@ void FindReferencesCmd::ReferenceScanner::PrintRefs(
       result.Printf(reference_template.c_str(), str.raw(), type_name.c_str(),
                     "<Second>", search_value_.raw());
     }
-  } else if (repr == v8->string()->kThinStringTag) {
+  } else if (*repr == v8->string()->kThinStringTag) {
     v8::ThinString thin_str(str);
     v8::String actual = thin_str.Actual(err);
     if (err.Success() && actual.raw() == search_value_.raw()) {
@@ -985,12 +986,13 @@ void FindReferencesCmd::ReferenceScanner::ScanRefs(v8::String& str,
 
   v8::LLV8* v8 = str.v8();
 
-  int64_t repr = str.Representation(err);
+  v8::CheckedType<int64_t> repr = str.Representation(err);
+  RETURN_IF_INVALID(repr, );
 
   // Concatenated and sliced strings refer to other strings so
   // we need to check their references.
 
-  if (repr == v8->string()->kSlicedStringTag) {
+  if (*repr == v8->string()->kSlicedStringTag) {
     v8::SlicedString sliced_str(str);
     v8::String parent = sliced_str.Parent(err);
 
@@ -999,7 +1001,7 @@ void FindReferencesCmd::ReferenceScanner::ScanRefs(v8::String& str,
       references->push_back(str.raw());
     }
 
-  } else if (repr == v8->string()->kConsStringTag) {
+  } else if (*repr == v8->string()->kConsStringTag) {
     v8::ConsString cons_str(str);
 
     v8::String first = cons_str.First(err);
@@ -1013,7 +1015,7 @@ void FindReferencesCmd::ReferenceScanner::ScanRefs(v8::String& str,
       references = llscan_->GetReferencesByValue(second.raw());
       references->push_back(str.raw());
     }
-  } else if (repr == v8->string()->kThinStringTag) {
+  } else if (*repr == v8->string()->kThinStringTag) {
     v8::ThinString thin_str(str);
     v8::String actual = thin_str.Actual(err);
 
@@ -1183,10 +1185,10 @@ void FindReferencesCmd::StringScanner::PrintRefs(SBCommandReturnObject& result,
   // Concatenated and sliced strings refer to other strings so
   // we need to check their references.
 
-  int64_t repr = str.Representation(err);
-  if (err.Fail()) return;
+  v8::CheckedType<int64_t> repr = str.Representation(err);
+  RETURN_IF_INVALID(repr, );
 
-  if (repr == v8->string()->kSlicedStringTag) {
+  if (*repr == v8->string()->kSlicedStringTag) {
     v8::SlicedString sliced_str(str);
     v8::String parent_str = sliced_str.Parent(err);
     if (err.Fail()) return;
@@ -1197,7 +1199,7 @@ void FindReferencesCmd::StringScanner::PrintRefs(SBCommandReturnObject& result,
                     type_name.c_str(), "<Parent>", parent_str.raw(),
                     parent.c_str());
     }
-  } else if (repr == v8->string()->kConsStringTag) {
+  } else if (*repr == v8->string()->kConsStringTag) {
     v8::ConsString cons_str(str);
 
     v8::String first_str = cons_str.First(err);
@@ -1313,10 +1315,10 @@ void FindReferencesCmd::StringScanner::ScanRefs(v8::String& str, Error& err) {
   // Concatenated and sliced strings refer to other strings so
   // we need to check their references.
 
-  int64_t repr = str.Representation(err);
-  if (err.Fail()) return;
+  v8::CheckedType<int64_t> repr = str.Representation(err);
+  RETURN_IF_INVALID(repr, );
 
-  if (repr == v8->string()->kSlicedStringTag) {
+  if (*repr == v8->string()->kSlicedStringTag) {
     v8::SlicedString sliced_str(str);
     v8::String parent_str = sliced_str.Parent(err);
     if (err.Fail()) return;
@@ -1325,7 +1327,7 @@ void FindReferencesCmd::StringScanner::ScanRefs(v8::String& str, Error& err) {
       references = llscan_->GetReferencesByString(parent);
       references->push_back(str.raw());
     }
-  } else if (repr == v8->string()->kConsStringTag) {
+  } else if (*repr == v8->string()->kConsStringTag) {
     v8::ConsString cons_str(str);
 
     v8::String first_str = cons_str.First(err);

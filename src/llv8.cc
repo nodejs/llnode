@@ -720,13 +720,13 @@ std::string Symbol::ToString(Error& err) {
 
 
 std::string String::ToString(Error& err) {
-  int64_t repr = Representation(err);
-  if (err.Fail()) return std::string();
+  CheckedType<int64_t> repr = Representation(err);
+  RETURN_IF_INVALID(repr, std::string());
 
   int64_t encoding = Encoding(err);
   if (err.Fail()) return std::string();
 
-  if (repr == v8()->string()->kSeqStringTag) {
+  if (*repr == v8()->string()->kSeqStringTag) {
     if (encoding == v8()->string()->kOneByteStringTag) {
       OneByteString one(this);
       return one.ToString(err);
@@ -739,27 +739,27 @@ std::string String::ToString(Error& err) {
     return std::string();
   }
 
-  if (repr == v8()->string()->kConsStringTag) {
+  if (*repr == v8()->string()->kConsStringTag) {
     ConsString cons(this);
     return cons.ToString(err);
   }
 
-  if (repr == v8()->string()->kSlicedStringTag) {
+  if (*repr == v8()->string()->kSlicedStringTag) {
     SlicedString sliced(this);
     return sliced.ToString(err);
   }
 
   // TODO(indutny): add support for external strings
-  if (repr == v8()->string()->kExternalStringTag) {
+  if (*repr == v8()->string()->kExternalStringTag) {
     return std::string("(external)");
   }
 
-  if (repr == v8()->string()->kThinStringTag) {
+  if (*repr == v8()->string()->kThinStringTag) {
     ThinString thin(this);
     return thin.ToString(err);
   }
 
-  err = Error::Failure("Unsupported string representation %" PRId64, repr);
+  err = Error::Failure("Unsupported string representation %" PRId64, *repr);
   return std::string();
 }
 
