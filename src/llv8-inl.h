@@ -36,7 +36,7 @@ inline T LLV8::LoadValue(int64_t addr, Error& err) {
 
 
 inline bool Smi::Check() const {
-  return (raw() & v8()->smi()->kTagMask) == v8()->smi()->kTag;
+  return valid_ && (raw() & v8()->smi()->kTagMask) == v8()->smi()->kTag;
 }
 
 
@@ -46,7 +46,8 @@ inline int64_t Smi::GetValue() const {
 
 
 inline bool HeapObject::Check() const {
-  return (raw() & v8()->heap_obj()->kTagMask) == v8()->heap_obj()->kTag;
+  return valid_ &&
+         (raw() & v8()->heap_obj()->kTagMask) == v8()->heap_obj()->kTag;
 }
 
 
@@ -219,6 +220,7 @@ inline int64_t Map::NumberOfOwnDescriptors(Error& err) {
 
 #define ACCESSOR(CLASS, METHOD, OFF, TYPE)       \
   inline TYPE CLASS::METHOD(Error& err) {        \
+    if (!Check()) return TYPE();                 \
     return LoadFieldValue<TYPE>(v8()->OFF, err); \
   }
 
@@ -346,9 +348,11 @@ bool String::IsString(LLV8* v8, HeapObject heap_object, Error& err) {
   return type < v8->types()->kFirstNonstringType;
 }
 
-inline int64_t String::Representation(Error& err) {
+inline CheckedType<int64_t> String::Representation(Error& err) {
+  RETURN_IF_INVALID((*this), CheckedType<int64_t>());
+
   int64_t type = GetType(err);
-  if (err.Fail()) return -1;
+  if (err.Fail()) return CheckedType<int64_t>();
   return type & v8()->string()->kRepresentationMask;
 }
 
@@ -640,7 +644,9 @@ inline std::string SlicedString::ToString(Error& err) {
   // TODO - Remove when we add support for external strings
   // We can't use the offset and length safely if we get "(external)"
   // instead of the original parent string.
-  if (parent.Representation(err) == v8()->string()->kExternalStringTag) {
+  CheckedType<int64_t> repr = parent.Representation(err);
+  RETURN_IF_INVALID(repr, std::string());
+  if (*repr == v8()->string()->kExternalStringTag) {
     return parent.ToString(err);
   }
 
