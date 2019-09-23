@@ -788,17 +788,25 @@ void FindReferencesCmd::ReferenceScanner::PrintContextRefs(
     v8::Context c(context_obj);
 
     v8::Context::Locals locals(&c, err);
-    if (err.Fail()) return;
+    // If we can't read locals in this context, just go to the next.
+    if (err.Fail()) continue;
 
     for (v8::Context::Locals::Iterator it = locals.begin(); it != locals.end();
          it++) {
       if ((*it).raw() == search_value_.raw()) {
+        std::string name = "???";
         v8::String _name = it.LocalName(err);
-        if (err.Fail()) return;
-
-        std::string name = _name.ToString(err);
-        if (err.Fail()) return;
-
+        // TODO(mmarchini): use Check once #294 gets merged
+        if (err.Success()) {
+          std::string maybe_name = _name.ToString(err);
+          if (err.Success())
+            name = maybe_name;
+          else
+            Error::PrintInDebugMode(
+                "Couldn't get the variable name for 0x%" PRIx64
+                " in context 0x%" PRIx64,
+                search_value_.raw(), c.raw());
+        }
 
         std::stringstream ss;
         ss << rang::fg::cyan << "0x%" PRIx64 << rang::fg::reset << ": "
