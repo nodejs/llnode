@@ -32,14 +32,10 @@ class SetPropertyColorCmd : public CommandBase {
 
 class SetTreePaddingCmd : public CommandBase {
  public:
-  SetTreePaddingCmd(v8::LLV8* llv8) : llv8_(llv8) {}
   ~SetTreePaddingCmd() override {}
 
   bool DoExecute(lldb::SBDebugger d, char** cmd,
                  lldb::SBCommandReturnObject& result) override;
-
- private:
-  v8::LLV8* llv8_;
 };
 
 class PrintCmd : public CommandBase {

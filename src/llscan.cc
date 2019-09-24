@@ -647,7 +647,7 @@ void FindReferencesCmd::PrintRecursiveReferences(
     std::stringstream seen_str;
     seen_str << rang::fg::red << " [seen above]" << rang::fg::reset
              << std::endl;
-    result.Printf(seen_str.str().c_str());
+    result.Printf("%s", seen_str.str().c_str());
   } else {
     visited_references->push_back(address);
     v8::Value value(llscan_->v8(), address);

@@ -477,8 +477,7 @@ bool PluginInitialize(SBDebugger d) {
 
   setPropertyCmd.AddCommand("color", new llnode::SetPropertyColorCmd(),
                             "Set color property value");
-  setPropertyCmd.AddCommand("tree-padding",
-                            new llnode::SetTreePaddingCmd(&llv8),
+  setPropertyCmd.AddCommand("tree-padding", new llnode::SetTreePaddingCmd(),
                             "Set tree-padding value");
 
   interpreter.AddCommand("findjsobjects", new llnode::FindObjectsCmd(&llscan),
