@@ -111,7 +111,11 @@ double LLV8::LoadDouble(int64_t addr, Error& err) {
   }
 
   err = Error::Ok();
-  return *reinterpret_cast<double*>(&value);
+  // dereferencing type-punned pointer will break strict-aliasing rules
+  // return *reinterpret_cast<double*>(&value);
+  double dvalue;
+  std::memcpy(&dvalue, &value, sizeof(double));
+  return dvalue;
 }
 
 
@@ -1288,8 +1292,8 @@ StackTrace::StackTrace(JSArray frame_array, Error& err)
     if ((len_ != 0) ||
         ((frame_array_.GetArrayLength(err) - 1) % multiplier_ != 0)) {
       Error::PrintInDebugMode(
-          "JSArray doesn't look like a Stack Frames array. stack_len: %lld "
-          "array_len: %lld",
+          "JSArray doesn't look like a Stack Frames array. stack_len: %d "
+          "array_len: %ld",
           len_, frame_array_.GetArrayLength(err));
       len_ = -1;
       multiplier_ = -1;
