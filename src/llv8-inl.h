@@ -17,6 +17,12 @@ inline int32_t LLV8::LoadValue<int32_t>(int64_t addr, Error& err) {
   return LoadUnsigned(addr, 4, err);
 }
 
+template <>
+inline CheckedType<int32_t> LLV8::LoadValue<CheckedType<int32_t>>(
+    int64_t addr) {
+  return LoadUnsigned<int32_t>(addr, 4);
+}
+
 template <class T>
 inline T LLV8::LoadValue(int64_t addr, Error& err) {
   int64_t ptr;
@@ -363,7 +369,23 @@ inline int64_t String::Encoding(Error& err) {
   return type & v8()->string()->kEncodingMask;
 }
 
-ACCESSOR(String, Length, string()->kLengthOffset, Smi)
+inline CheckedType<int32_t> String::Length(Error& err) {
+  RETURN_IF_INVALID((*this), CheckedType<int32_t>());
+
+  if (v8()->string()->kLengthIsSmi) {
+    Smi len = LoadFieldValue<Smi>(v8()->string()->kLengthOffset, err);
+    RETURN_IF_INVALID(len, CheckedType<int32_t>());
+
+    return CheckedType<int32_t>(len.GetValue());
+  }
+
+  CheckedType<int32_t> len = v8()->LoadValue<CheckedType<int32_t>>(
+      LeaField(v8()->string()->kLengthOffset));
+  RETURN_IF_INVALID(len, CheckedType<int32_t>());
+
+  return len;
+}
+
 
 ACCESSOR(Script, Name, script()->kNameOffset, String)
 ACCESSOR(Script, LineOffset, script()->kLineOffsetOffset, Smi)
@@ -610,16 +632,16 @@ inline int64_t FixedTypedArrayBase::GetExternal(Error& err) {
 
 inline std::string OneByteString::ToString(Error& err) {
   int64_t chars = LeaField(v8()->one_byte_string()->kCharsOffset);
-  Smi len = Length(err);
-  if (err.Fail()) return std::string();
-  return v8()->LoadString(chars, len.GetValue(), err);
+  CheckedType<int32_t> len = Length(err);
+  RETURN_IF_INVALID(len, std::string());
+  return v8()->LoadString(chars, *len, err);
 }
 
 inline std::string TwoByteString::ToString(Error& err) {
   int64_t chars = LeaField(v8()->two_byte_string()->kCharsOffset);
-  Smi len = Length(err);
-  if (err.Fail()) return std::string();
-  return v8()->LoadTwoByteString(chars, len.GetValue(), err);
+  CheckedType<int32_t> len = Length(err);
+  RETURN_IF_INVALID(len, std::string());
+  return v8()->LoadTwoByteString(chars, *len, err);
 }
 
 inline std::string ConsString::ToString(Error& err) {
@@ -653,24 +675,23 @@ inline std::string SlicedString::ToString(Error& err) {
   Smi offset = Offset(err);
   if (err.Fail()) return std::string();
 
-  Smi length = Length(err);
-  if (err.Fail()) return std::string();
+  CheckedType<int32_t> length = Length(err);
+  RETURN_IF_INVALID(length, std::string());
 
   std::string tmp = parent.ToString(err);
   if (err.Fail()) return std::string();
 
   int64_t off = offset.GetValue();
-  int64_t len = length.GetValue();
   int64_t tmp_size = tmp.size();
-  if (off > tmp_size || len > tmp_size) {
+  if (off > tmp_size || *length > tmp_size) {
     err = Error::Failure("Failed to display sliced string 0x%016" PRIx64
-                         " (offset = 0x%016" PRIx64 ", length = 0x%016" PRIx64
-                         ") from parent string 0x%016" PRIx64
+                         " (offset = 0x%016" PRIx64
+                         ", length = %d) from parent string 0x%016" PRIx64
                          " (length = 0x%016" PRIx64 ")",
-                         raw(), off, len, parent.raw(), tmp_size);
+                         raw(), off, *length, parent.raw(), tmp_size);
     return std::string(err.GetMessage());
   }
-  return tmp.substr(offset.GetValue(), length.GetValue());
+  return tmp.substr(offset.GetValue(), *length);
 }
 
 inline std::string ThinString::ToString(Error& err) {
