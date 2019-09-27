@@ -30,7 +30,7 @@ void Module::Assign(SBTarget target, Common* common) {
 
 
 void Common::Load() {
-  kPointerSize = 1 << LoadConstant("PointerSizeLog2");
+  kPointerSize = 1 << LoadConstant("PointerSizeLog2", "SystemPointerSizeLog2");
   kVersionMajor = LoadRawConstant("v8::internal::Version::major_");
   kVersionMinor = LoadRawConstant("v8::internal::Version::minor_");
   kVersionPatch = LoadRawConstant("v8::internal::Version::patch_");
