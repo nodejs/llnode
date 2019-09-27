@@ -80,6 +80,20 @@ int64_t LLV8::LoadPtr(int64_t addr, Error& err) {
   return value;
 }
 
+template <class T>
+CheckedType<T> LLV8::LoadUnsigned(int64_t addr, uint32_t byte_size) {
+  SBError sberr;
+  int64_t value = process_.ReadUnsignedFromMemory(static_cast<addr_t>(addr),
+                                                  byte_size, sberr);
+
+  if (sberr.Fail()) {
+    PRINT_DEBUG("Failed to load unsigned from v8 memory. Reason: %s",
+                sberr.GetCString());
+    return CheckedType<T>();
+  }
+
+  return CheckedType<T>(value);
+}
 
 int64_t LLV8::LoadUnsigned(int64_t addr, uint32_t byte_size, Error& err) {
   SBError sberr;

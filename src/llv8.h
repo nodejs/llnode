@@ -163,7 +163,7 @@ class String : public HeapObject {
 
   inline int64_t Encoding(Error& err);
   inline CheckedType<int64_t> Representation(Error& err);
-  inline Smi Length(Error& err);
+  inline CheckedType<int32_t> Length(Error& err);
 
   std::string ToString(Error& err);
 
@@ -605,8 +605,13 @@ class LLV8 {
   template <class T>
   inline T LoadValue(int64_t addr, Error& err);
 
+  template <class T>
+  inline T LoadValue(int64_t addr);
+
   int64_t LoadConstant(const char* name);
   int64_t LoadPtr(int64_t addr, Error& err);
+  template <class T>
+  CheckedType<T> LoadUnsigned(int64_t addr, uint32_t byte_size);
   int64_t LoadUnsigned(int64_t addr, uint32_t byte_size, Error& err);
   double LoadDouble(int64_t addr, Error& err);
   std::string LoadBytes(int64_t addr, int64_t length, Error& err);
