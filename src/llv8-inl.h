@@ -165,9 +165,11 @@ inline bool HeapObject::IsJSErrorType(Error& err) {
 }
 
 
+// TODO(mmarchini): return CheckedType
 inline int64_t Map::GetType(Error& err) {
-  int64_t type =
-      v8()->LoadUnsigned(LeaField(v8()->map()->kInstanceAttrsOffset), 2, err);
+  RETURN_IF_INVALID(v8()->map()->kInstanceAttrsOffset, -1);
+  int64_t type = v8()->LoadUnsigned(
+      LeaField(*(v8()->map()->kInstanceAttrsOffset)), 2, err);
   if (err.Fail()) return -1;
 
   return type & v8()->map()->kMapTypeMask;
@@ -230,12 +232,19 @@ inline int64_t Map::NumberOfOwnDescriptors(Error& err) {
     return LoadFieldValue<TYPE>(v8()->OFF, err); \
   }
 
+#define SAFE_ACCESSOR(CLASS, METHOD, OFF, TYPE)     \
+  inline TYPE CLASS::METHOD(Error& err) {           \
+    if (!Check()) return TYPE();                    \
+    if (!v8()->OFF.Check()) return TYPE();          \
+    return LoadFieldValue<TYPE>(*(v8()->OFF), err); \
+  }
+
 
 ACCESSOR(HeapObject, GetMap, heap_obj()->kMapOffset, HeapObject)
 
 ACCESSOR(Map, MaybeConstructor, map()->kMaybeConstructorOffset, HeapObject)
-ACCESSOR(Map, InstanceDescriptors, map()->kInstanceDescriptorsOffset,
-         HeapObject)
+SAFE_ACCESSOR(Map, InstanceDescriptors, map()->kInstanceDescriptorsOffset,
+              HeapObject)
 
 ACCESSOR(Symbol, Name, symbol()->kNameOffset, HeapObject)
 
