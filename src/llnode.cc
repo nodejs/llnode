@@ -69,7 +69,12 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
     const char star = (frame == selected_frame ? '*' : ' ');
     const uint64_t pc = frame.GetPC();
 
-    if (!frame.GetSymbol().IsValid()) {
+    // TODO(mmarchini): There might be a better way to check for V8 builtins
+    // embedded in the binary.
+    auto c_function_name = frame.GetFunctionName();
+    std::string function_name(c_function_name != nullptr ? c_function_name
+                                                         : "");
+    if (!frame.GetSymbol().IsValid() || function_name.find("Builtins_") == 0) {
       Error err;
       v8::JSFrame v8_frame(llv8_, static_cast<int64_t>(frame.GetFP()));
       Printer printer(llv8_);
