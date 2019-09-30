@@ -69,9 +69,9 @@ class Map : public Module {
   CONSTANTS_DEFAULT_METHODS(Map);
 
   int64_t kMapTypeMask;
-  int64_t kInstanceAttrsOffset;
+  Constant<int64_t> kInstanceAttrsOffset;
   int64_t kMaybeConstructorOffset;
-  int64_t kInstanceDescriptorsOffset;
+  Constant<int64_t> kInstanceDescriptorsOffset;
   int64_t kBitField3Offset;
   int64_t kInObjectPropertiesOffset;
   int64_t kInObjectPropertiesStartOffset;
