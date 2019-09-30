@@ -37,9 +37,10 @@ class CodeMap;
   NAME(Value* v) : PARENT(v->v8(), v->raw()) {}    \
   static inline const char* ClassName() { return #NAME; }
 
-#define RETURN_IF_INVALID(var, ret) \
-  if (!var.Check()) {               \
-    return ret;                     \
+#define RETURN_IF_INVALID(var, ret)                            \
+  if (!var.Check()) {                                          \
+    PRINT_DEBUG("Unable to load variable %s correctly", #var); \
+    return ret;                                                \
   }
 
 #define RETURN_IF_THIS_INVALID(ret) \

@@ -81,10 +81,9 @@ void HeapObject::Load() {
 
 void Map::Load() {
   Error err;
-  kInstanceAttrsOffset =
-      LoadConstant("class_Map__instance_attributes__int", err);
-  if (err.Fail()) {
-    kInstanceAttrsOffset = LoadConstant("class_Map__instance_type__uint16_t");
+  kInstanceAttrsOffset = LoadConstant({"class_Map__instance_attributes__int",
+                                       "class_Map__instance_type__uint16_t"});
+  if (kInstanceAttrsOffset.name() == "class_Map__instance_type__uint16_t") {
     kMapTypeMask = 0xffff;
   } else {
     kMapTypeMask = 0xff;
@@ -93,8 +92,9 @@ void Map::Load() {
   kMaybeConstructorOffset =
       LoadConstant("class_Map__constructor_or_backpointer__Object",
                    "class_Map__constructor__Object");
-  kInstanceDescriptorsOffset =
-      LoadConstant("class_Map__instance_descriptors__DescriptorArray");
+  kInstanceDescriptorsOffset = LoadConstant({
+      "class_Map__instance_descriptors__DescriptorArray",
+  });
   kBitField3Offset =
       LoadConstant("class_Map__bit_field3__int", "class_Map__bit_field3__SMI");
   kInObjectPropertiesOffset = LoadConstant(

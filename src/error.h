@@ -30,6 +30,7 @@ class Error {
   inline const char* GetMessage() { return msg_.c_str(); }
 
   static void SetDebugMode(bool mode) { is_debug_mode = mode; }
+  static bool IsDebugMode() { return is_debug_mode; }
 
  private:
   bool failed_;
