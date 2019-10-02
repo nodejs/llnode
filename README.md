@@ -359,6 +359,52 @@ LLNODE_DEBUG=true TEST_LLNODE_DEBUG=true \
   node test/scan-test.js
 ```
 
+<!--
+### TSC (Technical Steering Committee)
+
+ncu-team-sync.team(nodejs/llnode)
+
+* [bnoordhuis](https://github.com/bnoordhuis) -
+**Ben Noordhuis** &lt;info@bnoordhuis.nl&gt;
+* [cjihrig](https://github.com/cjihrig) -
+**Colin Ihrig** &lt;cjihrig@gmail.com&gt; (he/him)
+* [hhellyer](https://github.com/hhellyer) -
+**Howard Hellyer** &lt;hhellyer@uk.ibm.com&gt;
+* [indutny](https://github.com/indutny) -
+**Fedor Indutny** &lt;fedor.indutny@gmail.com&gt;
+* [joyeecheung](https://github.com/joyeecheung) -
+**Joyee Cheung** &lt;joyeec9h3@gmail.com&gt; (she/her)
+* [mmarchini](https://github.com/mmarchini) -
+**Matheus Marchini** &lt;mmarchini@netflix.com&gt;
+
+ncu-team-sync end
+
+### TSC Emeriti
+-->
+
+### Collaborators
+
+<!-- ncu-team-sync.team(nodejs/llnode) -->
+
+* [bnoordhuis](https://github.com/bnoordhuis) -
+**Ben Noordhuis** &lt;info@bnoordhuis.nl&gt;
+* [cjihrig](https://github.com/cjihrig) -
+**Colin Ihrig** &lt;cjihrig@gmail.com&gt; (he/him)
+* [hhellyer](https://github.com/hhellyer) -
+**Howard Hellyer** &lt;hhellyer@uk.ibm.com&gt;
+* [indutny](https://github.com/indutny) -
+**Fedor Indutny** &lt;fedor.indutny@gmail.com&gt;
+* [joyeecheung](https://github.com/joyeecheung) -
+**Joyee Cheung** &lt;joyeec9h3@gmail.com&gt; (she/her)
+* [mmarchini](https://github.com/mmarchini) -
+**Matheus Marchini** &lt;mmarchini@netflix.com&gt;
+
+<!-- ncu-team-sync end -->
+
+<!--
+### Collaborator Emeriti
+-->
+
 ## LICENSE
 
 This software is licensed under the MIT License.
