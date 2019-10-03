@@ -17,3 +17,5 @@ config.gypi
 llnode.js
 *.gcov
 *.info
+core
+core.*
