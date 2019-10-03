@@ -45,10 +45,13 @@ function SessionOutput(session, stream, timeout) {
   this.timeout = timeout || 10000;
   this.session = session;
 
-  stream.on('data', (data) => {
-    buf += data;
-
+  this.flush = function flush() {
     for (;;) {
+      // NOTE(mmarchini): don't emit line events while not waiting, otherwise
+      // we might miss something.
+      if (!this.waiting)
+        break
+
       let index = buf.indexOf('\n');
 
       if (index === -1)
@@ -62,6 +65,11 @@ function SessionOutput(session, stream, timeout) {
       else
         this.emit('line', line);
     }
+  }
+
+  stream.on('data', (data) => {
+    buf += data;
+    this.flush();
   });
 
   // Ignore errors
@@ -129,6 +137,7 @@ SessionOutput.prototype.wait = function wait(regexp, callback, allLines) {
   }, this.timeout).unref();
 
   this.on('line', onLine);
+  this.flush();
 };
 
 SessionOutput.prototype.waitBreak = function waitBreak(callback) {
