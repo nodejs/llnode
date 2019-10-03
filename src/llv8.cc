@@ -304,19 +304,17 @@ bool JSFrame::MightBeV8Frame(lldb::SBFrame& frame) {
 }
 
 std::string JSFunction::GetDebugLine(std::string args, Error& err) {
-  SharedFunctionInfo info = Info(err);
-  if (err.Fail()) return std::string();
+  RETURN_IF_THIS_INVALID(std::string());
 
-  std::string res = info.ProperName(err);
+  // TODO(mmarchini) turn this into CheckedType
+  std::string res = Name(err);
   if (err.Fail()) return std::string();
 
   if (!args.empty()) res += "(" + args + ")";
 
   res += " at ";
 
-  std::string shared;
-
-  res += info.GetPostfix(err);
+  res += Info(err).GetPostfix(err);
   if (err.Fail()) return std::string();
 
   return res;
@@ -385,13 +383,15 @@ std::string JSFunction::GetSource(Error& err) {
 
 
 std::string SharedFunctionInfo::ProperName(Error& err) {
+  RETURN_IF_THIS_INVALID(std::string());
+
   String name = Name(err);
   if (err.Fail()) return std::string();
 
   std::string res = name.ToString(err);
   if (err.Fail() || res.empty()) {
     Value inferred = GetInferredName(err);
-    if (err.Fail() || inferred.raw() == -1) return std::string();
+    if (err.Fail() || !inferred.Check()) return std::string();
 
     // Function may not have inferred name
     if (!inferred.IsHoleOrUndefined(err) && !err.Fail())
@@ -406,8 +406,10 @@ std::string SharedFunctionInfo::ProperName(Error& err) {
 
 
 std::string SharedFunctionInfo::GetPostfix(Error& err) {
+  RETURN_IF_THIS_INVALID(std::string());
+
   Script script = GetScript(err);
-  if (err.Fail() || script.raw() == -1) return std::string();
+  if (err.Fail() || !script.Check()) return std::string();
 
   // There is no `Script` for functions created in C++ (and possibly others)
   int64_t type = script.GetType(err);
@@ -1257,9 +1259,11 @@ bool JSError::HasStackTrace(Error& err) {
 
 
 JSArray JSError::GetFrameArray(Error& err) {
+  RETURN_IF_THIS_INVALID(JSArray());
+
   v8::Value maybe_stack = GetProperty(stack_trace_property(), err);
 
-  if (err.Fail() || maybe_stack.raw() == -1) {
+  if (err.Fail() || !maybe_stack.Check()) {
     PRINT_DEBUG("Couldn't find a symbol property in the Error object.");
     return JSArray();
   }
