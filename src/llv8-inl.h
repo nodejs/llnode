@@ -906,16 +906,25 @@ inline HeapObject ScopeInfo::MaybeFunctionName(Error& err) {
   // metadata to determine in which slot its being stored for the present
   // ScopeInfo, we try to find it heuristically.
   int tries = 3;
+  HeapObject likely_function_name;
   while (tries > 0 && proper_index < Length(err).GetValue()) {
     err = Error();
 
     HeapObject maybe_function_name =
         FixedArray::Get<HeapObject>(proper_index, err);
-    if (err.Success() && String::IsString(v8(), maybe_function_name, err))
-      return maybe_function_name;
+    if (err.Success() && String::IsString(v8(), maybe_function_name, err)) {
+      likely_function_name = maybe_function_name;
+      if (String(likely_function_name).Length(err).GetValue() > 0) {
+        return likely_function_name;
+      }
+    }
 
     tries--;
     proper_index++;
+  }
+
+  if (likely_function_name.Check()) {
+    return likely_function_name;
   }
 
   err = Error::Failure("Couldn't get FunctionName from ScopeInfo");

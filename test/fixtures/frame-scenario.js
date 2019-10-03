@@ -3,13 +3,29 @@ const common = require('../common');
 
 function crasher(unused) {
   'use strict';
-  process.abort();  // Creates an exit frame.
-  return this;      // Force definition of |this|.
+  this.foo = arguments;  // Force adaptor frame on Node.js v12+
+  process.abort();       // Creates an exit frame.
+  return this;           // Force definition of |this|.
 }
 
-function eyecatcher() {
+// Force V8 to use an inferred name instead of saving the variable name as
+// FunctionName.
+let fnInferredName;
+fnInferredName = (() => function () {
   crasher();    // # args < # formal parameters inserts an adaptor frame.
+})();
+
+function Module() {
+  this.foo = "bar";
+}
+
+Module.prototype.fnInferredNamePrototype = function() {
+  fnInferredName();
+}
+
+function fnFunctionName() {
+  (new Module()).fnInferredNamePrototype();
   return this;  // Force definition of |this|.
 }
 
-eyecatcher();
+fnFunctionName();
