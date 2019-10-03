@@ -1,16 +1,31 @@
 'use strict';
 
+const { promisify } = require('util');
+
 const tape = require('tape');
 
 const common = require('../common');
 
-const sourceCode = [
-"10 function eyecatcher() {",
-"11   crasher();    // # args < # formal parameters inserts an adaptor frame.",
-"12   return this;  // Force definition of |this|.",
-"13 }",
-];
-const lastLine = new RegExp(sourceCode[sourceCode.length - 1]);
+const sourceCodes = {
+  "fnFunctionName": [
+    "26 function fnFunctionName() {",
+    "27   (new Module()).fnInferredNamePrototype();",
+    "28   return this;  // Force definition of |this|.",
+    "29 }",
+  ],
+  "fnInferredNamePrototype": [
+    "22 Module.prototype.fnInferredNamePrototype = function() {",
+    "23   fnInferredName();",
+    "24 }",
+    "25",
+  ],
+  "fnInferredName": [
+    "14 fnInferredName = (() => function () {",
+    "15   crasher();    // # args < # formal parameters inserts an adaptor frame.",
+    "16 })();",
+    "17",
+  ],
+};
 
 function fatalError(t, sess, err) {
   t.error(err);
@@ -18,94 +33,105 @@ function fatalError(t, sess, err) {
   return t.end();
 }
 
-function testFrameList(t, sess, frameNumber) {
+async function testFrameList(t, sess, frameNumber, sourceCode, cb) {
+  const lastLine = new RegExp(sourceCode[sourceCode.length - 1]);
+
   sess.send(`frame select ${frameNumber}`);
-  sess.linesUntil(/frame/, (err, lines) => {
-    if (err) {
-      return fatalError(t, sess, err);
-    }
-    sess.send('v8 source list');
+  await sess.linesUntil(/frame/);
+  sess.send('v8 source list');
+  await sess.linesUntil(/v8 source list/);
 
-    sess.linesUntil(/v8 source list/, (err, lines) => {
-      sess.linesUntil(lastLine, (err, lines) => {
-        if (err) {
-          return fatalError(t, sess, err);
-        }
-        t.equal(lines.length, sourceCode.length,
-                `v8 source list correct size`);
-        for (let i = 0; i < lines.length; i++) {
-          t.equal(lines[i].trim(), sourceCode[i], `v8 source list #${i}`);
-        }
+  let lines = await sess.linesUntil(lastLine);
+  t.equal(lines.length, sourceCode.length,
+          `v8 source list correct size`);
+  for (let i = 0; i < lines.length; i++) {
+    t.equal(lines[i].trim(), sourceCode[i], `v8 source list #${i}`);
+  }
 
-        sess.send('v8 source list -l 2');
+  sess.send('v8 source list -l 2');
+  await sess.linesUntil(/v8 source list/);
+  lines = await sess.linesUntil(lastLine);
 
-        sess.linesUntil(/v8 source list/, (err, lines) => {
-          sess.linesUntil(lastLine, (err, lines) => {
-            if (err) {
-              return fatalError(t, sess, err);
-            }
-            t.equal(lines.length, sourceCode.length - 1,
-                    `v8 source list -l 2 correct size`);
-            for (let i = 0; i < lines.length; i++) {
-              t.equal(lines[i].trim(), sourceCode[i + 1],
-                      `v8 source list -l 2 #${i}`);
-            }
-
-            sess.quit();
-            t.end();
-          });
-        });
-      });
-    });
-  });
+  t.equal(lines.length, sourceCode.length - 1,
+          `v8 source list -l 2 correct size`);
+  for (let i = 0; i < lines.length; i++) {
+    t.equal(lines[i].trim(), sourceCode[i + 1],
+            `v8 source list -l 2 #${i}`);
+  }
 }
 
-tape('v8 stack', (t) => {
+tape('v8 stack', async (t) => {
   t.timeoutAfter(15000);
 
   const sess = common.Session.create('frame-scenario.js');
-  sess.waitBreak((err) => {
-    t.error(err);
-    sess.send('v8 bt');
-  });
+  sess.waitBreak = promisify(sess.waitBreak);
+  sess.linesUntil = promisify(sess.linesUntil);
 
-  sess.linesUntil(/eyecatcher/, (err, lines) => {
-    t.error(err);
+  try {
+    await sess.waitBreak();
+    sess.send('v8 bt');
+
+    let lines = await sess.linesUntil(/\sfnFunctionName\(/);
+
     lines.reverse();
     t.ok(lines.length > 4, 'frame count');
-    // FIXME(bnoordhuis) This can fail with versions of lldb that don't
-    // support the GetMemoryRegions() API; llnode won't be able to identify
-    // V8 builtins stack frames, it just prints them as anonymous frames.
+
     lines = lines.filter((s) => !/<builtin>|<stub>/.test(s));
-    const eyecatcher = lines[0];
-    const adapter = lines[1];
-    const crasher = lines[2];
-    const exit = lines[3];
-    t.ok(/eyecatcher/.test(eyecatcher), 'eyecatcher frame');
-    t.ok(/<adaptor>/.test(adapter), 'arguments adapter frame');
+    const exit = lines[5];
+    const crasher = lines[4];
+    const adapter = lines[3];
+    const fnInferredName = lines[2];
+    const fnInferredNamePrototype = lines[1];
+    const fnFunctionName = lines[0];
+    t.ok(/<exit>/.test(exit), 'exit frame');
     t.ok(/crasher/.test(crasher), 'crasher frame');
-    {
-      // V8 4.5 does not use EXIT frames, only INTERNAL frames.
-      const isv4 = /^v4\./.test(process.version);
-      const re = isv4 ? /<internal code>/ : /<exit>/;
-      t.ok(re.test(exit), 'exit frame');
-    }
-    // eyecatcher() is a sloppy mode function that should have an implicit
+    t.ok(/<adaptor>/.test(adapter), 'arguments adapter frame');
+    t.ok(/\sfnInferredName\(/.test(fnInferredName), 'fnInferredName frame');
+    t.ok(/\sModule.fnInferredNamePrototype\(/.test(fnInferredNamePrototype),
+         'fnInferredNamePrototype frame');
+    t.ok(/\sfnFunctionName\(/.test(fnFunctionName), 'fnFunctionName frame');
+    // fn() is a sloppy mode function that should have an implicit
     // |this| that is the global object.  crasher() is a strict mode function
     // that should have a |this| that is the |undefined| value.
     //
     // Interestingly, V8 4.5 has a quirk where the |this| value is |undefined|
     // in both strict and sloppy mode unless the function actually uses |this|.
     // The test adds unreachable `return this` statements as a workaround.
-    t.ok(/this=(0x[0-9a-f]+):<Global proxy>/.test(eyecatcher), 'global this');
+    t.ok(/this=(0x[0-9a-f]+):<Global proxy>/.test(fnFunctionName),
+         'global this');
     t.ok(/this=(0x[0-9a-f]+):<undefined>/.test(crasher), 'undefined this');
 
-    const eyecatcherFrame = eyecatcher.match(/frame #([0-9]+)/)[1];
-    if (!eyecatcherFrame) {
-      fatalError(t, sess, "Couldn't determine eyecather's frame number");
+    // TODO(mmarchini): also test positional info (line, column)
+
+    const fnFunctionNameFrame = fnFunctionName.match(/frame #([0-9]+)/)[1];
+    if (fnFunctionNameFrame) {
+      await testFrameList(t, sess, fnFunctionNameFrame,
+                          sourceCodes['fnFunctionName']);
+    } else {
+      fatalError(t, sess, "Couldn't determine fnFunctionName's frame number");
     }
 
-    testFrameList(t, sess, eyecatcherFrame);
+    const fnInferredNamePrototypeFrame =
+      fnInferredNamePrototype.match(/frame #([0-9]+)/)[1];
+    if (fnInferredNamePrototypeFrame) {
+      await testFrameList(t, sess, fnInferredNamePrototypeFrame,
+                          sourceCodes['fnInferredNamePrototype']);
+    } else {
+      fatalError(t, sess,
+                 "Couldn't determine fnInferredNamePrototype's frame number");
+    }
 
-  });
+    const fnInferredNameFrame = fnInferredName.match(/frame #([0-9]+)/)[1];
+    if (fnInferredNameFrame) {
+      await testFrameList(t, sess,
+                          fnInferredNameFrame, sourceCodes['fnInferredName']);
+    } else {
+      fatalError(t, sess, "Couldn't determine fnInferredName's frame number");
+    }
+
+    sess.quit();
+    return t.end();
+  } catch (err) {
+    fatalError(t, sess, err);
+  }
 });
