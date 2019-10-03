@@ -923,7 +923,7 @@ inline HeapObject ScopeInfo::MaybeFunctionName(Error& err) {
         FixedArray::Get<HeapObject>(proper_index, err);
     if (err.Success() && String::IsString(v8(), maybe_function_name, err)) {
       likely_function_name = maybe_function_name;
-      if (String(likely_function_name).Length(err).GetValue() > 0) {
+      if (*String(likely_function_name).Length(err) > 0) {
         return likely_function_name;
       }
     }
