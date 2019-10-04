@@ -539,11 +539,15 @@ void Types::Load() {
   kSharedFunctionInfoType =
       LoadConstant("type_SharedFunctionInfo__SHARED_FUNCTION_INFO_TYPE");
   kUncompiledDataWithoutPreParsedScopeType = LoadConstant(
-      "type_UncompiledDataWithoutPreParsedScope__UNCOMPILED_DATA_WITHOUT_PRE_"
-      "PARSED_SCOPE_TYPE");
+      {"type_UncompiledDataWithoutPreParsedScope__UNCOMPILED_DATA_WITHOUT_PRE_"
+       "PARSED_SCOPE_TYPE",
+       "type_UncompiledDataWithoutPreparseData__UNCOMPILED_DATA_WITHOUT_"
+       "PREPARSE_DATA_TYPE"});
   kUncompiledDataWithPreParsedScopeType = LoadConstant(
-      "type_UncompiledDataWithPreParsedScope__UNCOMPILED_DATA_WITH_PRE_PARSED_"
-      "SCOPE_TYPE");
+      {"type_UncompiledDataWithPreParsedScope__UNCOMPILED_DATA_WITH_PRE_PARSED_"
+       "SCOPE_TYPE",
+       "type_UncompiledDataWithPreparseData__UNCOMPILED_DATA_WITH_"
+       "PREPARSE_DATA_TYPE"});
   kScriptType = LoadConstant("type_Script__SCRIPT_TYPE");
   kScopeInfoType = LoadConstant("type_ScopeInfo__SCOPE_INFO_TYPE");
   kSymbolType = LoadConstant("type_Symbol__SYMBOL_TYPE");
