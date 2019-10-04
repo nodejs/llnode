@@ -69,12 +69,7 @@ bool BacktraceCmd::DoExecute(SBDebugger d, char** cmd,
     const char star = (frame == selected_frame ? '*' : ' ');
     const uint64_t pc = frame.GetPC();
 
-    // TODO(mmarchini): There might be a better way to check for V8 builtins
-    // embedded in the binary.
-    auto c_function_name = frame.GetFunctionName();
-    std::string function_name(c_function_name != nullptr ? c_function_name
-                                                         : "");
-    if (!frame.GetSymbol().IsValid() || function_name.find("Builtins_") == 0) {
+    if (v8::JSFrame::MightBeV8Frame(frame)) {
       Error err;
       v8::JSFrame v8_frame(llv8_, static_cast<int64_t>(frame.GetFP()));
       Printer printer(llv8_);
@@ -263,7 +258,6 @@ bool ListCmd::DoExecute(SBDebugger d, char** cmd,
   // Load V8 constants from postmortem data
   llv8_->Load(target);
   SBFrame frame = thread.GetSelectedFrame();
-  SBSymbol symbol = frame.GetSymbol();
 
   bool reset_line = false;
   if (line_switch) {
@@ -274,8 +268,7 @@ bool ListCmd::DoExecute(SBDebugger d, char** cmd,
     reset_line = true;
   }
   last_frame = frame;
-  // C++ symbol
-  if (symbol.IsValid()) {
+  if (!v8::JSFrame::MightBeV8Frame(frame)) {
     SBCommandInterpreter interpreter = d.GetCommandInterpreter();
     std::string cmd = "source list ";
     cmd += full_cmd;
