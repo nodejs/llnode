@@ -293,6 +293,16 @@ Smi JSFrame::FromFrameMarker(Value value) const {
   return Smi(value);
 }
 
+
+bool JSFrame::MightBeV8Frame(lldb::SBFrame& frame) {
+  // TODO(mmarchini): There might be a better way to check for V8 builtins
+  // embedded in the binary.
+  auto c_function_name = frame.GetFunctionName();
+  std::string function_name(c_function_name != nullptr ? c_function_name : "");
+
+  return !frame.GetSymbol().IsValid() || function_name.find("Builtins_") == 0;
+}
+
 std::string JSFunction::GetDebugLine(std::string args, Error& err) {
   SharedFunctionInfo info = Info(err);
   if (err.Fail()) return std::string();

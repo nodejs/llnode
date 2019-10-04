@@ -590,6 +590,8 @@ class JSFrame : public Value {
                                uint32_t line_limit, std::string lines[],
                                uint32_t& lines_found, Error& err);
 
+  static bool MightBeV8Frame(lldb::SBFrame& frame);
+
  private:
   Smi FromFrameMarker(Value value) const;
   friend class llnode::Printer;
