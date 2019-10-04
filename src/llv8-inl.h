@@ -144,8 +144,8 @@ inline bool Value::IsUncompiledData(Error& err) {
   int64_t type = heap_object.GetType(err);
   if (err.Fail()) return false;
 
-  return type == v8()->types()->kUncompiledDataWithoutPreParsedScopeType ||
-         type == v8()->types()->kUncompiledDataWithPreParsedScopeType;
+  return type == *v8()->types()->kUncompiledDataWithoutPreParsedScopeType ||
+         type == *v8()->types()->kUncompiledDataWithPreParsedScopeType;
 }
 
 
