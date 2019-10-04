@@ -524,8 +524,8 @@ class Types : public Module {
   int64_t kJSRegExpType;
   int64_t kJSDateType;
   int64_t kSharedFunctionInfoType;
-  int64_t kUncompiledDataWithoutPreParsedScopeType;
-  int64_t kUncompiledDataWithPreParsedScopeType;
+  Constant<int64_t> kUncompiledDataWithoutPreParsedScopeType;
+  Constant<int64_t> kUncompiledDataWithPreParsedScopeType;
   int64_t kScriptType;
   int64_t kScopeInfoType;
   int64_t kSymbolType;
