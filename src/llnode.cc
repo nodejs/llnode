@@ -4,6 +4,8 @@
 #include <string.h>
 
 #include <cinttypes>
+#include <iostream>
+#include <regex>
 #include <sstream>
 #include <string>
 
@@ -189,8 +191,35 @@ bool PrintCmd::DoExecute(SBDebugger d, char** cmd,
   std::string full_cmd;
   for (; start != nullptr && *start != nullptr; start++) full_cmd += *start;
 
+  if (full_cmd.substr(0, 2) != "0x") {
+    result.SetError("Invalid format: address should be in hexadecimal\n");
+    result.SetStatus(eReturnStatusFailed);
+    return false;
+  }
+
+  size_t i = 2;
+  while (true) {
+    char c = full_cmd[i];
+    if ('0' <= c && c <= '9') {
+      i++;
+      continue;
+    }
+    if ('a' <= c && c <= 'f') {
+      i++;
+      continue;
+    }
+    if ('.' == c || c == '[' || c == '\0') {
+      break;
+    }
+
+    result.Printf("Invalid character %c on position %d\n", c, i);
+    result.SetStatus(eReturnStatusFailed);
+    return false;
+  }
+
   SBExpressionOptions options;
-  SBValue value = target.EvaluateExpression(full_cmd.c_str(), options);
+  SBValue value =
+      target.EvaluateExpression(full_cmd.substr(0, i).c_str(), options);
   if (value.GetError().Fail()) {
     SBError error = value.GetError();
     result.SetError(error);
@@ -202,7 +231,38 @@ bool PrintCmd::DoExecute(SBDebugger d, char** cmd,
   llv8_->Load(target);
 
   v8::Value v8_value(llv8_, value.GetValueAsSigned());
+  std::string accessors = full_cmd.substr(i);
+  std::regex b("(\\.[a-zA-Z_0-9]+|\\[[0-9]+\\])");
+  auto words_begin =
+      std::sregex_iterator(accessors.begin(), accessors.end(), b);
+  auto words_end = std::sregex_iterator();
+
   Error err;
+  for (std::sregex_iterator i = words_begin; i != words_end; ++i) {
+    std::smatch match = *i;
+    std::string match_str = match.str();
+
+    v8::JSObject obj(v8_value);
+    if (!obj.Check()) {
+      result.SetError("Couldn't load object on address XYZ");
+      return false;
+    }
+
+    if (match_str[0] == '.') {
+      v8_value = obj.GetProperty(match_str.substr(1), err);
+    }
+
+    if (match_str[0] == '[') {
+      v8_value = obj.GetArrayElement(
+          std::stoi(match_str.substr(1, match_str.length() - 2)), err);
+    }
+
+    if (!v8_value.Check() || err.Fail()) {
+      result.SetError("Couldn't load object using acessor XYZ");
+      return false;
+    }
+  }
+
   Printer printer(llv8_, printer_options);
   std::string res = printer.Stringify(v8_value, err);
   if (err.Fail()) {
