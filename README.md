@@ -286,6 +286,9 @@ make plugin
 
 # To configure and build both the plugin and the addon
 npm install --llnode_build_addon=true
+# To configure and build with a specific path to headers
+npm install --llnode_lldb_include_dir=/path/to/lldb/include
+
 # Without npm
 LLNODE_BUILD_ADDON=true node scripts/configure.js && node scripts/install.js && node scripts/cleanup.js
 # Or use make
