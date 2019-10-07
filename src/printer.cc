@@ -345,18 +345,13 @@ std::string Printer::Stringify(v8::JSArrayBuffer js_array_buffer, Error& err) {
     return ss.str();
   }
 
-  int64_t data = js_array_buffer.BackingStore(err);
-  if (err.Fail()) return std::string();
-
-  v8::Smi length = js_array_buffer.ByteLength(err);
-  if (err.Fail()) return std::string();
-
-  int byte_length = static_cast<int>(length.GetValue());
+  v8::CheckedType<uintptr_t> data = js_array_buffer.BackingStore();
+  v8::CheckedType<size_t> byte_length = js_array_buffer.ByteLength();
 
   char tmp[128];
-  snprintf(tmp, sizeof(tmp),
-           "<ArrayBuffer: backingStore=0x%016" PRIx64 ", byteLength=%d", data,
-           byte_length);
+  snprintf(tmp, sizeof(tmp), "<ArrayBuffer: backingStore=%s, byteLength=%s",
+           data.ToString("0x%016" PRIx64).c_str(),
+           byte_length.ToString("%d").c_str());
 
   std::string res;
   res += tmp;
@@ -365,16 +360,21 @@ std::string Printer::Stringify(v8::JSArrayBuffer js_array_buffer, Error& err) {
     ss << rang::fg::magenta << res + ":" << rang::fg::yellow;
     res = ss.str();
 
-    res += " [\n  ";
+    if (!(data.Check() && byte_length.Check())) {
+      res = "";
+    } else {
+      res += " [\n  ";
 
-    int display_length = std::min<int>(byte_length, options_.length);
-    res += llv8_->LoadBytes(data, display_length, err);
+      int display_length = std::min<int>(*byte_length, options_.length);
+      res += llv8_->LoadBytes(*data, display_length, err);
 
-    if (display_length < byte_length) {
-      res += " ...";
+      if (display_length < *byte_length) {
+        res += " ...";
+      }
+
+      res += "\n]";
     }
 
-    res += "\n]";
     ss.str("");
     ss.clear();
     ss << res << rang::fg::reset;
@@ -390,9 +390,9 @@ std::string Printer::Stringify(v8::JSArrayBuffer js_array_buffer, Error& err) {
 
 
 template <>
-std::string Printer::Stringify(v8::JSArrayBufferView js_array_buffer_view,
-                               Error& err) {
-  v8::JSArrayBuffer buf = js_array_buffer_view.Buffer(err);
+std::string Printer::Stringify(v8::JSTypedArray js_typed_array, Error& err) {
+  // TODO(mmarchini): shouldn't need to fetch buffer here
+  v8::JSArrayBuffer buf = js_typed_array.Buffer(err);
   if (err.Fail()) return std::string();
 
   bool neutered = buf.WasNeutered(err);
@@ -404,34 +404,22 @@ std::string Printer::Stringify(v8::JSArrayBufferView js_array_buffer_view,
     return ss.str().c_str();
   }
 
-  int64_t data = buf.BackingStore(err);
-  if (err.Fail()) return std::string();
+  v8::CheckedType<uintptr_t> data = js_typed_array.GetData();
+  // TODO(mmarchini): be more lenient to failed load
+  RETURN_IF_INVALID(data, std::string());
 
-  if (data == 0) {
-    // The backing store has not been materialized yet.
-    v8::HeapObject elements_obj = js_array_buffer_view.Elements(err);
-    if (err.Fail()) return std::string();
-    v8::FixedTypedArrayBase elements(elements_obj);
-    int64_t base = elements.GetBase(err);
-    if (err.Fail()) return std::string();
-    int64_t external = elements.GetExternal(err);
-    if (err.Fail()) return std::string();
-    data = base + external;
-  }
+  v8::CheckedType<size_t> byte_offset = js_typed_array.ByteOffset();
+  RETURN_IF_INVALID(byte_offset, std::string());
 
-  v8::Smi off = js_array_buffer_view.ByteOffset(err);
-  if (err.Fail()) return std::string();
+  v8::CheckedType<size_t> byte_length = js_typed_array.ByteLength();
+  RETURN_IF_INVALID(byte_length, std::string());
 
-  v8::Smi length = js_array_buffer_view.ByteLength(err);
-  if (err.Fail()) return std::string();
-
-  int byte_length = static_cast<int>(length.GetValue());
-  int byte_offset = static_cast<int>(off.GetValue());
   char tmp[128];
   snprintf(tmp, sizeof(tmp),
-           "<ArrayBufferView: backingStore=0x%016" PRIx64
-           ", byteOffset=%d, byteLength=%d",
-           data, byte_offset, byte_length);
+           "<ArrayBufferView: backingStore=%s, byteOffset=%s, byteLength=%s",
+           data.ToString("0x%016" PRIx64).c_str(),
+           byte_offset.ToString("%d").c_str(),
+           byte_length.ToString("%d").c_str());
 
   std::string res;
   res += tmp;
@@ -442,10 +430,10 @@ std::string Printer::Stringify(v8::JSArrayBufferView js_array_buffer_view,
 
     res += " [\n  ";
 
-    int display_length = std::min<int>(byte_length, options_.length);
-    res += llv8_->LoadBytes(data + byte_offset, display_length, err);
+    int display_length = std::min<int>(*byte_length, options_.length);
+    res += llv8_->LoadBytes(*data + *byte_offset, display_length, err);
 
-    if (display_length < byte_length) {
+    if (display_length < *byte_length) {
       res += " ...";
     }
 
@@ -765,8 +753,8 @@ std::string Printer::Stringify(v8::HeapObject heap_object, Error& err) {
   }
 
   if (type == llv8_->types()->kJSTypedArrayType) {
-    v8::JSArrayBufferView view(heap_object);
-    return pre + Stringify(view, err);
+    v8::JSTypedArray typed_array(heap_object);
+    return pre + Stringify(typed_array, err);
   }
 
   if (type == llv8_->types()->kJSDateType) {
