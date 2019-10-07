@@ -146,7 +146,7 @@ function getLldbVersion(lldbExe) {
     return undefined;
   }
   // Ignore minor revisions like 3.8.1
-  const versionMatch = lldbStr.match(/version (\d.\d)/);
+  const versionMatch = lldbStr.match(/version (\d+.\d+)/);
   if (versionMatch) {
     return versionMatch[1];
   }

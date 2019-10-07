@@ -51,7 +51,8 @@ function configureInstallation(osName, buildDir) {
   // - What level of lldb we are running.
   // - If we need to download the headers. (Linux may have them installed)
   let installation;
-  let includeDir;
+  let includeDir = process.env.npm_config_llnode_lldb_include_dir ||
+    process.env.LLNODE_LLDB_INCLUDE_DIR;
   const config = {
     variables: {}
   };
@@ -82,11 +83,13 @@ function configureInstallation(osName, buildDir) {
     process.exit(1);
   }
 
-  if (installation.includeDir === undefined) {
-    // Could not find the headers, need to download them
-    includeDir = lldb.cloneHeaders(installation.version, buildDir);
-  } else {
-    includeDir = installation.includeDir;
+  if (!includeDir) {
+    if (installation.includeDir === undefined) {
+      // Could not find the headers, need to download them
+      includeDir = lldb.cloneHeaders(installation.version, buildDir);
+    } else {
+      includeDir = installation.includeDir;
+    }
   }
   config.variables['lldb_include_dir%'] = includeDir;
   return {
