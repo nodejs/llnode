@@ -406,9 +406,9 @@ class DescriptorArray : public Module {
  public:
   CONSTANTS_DEFAULT_METHODS(DescriptorArray);
 
-  int64_t kDetailsOffset;
-  int64_t kKeyOffset;
-  int64_t kValueOffset;
+  Constant<int64_t> kDetailsOffset;
+  Constant<int64_t> kKeyOffset;
+  Constant<int64_t> kValueOffset;
 
   int64_t kPropertyIndexMask;
   int64_t kPropertyIndexShift;
@@ -417,8 +417,10 @@ class DescriptorArray : public Module {
 
   int64_t kRepresentationDouble;
 
-  int64_t kFirstIndex;
-  int64_t kSize;
+  Constant<int64_t> kFirstIndex;
+  Constant<int64_t> kHeaderSize;
+  Constant<int64_t> kSize;
+  Constant<int64_t> kEntrySize;
 
   // node.js <= 7
   int64_t kPropertyTypeMask = -1;
