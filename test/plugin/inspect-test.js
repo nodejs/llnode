@@ -48,11 +48,9 @@ const hashMapTests = {
         // Include 'source:' and '>' to act as boundaries. (Avoid
         // passing if the whole file it displayed instead of just
         // the function we want.)
-        const arrowSource = 'source:\n' +
-            'function c.hashmap.(anonymous function)(a,b)=>{a+b}\n' +
-            '>';
+        const arrowSource = /source:\nfunction c.hashmap.(\(anonymous function\)|<computed>)\(a,b\)=>{a\+b}\n>/;
 
-        t.ok(lines.includes(arrowSource),
+        t.ok(lines.match(arrowSource),
             'hashmap[25] should have the correct function source');
         cb(null);
       });
