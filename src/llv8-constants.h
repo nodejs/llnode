@@ -348,8 +348,21 @@ class FixedTypedArrayBase : public Module {
  public:
   CONSTANTS_DEFAULT_METHODS(FixedTypedArrayBase);
 
-  int64_t kBasePointerOffset;
-  int64_t kExternalPointerOffset;
+  Constant<int64_t> kBasePointerOffset;
+  Constant<int64_t> kExternalPointerOffset;
+
+ protected:
+  void Load();
+};
+
+class JSTypedArray : public Module {
+ public:
+  CONSTANTS_DEFAULT_METHODS(JSTypedArray);
+
+  Constant<int64_t> kBasePointerOffset;
+  Constant<int64_t> kExternalPointerOffset;
+
+  bool IsDataPointerInJSTypedArray();
 
  protected:
   void Load();
@@ -379,12 +392,14 @@ class JSArrayBuffer : public Module {
 
   int64_t kKindOffset;
 
-  int64_t kBackingStoreOffset;
-  int64_t kByteLengthOffset;
-  int64_t kBitFieldOffset;
+  Constant<int64_t> kBackingStoreOffset;
+  Constant<int64_t> kByteLengthOffset;
 
   int64_t kWasNeuteredMask;
   int64_t kWasNeuteredShift;
+
+  Constant<int64_t> BitFieldOffset();
+  bool IsByteLengthScalar();
 
  protected:
   void Load();
@@ -395,8 +410,11 @@ class JSArrayBufferView : public Module {
   CONSTANTS_DEFAULT_METHODS(JSArrayBufferView);
 
   int64_t kBufferOffset;
-  int64_t kByteOffsetOffset;
-  int64_t kByteLengthOffset;
+  Constant<int64_t> kByteOffsetOffset;
+  Constant<int64_t> kByteLengthOffset;
+
+  bool IsByteLengthScalar();
+  bool IsByteOffsetScalar();
 
  protected:
   void Load();

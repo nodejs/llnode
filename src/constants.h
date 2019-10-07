@@ -48,8 +48,6 @@ class Constant {
 
   inline std::string name() { return name_; }
 
- protected:
-  friend class Constants;
   explicit Constant(T value) : value_(value), status_(kValid), name_("") {}
   Constant(T value, std::string name)
       : value_(value), status_(kLoaded), name_(name) {}
