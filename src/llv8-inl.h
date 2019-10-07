@@ -271,6 +271,7 @@ inline bool Context::IsContext(LLV8* v8, HeapObject heap_object, Error& err) {
 }
 
 inline int64_t Map::InObjectProperties(Error& err) {
+  RETURN_IF_THIS_INVALID(-1);
   if (!IsJSObjectMap(err)) {
     err = Error::Failure(
         "Invalid call to Map::InObjectProperties with a non-JsObject type");
@@ -724,25 +725,42 @@ inline T FixedArray::Get(int index, Error& err) {
   return LoadFieldValue<T>(off, err);
 }
 
-inline Smi DescriptorArray::GetDetails(int index, Error& err) {
-  return Get<Smi>(v8()->descriptor_array()->kFirstIndex +
-                      index * v8()->descriptor_array()->kSize +
-                      v8()->descriptor_array()->kDetailsOffset,
-                  err);
+template <class T>
+inline T DescriptorArray::Get(int index, int64_t offset) {
+  // TODO(mmarchini): shouldn't need Error here.
+  Error err;
+  RETURN_IF_INVALID(v8()->descriptor_array()->kSize, T());
+
+  index = index * *(v8()->descriptor_array()->kSize);
+  if (v8()->descriptor_array()->kFirstIndex.Loaded()) {
+    return FixedArray::Get<T>(
+        *(v8()->descriptor_array()->kFirstIndex) + index + offset, err);
+  } else if (v8()->descriptor_array()->kHeaderSize.Loaded()) {
+    index *= v8()->common()->kPointerSize;
+    index += *(v8()->descriptor_array()->kHeaderSize);
+    index += (v8()->common()->kPointerSize * offset);
+    return LoadFieldValue<T>(index, err);
+  } else {
+    PRINT_DEBUG(
+        "Missing FirstIndex and HeaderSize constants, can't get key from "
+        "DescriptorArray");
+    return T();
+  }
 }
 
-inline Value DescriptorArray::GetKey(int index, Error& err) {
-  return Get<Value>(v8()->descriptor_array()->kFirstIndex +
-                        index * v8()->descriptor_array()->kSize +
-                        v8()->descriptor_array()->kKeyOffset,
-                    err);
+inline Smi DescriptorArray::GetDetails(int index) {
+  RETURN_IF_INVALID(v8()->descriptor_array()->kDetailsOffset, Smi());
+  return Get<Smi>(index, *v8()->descriptor_array()->kDetailsOffset);
 }
 
-inline Value DescriptorArray::GetValue(int index, Error& err) {
-  return Get<Value>(v8()->descriptor_array()->kFirstIndex +
-                        index * v8()->descriptor_array()->kSize +
-                        v8()->descriptor_array()->kValueOffset,
-                    err);
+inline Value DescriptorArray::GetKey(int index) {
+  RETURN_IF_INVALID(v8()->descriptor_array()->kKeyOffset, Value());
+  return Get<Value>(index, *v8()->descriptor_array()->kKeyOffset);
+}
+
+inline Value DescriptorArray::GetValue(int index) {
+  RETURN_IF_INVALID(v8()->descriptor_array()->kValueOffset, Value());
+  return Get<Value>(index, *v8()->descriptor_array()->kValueOffset);
 }
 
 inline bool DescriptorArray::IsDescriptorDetails(Smi details) {

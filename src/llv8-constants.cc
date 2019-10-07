@@ -95,6 +95,7 @@ void Map::Load() {
                    "class_Map__constructor__Object");
   kInstanceDescriptorsOffset = LoadConstant({
       "class_Map__instance_descriptors__DescriptorArray",
+      "class_Map__instance_descriptors_offset",
   });
   kBitField3Offset =
       LoadConstant("class_Map__bit_field3__int", "class_Map__bit_field3__SMI");
@@ -403,9 +404,9 @@ void JSArrayBufferView::Load() {
 
 
 void DescriptorArray::Load() {
-  kDetailsOffset = LoadConstant("prop_desc_details");
-  kKeyOffset = LoadConstant("prop_desc_key");
-  kValueOffset = LoadConstant("prop_desc_value");
+  kDetailsOffset = LoadConstant({"prop_desc_details"});
+  kKeyOffset = LoadConstant({"prop_desc_key"});
+  kValueOffset = LoadConstant({"prop_desc_value"});
 
   kPropertyIndexMask = LoadConstant("prop_index_mask");
   kPropertyIndexShift = LoadConstant("prop_index_shift");
@@ -455,8 +456,12 @@ void DescriptorArray::Load() {
     kRepresentationDouble = 7;
   }
 
-  kFirstIndex = LoadConstant("prop_idx_first");
-  kSize = LoadConstant("prop_desc_size");
+  // NOTE(mmarchini): removed from V8 7.2.
+  // https://github.com/v8/v8/commit/1ad0cd5
+  kFirstIndex = LoadOptionalConstant({"prop_idx_first"}, 0);
+  kSize = LoadConstant({"prop_desc_size"});
+  kHeaderSize = LoadOptionalConstant(
+      {"class_DescriptorArray__header_size__uintptr_t"}, 0);
 }
 
 
