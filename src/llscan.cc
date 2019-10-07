@@ -1563,7 +1563,7 @@ bool FindJSObjectsVisitor::MapCacheEntry::Load(v8::Map map,
   if (is_histogram) type_name = heap_object.GetTypeName(err);
 
   v8::HeapObject descriptors_obj = map.InstanceDescriptors(err);
-  if (err.Fail()) return false;
+  RETURN_IF_INVALID(descriptors_obj, false);
 
   v8::DescriptorArray descriptors(descriptors_obj);
   own_descriptors_count_ = map.NumberOfOwnDescriptors(err);

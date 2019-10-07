@@ -455,7 +455,7 @@ class DescriptorArray : public FixedArray {
  public:
   V8_VALUE_DEFAULT_METHODS(DescriptorArray, FixedArray)
 
-  inline Smi GetDetails(int index, Error& err);
+  inline Smi GetDetails(int index);
   inline Value GetKey(int index, Error& err);
 
   // NOTE: Only for DATA_CONSTANT

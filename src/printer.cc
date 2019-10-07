@@ -467,9 +467,7 @@ std::string Printer::Stringify(v8::JSArrayBufferView js_array_buffer_view,
 
 template <>
 std::string Printer::Stringify(v8::Map map, Error& err) {
-  v8::HeapObject descriptors_obj = map.InstanceDescriptors(err);
-  if (err.Fail()) return std::string();
-
+  // TODO(mmarchini): don't fail if can't load NumberOfOwnDescriptors
   int64_t own_descriptors_count = map.NumberOfOwnDescriptors(err);
   if (err.Fail()) return std::string();
 
@@ -492,25 +490,41 @@ std::string Printer::Stringify(v8::Map map, Error& err) {
   char tmp[256];
   std::stringstream ss;
   ss << rang::fg::yellow
-     << "<Map own_descriptors=%d %s=%d instance_size=%d "
-        "descriptors=0x%016" PRIx64
-     << rang::fg::reset;
+     << "<Map own_descriptors=%d %s=%d instance_size=%d descriptors=";
+
+  // TODO(mmarchini): this should be a reusable method
+  std::string descriptors_str = "???";
+  v8::HeapObject descriptors_obj = map.InstanceDescriptors(err);
+  if (descriptors_obj.Check()) {
+    char descriptors_raw[50];
+    snprintf(descriptors_raw, 50, "0x%016" PRIx64, descriptors_obj.raw());
+    ss << descriptors_raw;
+  } else {
+    PRINT_DEBUG("Failed to load InstanceDescriptors");
+    ss << rang::fg::red << "???";
+  }
+
+  ss << rang::fg::reset;
 
   snprintf(tmp, sizeof(tmp), ss.str().c_str(),
            static_cast<int>(own_descriptors_count),
            in_object_properties_or_constructor.c_str(),
            static_cast<int>(in_object_properties_or_constructor_index),
-           static_cast<int>(instance_size), descriptors_obj.raw());
+           static_cast<int>(instance_size));
 
   if (!options_.detailed) {
     return std::string(tmp) + ">";
   }
 
-  v8::DescriptorArray descriptors(descriptors_obj);
-  if (err.Fail()) return std::string();
+  if (descriptors_obj.Check()) {
+    v8::DescriptorArray descriptors(descriptors_obj);
+    if (err.Fail()) return std::string();
 
-  return std::string(tmp) + ":" + Stringify<v8::FixedArray>(descriptors, err) +
-         ">";
+    return std::string(tmp) + ":" + Stringify<v8::FixedArray>(descriptors, err) +
+          ">";
+  } else {
+    std::string(tmp) + ">";
+  }
 }
 
 template <>
@@ -965,7 +979,7 @@ std::string Printer::StringifyDictionary(v8::JSObject js_object, Error& err) {
 std::string Printer::StringifyDescriptors(v8::JSObject js_object, v8::Map map,
                                           Error& err) {
   v8::HeapObject descriptors_obj = map.InstanceDescriptors(err);
-  if (err.Fail()) return std::string();
+  RETURN_IF_INVALID(descriptors_obj, std::string());
 
   v8::DescriptorArray descriptors(descriptors_obj);
   int64_t own_descriptors_count = map.NumberOfOwnDescriptors(err);
@@ -987,20 +1001,30 @@ std::string Printer::StringifyDescriptors(v8::JSObject js_object, v8::Map map,
   std::string res;
   std::stringstream ss;
   for (int64_t i = 0; i < own_descriptors_count; i++) {
-    v8::Smi details = descriptors.GetDetails(i, err);
-    if (err.Fail()) return std::string();
+    if (!res.empty()) res += ",\n";
 
     v8::Value key = descriptors.GetKey(i, err);
-    if (err.Fail()) return std::string();
-
-    if (!res.empty()) res += ",\n";
 
     ss.str("");
     ss.clear();
-    ss << rang::style::bold << rang::fg::yellow << "    ." + key.ToString(err)
-       << rang::fg::reset << rang::style::reset;
+    ss << rang::style::bold << rang::fg::yellow << "    .";
+    if (key.Check()) {
+      ss << key.ToString(err);
+    } else {
+      PRINT_DEBUG("Failed to get key for index %ld", i);
+      ss << "???";
+    }
+    ss << rang::fg::reset << rang::style::reset;
+
     res += ss.str() + "=";
     if (err.Fail()) return std::string();
+
+    v8::Smi details = descriptors.GetDetails(i);
+    if (!details.Check()) {
+      PRINT_DEBUG("Failed to get details for index %ld", i);
+      res += "???";
+      continue;
+    }
 
     if (descriptors.IsConstFieldDetails(details) ||
         descriptors.IsDescriptorDetails(details)) {

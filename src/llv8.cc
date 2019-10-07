@@ -571,6 +571,8 @@ std::string Value::GetTypeName(Error& err) {
 
 
 std::string Value::ToString(Error& err) {
+  RETURN_IF_THIS_INVALID(std::string());
+
   Smi smi(this);
   if (smi.Check()) return smi.ToString(err);
 
@@ -922,7 +924,7 @@ std::vector<std::pair<Value, Value>> JSObject::DictionaryEntries(Error& err) {
 std::vector<std::pair<Value, Value>> JSObject::DescriptorEntries(Map map,
                                                                  Error& err) {
   HeapObject descriptors_obj = map.InstanceDescriptors(err);
-  if (err.Fail()) return {};
+  RETURN_IF_INVALID(descriptors_obj, {});
 
   DescriptorArray descriptors(descriptors_obj);
 
@@ -942,8 +944,12 @@ std::vector<std::pair<Value, Value>> JSObject::DescriptorEntries(Map map,
 
   std::vector<std::pair<Value, Value>> entries;
   for (int64_t i = 0; i < own_descriptors_count; i++) {
-    Smi details = descriptors.GetDetails(i, err);
-    if (err.Fail()) continue;
+    Smi details = descriptors.GetDetails(i);
+    if (!details.Check()) {
+      PRINT_DEBUG("Failed to get details for index %ld", i);
+      entries.push_back(std::pair<Value, Value>(Value(), Value()));
+      continue;
+    }
 
     Value key = descriptors.GetKey(i, err);
     if (err.Fail()) continue;
@@ -1037,15 +1043,19 @@ void JSObject::DictionaryKeys(std::vector<std::string>& keys, Error& err) {
 void JSObject::DescriptorKeys(std::vector<std::string>& keys, Map map,
                               Error& err) {
   HeapObject descriptors_obj = map.InstanceDescriptors(err);
-  if (err.Fail()) return;
+  RETURN_IF_INVALID(descriptors_obj, );
 
   DescriptorArray descriptors(descriptors_obj);
   int64_t own_descriptors_count = map.NumberOfOwnDescriptors(err);
   if (err.Fail()) return;
 
   for (int64_t i = 0; i < own_descriptors_count; i++) {
-    Smi details = descriptors.GetDetails(i, err);
-    if (err.Fail()) return;
+    Smi details = descriptors.GetDetails(i);
+    if (!details.Check()) {
+      PRINT_DEBUG("Failed to get details for index %ld", i);
+      keys.push_back("???");
+      continue;
+    }
 
     Value key = descriptors.GetKey(i, err);
     if (err.Fail()) return;
@@ -1124,7 +1134,7 @@ Value JSObject::GetDictionaryProperty(std::string key_name, Error& err) {
 Value JSObject::GetDescriptorProperty(std::string key_name, Map map,
                                       Error& err) {
   HeapObject descriptors_obj = map.InstanceDescriptors(err);
-  if (err.Fail()) return Value();
+  RETURN_IF_INVALID(descriptors_obj, Value());
 
   DescriptorArray descriptors(descriptors_obj);
   int64_t own_descriptors_count = map.NumberOfOwnDescriptors(err);
@@ -1142,8 +1152,11 @@ Value JSObject::GetDescriptorProperty(std::string key_name, Map map,
   FixedArray extra_properties(extra_properties_obj);
 
   for (int64_t i = 0; i < own_descriptors_count; i++) {
-    Smi details = descriptors.GetDetails(i, err);
-    if (err.Fail()) return Value();
+    Smi details = descriptors.GetDetails(i);
+    if (!details.Check()) {
+      PRINT_DEBUG("Failed to get details for index %ld", i);
+      continue;
+    }
 
     Value key = descriptors.GetKey(i, err);
     if (err.Fail()) return Value();
