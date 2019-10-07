@@ -455,11 +455,14 @@ class DescriptorArray : public FixedArray {
  public:
   V8_VALUE_DEFAULT_METHODS(DescriptorArray, FixedArray)
 
-  inline Smi GetDetails(int index, Error& err);
-  inline Value GetKey(int index, Error& err);
+  template <class T>
+  inline T Get(int index, int64_t offset);
+
+  inline Smi GetDetails(int index);
+  inline Value GetKey(int index);
 
   // NOTE: Only for DATA_CONSTANT
-  inline Value GetValue(int index, Error& err);
+  inline Value GetValue(int index);
 
   inline bool IsFieldDetails(Smi details);
   inline bool IsDescriptorDetails(Smi details);
