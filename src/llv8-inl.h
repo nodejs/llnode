@@ -7,6 +7,33 @@
 namespace llnode {
 namespace v8 {
 
+using lldb::SBError;
+using lldb::addr_t;
+
+template<typename T>
+inline std::string CheckedType<T>::ToString(const char* fmt) {
+  if (!Check()) return "???";
+
+  char buf[20];
+  snprintf(buf, sizeof(buf), fmt, val_);
+  return std::string(buf);
+}
+
+template <class T>
+inline CheckedType<T> LLV8::LoadUnsigned(int64_t addr, uint32_t byte_size) {
+  SBError sberr;
+  int64_t value = process_.ReadUnsignedFromMemory(static_cast<addr_t>(addr),
+                                                  byte_size, sberr);
+
+  if (sberr.Fail()) {
+    PRINT_DEBUG("Failed to load unsigned from v8 memory. Reason: %s",
+                sberr.GetCString());
+    return CheckedType<T>();
+  }
+
+  return CheckedType<T>(value);
+}
+
 template <>
 inline double LLV8::LoadValue<double>(int64_t addr, Error& err) {
   return LoadDouble(addr, err);
@@ -64,6 +91,14 @@ int64_t HeapObject::LeaField(int64_t off) const {
 
 inline int64_t HeapObject::LoadField(int64_t off, Error& err) {
   return v8()->LoadPtr(LeaField(off), err);
+}
+
+
+template <typename T>
+inline CheckedType<T> HeapObject::LoadCheckedField(Constant<int64_t> off) {
+  RETURN_IF_THIS_INVALID(CheckedType<T>());
+  RETURN_IF_INVALID(off, CheckedType<T>());
+  return v8()->LoadUnsigned<T>(LeaField(*off), 8);
 }
 
 
@@ -499,21 +534,69 @@ inline int64_t Code::Size(Error& err) {
 
 ACCESSOR(Oddball, Kind, oddball()->kKindOffset, Smi)
 
-inline int64_t JSArrayBuffer::BackingStore(Error& err) {
-  return LoadField(v8()->js_array_buffer()->kBackingStoreOffset, err);
+inline CheckedType<uintptr_t> JSArrayBuffer::BackingStore() {
+  RETURN_IF_THIS_INVALID(CheckedType<size_t>());
+
+  return LoadCheckedField<uintptr_t>(v8()->js_array_buffer()->kBackingStoreOffset);
 }
 
-inline int64_t JSArrayBuffer::BitField(Error& err) {
-  return LoadField(v8()->js_array_buffer()->kBitFieldOffset, err) & 0xffffffff;
+inline CheckedType<size_t> JSArrayBuffer::ByteLength() {
+  RETURN_IF_THIS_INVALID(CheckedType<size_t>());
+
+  if (!v8()->js_array_buffer()->IsByteLengthScalar()) {
+    Error err;
+    Smi len = byte_length(err);
+    RETURN_IF_INVALID(len, CheckedType<size_t>());
+
+    return CheckedType<size_t>(len.GetValue());
+  }
+
+  return LoadCheckedField<size_t>(v8()->js_array_buffer()->kByteLengthOffset);
 }
 
-ACCESSOR(JSArrayBuffer, ByteLength, js_array_buffer()->kByteLengthOffset, Smi)
+inline CheckedType<int64_t> JSArrayBuffer::BitField() {
+  RETURN_IF_THIS_INVALID(CheckedType<int64_t>());
+  CheckedType<int64_t> bit_fields = LoadCheckedField<int64_t>(v8()->js_array_buffer()->BitFieldOffset());
+  RETURN_IF_INVALID(bit_fields, CheckedType<int64_t>());
+  return CheckedType<int64_t>(*bit_fields & 0xffffffff);
+}
+
+SAFE_ACCESSOR(JSArrayBuffer, byte_length, js_array_buffer()->kByteLengthOffset, Smi)
 
 ACCESSOR(JSArrayBufferView, Buffer, js_array_buffer_view()->kBufferOffset,
          JSArrayBuffer)
-ACCESSOR(JSArrayBufferView, ByteOffset,
+
+inline CheckedType<size_t> JSArrayBufferView::ByteLength() {
+  RETURN_IF_THIS_INVALID(CheckedType<size_t>());
+
+  if (!v8()->js_array_buffer_view()->IsByteLengthScalar()) {
+    Error err;
+    Smi len = byte_length(err);
+    RETURN_IF_INVALID(len, CheckedType<size_t>());
+
+    return CheckedType<size_t>(len.GetValue());
+  }
+
+  return LoadCheckedField<size_t>(v8()->js_array_buffer_view()->kByteLengthOffset);
+}
+
+inline CheckedType<size_t> JSArrayBufferView::ByteOffset() {
+  RETURN_IF_THIS_INVALID(CheckedType<size_t>());
+
+  if (!v8()->js_array_buffer_view()->IsByteOffsetScalar()) {
+    Error err;
+    Smi len = byte_offset(err);
+    RETURN_IF_INVALID(len, CheckedType<size_t>());
+
+    return CheckedType<size_t>(len.GetValue());
+  }
+
+  return LoadCheckedField<size_t>(v8()->js_array_buffer_view()->kByteOffsetOffset);
+}
+
+SAFE_ACCESSOR(JSArrayBufferView, byte_offset,
          js_array_buffer_view()->kByteOffsetOffset, Smi)
-ACCESSOR(JSArrayBufferView, ByteLength,
+SAFE_ACCESSOR(JSArrayBufferView, byte_length,
          js_array_buffer_view()->kByteLengthOffset, Smi)
 
 inline ScopeInfo::PositionInfo ScopeInfo::MaybePositionInfo(Error& err) {
@@ -637,7 +720,7 @@ inline int64_t FixedTypedArrayBase::GetBase(Error& err) {
 }
 
 inline int64_t FixedTypedArrayBase::GetExternal(Error& err) {
-  return LoadField(v8()->fixed_typed_array_base()->kExternalPointerOffset, err);
+  return LoadField(*v8()->fixed_typed_array_base()->kExternalPointerOffset, err);
 }
 
 inline std::string OneByteString::ToString(Error& err) {
@@ -1002,10 +1085,12 @@ inline bool Oddball::IsHole(Error& err) {
   return kind.GetValue() == v8()->oddball()->kTheHole;
 }
 
+// TODO(mmarchini): return CheckedType
 inline bool JSArrayBuffer::WasNeutered(Error& err) {
-  int64_t field = BitField(err);
-  if (err.Fail()) return false;
+  CheckedType<int64_t> bit_field = BitField();
+  RETURN_IF_INVALID(bit_field, false);
 
+  int64_t field = *bit_field;
   field &= v8()->js_array_buffer()->kWasNeuteredMask;
   field >>= v8()->js_array_buffer()->kWasNeuteredShift;
   return field != 0;

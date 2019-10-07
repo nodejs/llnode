@@ -60,6 +60,8 @@ class CheckedType {
   }
   inline bool Check() const { return valid_; }
 
+  inline std::string ToString(const char* fmt);
+
  private:
   T val_;
   bool valid_;
@@ -116,6 +118,9 @@ class HeapObject : public Value {
   inline bool Check() const;
   inline int64_t LeaField(int64_t off) const;
   inline int64_t LoadField(int64_t off, Error& err);
+
+  template <class T>
+  inline CheckedType<T> LoadCheckedField(Constant<int64_t> off);
 
   template <class T>
   inline T LoadFieldValue(int64_t off, Error& err);
@@ -562,11 +567,13 @@ class JSArrayBuffer : public JSObject {
  public:
   V8_VALUE_DEFAULT_METHODS(JSArrayBuffer, JSObject)
 
-  inline int64_t BackingStore(Error& err);
-  inline int64_t BitField(Error& err);
-  inline Smi ByteLength(Error& err);
+  inline CheckedType<uintptr_t> BackingStore();
+  inline CheckedType<int64_t> BitField();
+  inline CheckedType<size_t> ByteLength();
 
   inline bool WasNeutered(Error& err);
+ private:
+  inline Smi byte_length(Error& err);
 };
 
 class JSArrayBufferView : public JSObject {
@@ -574,8 +581,11 @@ class JSArrayBufferView : public JSObject {
   V8_VALUE_DEFAULT_METHODS(JSArrayBufferView, JSObject)
 
   inline JSArrayBuffer Buffer(Error& err);
-  inline Smi ByteOffset(Error& err);
-  inline Smi ByteLength(Error& err);
+  inline CheckedType<size_t> ByteOffset();
+  inline CheckedType<size_t> ByteLength();
+ private:
+  inline Smi byte_offset(Error& err);
+  inline Smi byte_length(Error& err);
 };
 
 class JSFrame : public Value {
@@ -614,7 +624,7 @@ class LLV8 {
   int64_t LoadConstant(const char* name);
   int64_t LoadPtr(int64_t addr, Error& err);
   template <class T>
-  CheckedType<T> LoadUnsigned(int64_t addr, uint32_t byte_size);
+  inline CheckedType<T> LoadUnsigned(int64_t addr, uint32_t byte_size);
   int64_t LoadUnsigned(int64_t addr, uint32_t byte_size, Error& err);
   double LoadDouble(int64_t addr, Error& err);
   std::string LoadBytes(int64_t addr, int64_t length, Error& err);

@@ -345,18 +345,13 @@ std::string Printer::Stringify(v8::JSArrayBuffer js_array_buffer, Error& err) {
     return ss.str();
   }
 
-  int64_t data = js_array_buffer.BackingStore(err);
-  if (err.Fail()) return std::string();
-
-  v8::Smi length = js_array_buffer.ByteLength(err);
-  if (err.Fail()) return std::string();
-
-  int byte_length = static_cast<int>(length.GetValue());
+  v8::CheckedType<uintptr_t> data = js_array_buffer.BackingStore();
+  v8::CheckedType<size_t> byte_length = js_array_buffer.ByteLength();
 
   char tmp[128];
-  snprintf(tmp, sizeof(tmp),
-           "<ArrayBuffer: backingStore=0x%016" PRIx64 ", byteLength=%d", data,
-           byte_length);
+  snprintf(tmp, sizeof(tmp), "<ArrayBuffer: backingStore=%s, byteLength=%s",
+          data.ToString("0x%016" PRIx64).c_str(),
+          byte_length.ToString("%d").c_str());
 
   std::string res;
   res += tmp;
@@ -365,16 +360,21 @@ std::string Printer::Stringify(v8::JSArrayBuffer js_array_buffer, Error& err) {
     ss << rang::fg::magenta << res + ":" << rang::fg::yellow;
     res = ss.str();
 
-    res += " [\n  ";
+    if (!(data.Check() && byte_length.Check())) {
+      res = "";
+    } else {
+      res += " [\n  ";
 
-    int display_length = std::min<int>(byte_length, options_.length);
-    res += llv8_->LoadBytes(data, display_length, err);
+      int display_length = std::min<int>(*byte_length, options_.length);
+      res += llv8_->LoadBytes(*data, display_length, err);
 
-    if (display_length < byte_length) {
-      res += " ...";
+      if (display_length < *byte_length) {
+        res += " ...";
+      }
+
+      res += "\n]";
     }
 
-    res += "\n]";
     ss.str("");
     ss.clear();
     ss << res << rang::fg::reset;
@@ -404,10 +404,12 @@ std::string Printer::Stringify(v8::JSArrayBufferView js_array_buffer_view,
     return ss.str().c_str();
   }
 
-  int64_t data = buf.BackingStore(err);
-  if (err.Fail()) return std::string();
+  v8::CheckedType<uintptr_t> data = buf.BackingStore();
+  // TODO(mmarchini): be more lenient to failed load
+  RETURN_IF_INVALID(data, std::string());
 
-  if (data == 0) {
+  if (*data == 0) {
+    PRINT_DEBUG("Is this the real life");
     // The backing store has not been materialized yet.
     v8::HeapObject elements_obj = js_array_buffer_view.Elements(err);
     if (err.Fail()) return std::string();
@@ -416,22 +418,22 @@ std::string Printer::Stringify(v8::JSArrayBufferView js_array_buffer_view,
     if (err.Fail()) return std::string();
     int64_t external = elements.GetExternal(err);
     if (err.Fail()) return std::string();
-    data = base + external;
+    data = v8::CheckedType<uintptr_t>(base + external);
+    PRINT_DEBUG("Is this just fantasy");
   }
 
-  v8::Smi off = js_array_buffer_view.ByteOffset(err);
-  if (err.Fail()) return std::string();
+  v8::CheckedType<size_t> byte_offset = js_array_buffer_view.ByteOffset();
+  RETURN_IF_INVALID(byte_offset, std::string());
 
-  v8::Smi length = js_array_buffer_view.ByteLength(err);
-  if (err.Fail()) return std::string();
+  v8::CheckedType<size_t> byte_length = js_array_buffer_view.ByteLength();
+  RETURN_IF_INVALID(byte_length, std::string());
 
-  int byte_length = static_cast<int>(length.GetValue());
-  int byte_offset = static_cast<int>(off.GetValue());
   char tmp[128];
   snprintf(tmp, sizeof(tmp),
-           "<ArrayBufferView: backingStore=0x%016" PRIx64
-           ", byteOffset=%d, byteLength=%d",
-           data, byte_offset, byte_length);
+           "<ArrayBufferView: backingStore=%s, byteOffset=%s, byteLength=%s",
+           data.ToString("0x%016" PRIx64).c_str(),
+           byte_offset.ToString("%d").c_str(),
+           byte_length.ToString("%d").c_str());
 
   std::string res;
   res += tmp;
@@ -442,10 +444,10 @@ std::string Printer::Stringify(v8::JSArrayBufferView js_array_buffer_view,
 
     res += " [\n  ";
 
-    int display_length = std::min<int>(byte_length, options_.length);
-    res += llv8_->LoadBytes(data + byte_offset, display_length, err);
+    int display_length = std::min<int>(*byte_length, options_.length);
+    res += llv8_->LoadBytes(*data + *byte_offset, display_length, err);
 
-    if (display_length < byte_length) {
+    if (display_length < *byte_length) {
       res += " ...";
     }
 

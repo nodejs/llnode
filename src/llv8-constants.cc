@@ -350,9 +350,9 @@ void FixedTypedArrayBase::Load() {
   kBasePointerOffset =
       LoadConstant("class_FixedTypedArrayBase__base_pointer__Object");
   kExternalPointerOffset =
-      LoadConstant("class_FixedTypedArrayBase__external_pointer__Object");
+      LoadConstant({"class_FixedTypedArrayBase__external_pointer__Object",
+                    "class_FixedTypedArrayBase__external_pointer__uintptr_t"});
 }
-
 
 void Oddball::Load() {
   kKindOffset = LoadConstant("class_Oddball__kind_offset__int");
@@ -369,18 +369,14 @@ void Oddball::Load() {
 
 void JSArrayBuffer::Load() {
   kBackingStoreOffset =
-      LoadConstant("class_JSArrayBuffer__backing_store__Object");
-  kByteLengthOffset = LoadConstant("class_JSArrayBuffer__byte_length__Object");
+      LoadConstant({"class_JSArrayBuffer__backing_store__Object",
+                    "class_JSArrayBuffer__backing_store__uintptr_t"});
+  kByteLengthOffset =
+    LoadConstant({"class_JSArrayBuffer__byte_length__Object",
+                  "class_JSArrayBuffer__byte_length__size_t"});
 
-  // v4 compatibility fix
-  if (kBackingStoreOffset == -1) {
-    common_->Load();
-
-    kBackingStoreOffset = kByteLengthOffset + common_->kPointerSize;
+  if (kBackingStoreOffset.Check()) {
   }
-
-  kBitFieldOffset = kBackingStoreOffset + common_->kPointerSize;
-  if (common_->kPointerSize == 8) kBitFieldOffset += 4;
 
   kWasNeuteredMask = LoadConstant("jsarray_buffer_was_neutered_mask");
   kWasNeuteredShift = LoadConstant("jsarray_buffer_was_neutered_shift");
@@ -393,14 +389,40 @@ void JSArrayBuffer::Load() {
 }
 
 
+bool JSArrayBuffer::IsByteLengthScalar() {
+  return kByteLengthOffset.name() == "class_JSArrayBuffer__byte_length__size_t";
+}
+
+Constant<int64_t> JSArrayBuffer::BitFieldOffset() {
+  if (!kBackingStoreOffset.Check())
+    return Constant<int64_t>();
+
+  common_->Load();
+  int64_t kBitFieldOffset = *kBackingStoreOffset + common_->kPointerSize;
+  if (common_->kPointerSize == 8) kBitFieldOffset += 4;
+  return Constant<int64_t>(kBitFieldOffset);
+}
+
+
 void JSArrayBufferView::Load() {
   kBufferOffset = LoadConstant("class_JSArrayBufferView__buffer__Object");
   kByteOffsetOffset =
-      LoadConstant("class_JSArrayBufferView__raw_byte_offset__Object");
+      LoadConstant({"class_JSArrayBufferView__raw_byte_offset__Object",
+          "class_JSArrayBufferView__byte_offset__size_t"});
   kByteLengthOffset =
-      LoadConstant("class_JSArrayBufferView__raw_byte_length__Object");
+      LoadConstant({"class_JSArrayBufferView__raw_byte_length__Object",
+          "class_JSArrayBufferView__byte_length__size_t"});
 }
 
+bool JSArrayBufferView::IsByteLengthScalar() {
+  PRINT_DEBUG("%s", kByteLengthOffset.name().c_str());
+  return kByteLengthOffset.name() == "class_JSArrayBufferView__byte_length__size_t";
+}
+
+bool JSArrayBufferView::IsByteOffsetScalar() {
+  PRINT_DEBUG("%s", kByteOffsetOffset.name().c_str());
+  return kByteOffsetOffset.name() == "class_JSArrayBufferView__byte_offset__size_t";
+}
 
 void DescriptorArray::Load() {
   kDetailsOffset = LoadConstant({"prop_desc_details"});
