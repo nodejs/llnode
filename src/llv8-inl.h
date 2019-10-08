@@ -774,13 +774,13 @@ ACCESSOR(JSFunction, Info, js_function()->kSharedInfoOffset,
          SharedFunctionInfo);
 ACCESSOR(JSFunction, GetContext, js_function()->kContextOffset, HeapObject);
 
-ACCESSOR(ConsString, First, cons_string()->kFirstOffset, String);
-ACCESSOR(ConsString, Second, cons_string()->kSecondOffset, String);
+SAFE_ACCESSOR(ConsString, First, cons_string()->kFirstOffset, String);
+SAFE_ACCESSOR(ConsString, Second, cons_string()->kSecondOffset, String);
 
 ACCESSOR(SlicedString, Parent, sliced_string()->kParentOffset, String);
-ACCESSOR(SlicedString, Offset, sliced_string()->kOffsetOffset, Smi);
+SAFE_ACCESSOR(SlicedString, Offset, sliced_string()->kOffsetOffset, Smi);
 
-ACCESSOR(ThinString, Actual, thin_string()->kActualOffset, String);
+SAFE_ACCESSOR(ThinString, Actual, thin_string()->kActualOffset, String);
 
 ACCESSOR(FixedArrayBase, Length, fixed_array_base()->kLengthOffset, Smi);
 
