@@ -171,7 +171,11 @@ const hashMapTests = {
         if (err) return cb(err);
         lines = lines.join('\n');
 
-        let strStackMatch = lines.match(/stack=(0x[0-9a-f]+):<String: /i);
+        // NOTE(mmarchini): V8 7.5 replaces the internal symbol with a string
+        // instead of the .stack accessor to avoid creating a new Map for each
+        // Error with stringified stack.
+        // https://github.com/v8/v8/commit/c8206043e1afb6d179a68bb5a8c079de5e76a010
+        let strStackMatch = lines.match(/(Symbol\(\)|stack)=(0x[0-9a-f]+):<String: /i);
         t.ok(strStackMatch, 'hashmap.stringifiedError should have stringified stack');
 
         let stackMatch  = lines.match(/error stack {/i);
