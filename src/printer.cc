@@ -390,9 +390,10 @@ std::string Printer::Stringify(v8::JSArrayBuffer js_array_buffer, Error& err) {
 
 
 template <>
-std::string Printer::Stringify(v8::JSArrayBufferView js_array_buffer_view,
+std::string Printer::Stringify(v8::JSTypedArray js_typed_array,
                                Error& err) {
-  v8::JSArrayBuffer buf = js_array_buffer_view.Buffer(err);
+  // TODO(mmarchini): shouldn't need to fetch buffer here
+  v8::JSArrayBuffer buf = js_typed_array.Buffer(err);
   if (err.Fail()) return std::string();
 
   bool neutered = buf.WasNeutered(err);
@@ -404,28 +405,14 @@ std::string Printer::Stringify(v8::JSArrayBufferView js_array_buffer_view,
     return ss.str().c_str();
   }
 
-  v8::CheckedType<uintptr_t> data = buf.BackingStore();
+  v8::CheckedType<uintptr_t> data = js_typed_array.GetData();
   // TODO(mmarchini): be more lenient to failed load
   RETURN_IF_INVALID(data, std::string());
 
-  if (*data == 0) {
-    PRINT_DEBUG("Is this the real life");
-    // The backing store has not been materialized yet.
-    v8::HeapObject elements_obj = js_array_buffer_view.Elements(err);
-    if (err.Fail()) return std::string();
-    v8::FixedTypedArrayBase elements(elements_obj);
-    int64_t base = elements.GetBase(err);
-    if (err.Fail()) return std::string();
-    int64_t external = elements.GetExternal(err);
-    if (err.Fail()) return std::string();
-    data = v8::CheckedType<uintptr_t>(base + external);
-    PRINT_DEBUG("Is this just fantasy");
-  }
-
-  v8::CheckedType<size_t> byte_offset = js_array_buffer_view.ByteOffset();
+  v8::CheckedType<size_t> byte_offset = js_typed_array.ByteOffset();
   RETURN_IF_INVALID(byte_offset, std::string());
 
-  v8::CheckedType<size_t> byte_length = js_array_buffer_view.ByteLength();
+  v8::CheckedType<size_t> byte_length = js_typed_array.ByteLength();
   RETURN_IF_INVALID(byte_length, std::string());
 
   char tmp[128];
@@ -767,8 +754,8 @@ std::string Printer::Stringify(v8::HeapObject heap_object, Error& err) {
   }
 
   if (type == llv8_->types()->kJSTypedArrayType) {
-    v8::JSArrayBufferView view(heap_object);
-    return pre + Stringify(view, err);
+    v8::JSTypedArray typed_array(heap_object);
+    return pre + Stringify(typed_array, err);
   }
 
   if (type == llv8_->types()->kJSDateType) {

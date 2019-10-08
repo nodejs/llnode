@@ -348,8 +348,21 @@ class FixedTypedArrayBase : public Module {
  public:
   CONSTANTS_DEFAULT_METHODS(FixedTypedArrayBase);
 
-  int64_t kBasePointerOffset;
+  Constant<int64_t> kBasePointerOffset;
   Constant<int64_t> kExternalPointerOffset;
+
+ protected:
+  void Load();
+};
+
+class JSTypedArray : public Module {
+ public:
+  CONSTANTS_DEFAULT_METHODS(JSTypedArray);
+
+  Constant<int64_t> kBasePointerOffset;
+  Constant<int64_t> kExternalPointerOffset;
+
+  bool IsDataPointerInJSTypedArray();
 
  protected:
   void Load();

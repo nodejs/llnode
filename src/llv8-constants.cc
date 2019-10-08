@@ -348,10 +348,23 @@ void FixedArray::Load() {
 
 void FixedTypedArrayBase::Load() {
   kBasePointerOffset =
-      LoadConstant("class_FixedTypedArrayBase__base_pointer__Object");
+      LoadOptionalConstant({"class_FixedTypedArrayBase__base_pointer__Object"}, 0);
   kExternalPointerOffset =
-      LoadConstant({"class_FixedTypedArrayBase__external_pointer__Object",
-                    "class_FixedTypedArrayBase__external_pointer__uintptr_t"});
+      LoadOptionalConstant({"class_FixedTypedArrayBase__external_pointer__Object",
+                    "class_FixedTypedArrayBase__external_pointer__uintptr_t"}, 0);
+}
+
+void JSTypedArray::Load() {
+  kBasePointerOffset =
+      LoadOptionalConstant({"class_JSTypedArray__base_pointer__Object"}, 0);
+  kExternalPointerOffset =
+      LoadOptionalConstant({"class_JSTypedArray__external_pointer__uintptr_t"}, 0);
+}
+
+// TODO(mmarchini): proper validation so that we log an error if neither classes
+// were able to load their constants.
+bool JSTypedArray::IsDataPointerInJSTypedArray() {
+  return kBasePointerOffset.Loaded() && kExternalPointerOffset.Loaded();
 }
 
 void Oddball::Load() {

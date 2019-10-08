@@ -452,8 +452,8 @@ class FixedTypedArrayBase : public FixedArrayBase {
  public:
   V8_VALUE_DEFAULT_METHODS(FixedTypedArrayBase, FixedArrayBase)
 
-  inline int64_t GetBase(Error& err);
-  inline int64_t GetExternal(Error& err);
+  inline CheckedType<int64_t> GetBase();
+  inline CheckedType<int64_t> GetExternal();
 };
 
 class DescriptorArray : public FixedArray {
@@ -591,6 +591,18 @@ class JSArrayBufferView : public JSObject {
   inline Smi byte_length(Error& err);
 };
 
+class JSTypedArray : public JSArrayBufferView {
+ public:
+  V8_VALUE_DEFAULT_METHODS(JSTypedArray, JSArrayBufferView)
+
+  inline CheckedType<int64_t> GetExternal();
+  inline CheckedType<int64_t> GetBase();
+  inline CheckedType<uintptr_t> GetData();
+ private:
+  inline CheckedType<int64_t> external();
+  inline CheckedType<int64_t> base();
+};
+
 class JSFrame : public Value {
  public:
   V8_VALUE_DEFAULT_METHODS(JSFrame, Value)
@@ -660,6 +672,7 @@ class LLV8 {
   constants::ThinString thin_string;
   constants::FixedArrayBase fixed_array_base;
   constants::FixedTypedArrayBase fixed_typed_array_base;
+  constants::JSTypedArray js_typed_array;
   constants::FixedArray fixed_array;
   constants::Oddball oddball;
   constants::JSArrayBuffer js_array_buffer;
@@ -695,6 +708,7 @@ class LLV8 {
   friend class FixedArrayBase;
   friend class FixedArray;
   friend class FixedTypedArrayBase;
+  friend class JSTypedArray;
   friend class DescriptorArray;
   friend class NameDictionary;
   friend class Context;

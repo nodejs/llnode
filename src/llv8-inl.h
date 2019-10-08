@@ -599,6 +599,69 @@ SAFE_ACCESSOR(JSArrayBufferView, byte_offset,
 SAFE_ACCESSOR(JSArrayBufferView, byte_length,
          js_array_buffer_view()->kByteLengthOffset, Smi)
 
+inline CheckedType<int64_t> JSTypedArray::base() {
+  return LoadCheckedField<int64_t>(v8()->js_typed_array()->kBasePointerOffset);
+}
+
+inline CheckedType<int64_t> JSTypedArray::external() {
+  return LoadCheckedField<int64_t>(v8()->js_typed_array()->kExternalPointerOffset);
+}
+
+inline CheckedType<int64_t> JSTypedArray::GetExternal() {
+  if (v8()->js_typed_array()->IsDataPointerInJSTypedArray()) {
+    PRINT_DEBUG("OHALO");
+    return external();
+  } else {
+    PRINT_DEBUG("NAY");
+    // TODO(mmarchini): don't rely on Error
+    Error err;
+    v8::HeapObject elements_obj = Elements(err);
+    RETURN_IF_INVALID(elements_obj, CheckedType<int64_t>());
+    v8::FixedTypedArrayBase elements(elements_obj);
+    return elements.GetExternal();
+  }
+}
+
+inline CheckedType<int64_t> JSTypedArray::GetBase() {
+  if (v8()->js_typed_array()->IsDataPointerInJSTypedArray()) {
+    PRINT_DEBUG("ALOHA");
+    return base();
+  } else {
+    PRINT_DEBUG("NEY");
+    // TODO(mmarchini): don't rely on Error
+    Error err;
+    v8::HeapObject elements_obj = Elements(err);
+    RETURN_IF_INVALID(elements_obj, CheckedType<int64_t>());
+    v8::FixedTypedArrayBase elements(elements_obj);
+    return elements.GetBase();
+  }
+}
+
+inline CheckedType<uintptr_t> JSTypedArray::GetData() {
+  // TODO(mmarchini): don't rely on Error
+  Error err;
+  v8::JSArrayBuffer buf = Buffer(err);
+  if (err.Fail()) return CheckedType<uintptr_t>();
+
+  v8::CheckedType<uintptr_t> data = buf.BackingStore();
+  // TODO(mmarchini): be more lenient to failed load
+  RETURN_IF_INVALID(data, CheckedType<uintptr_t>());
+
+  if (*data == 0) {
+    // The backing store has not been materialized yet.
+
+    CheckedType<int64_t> base = GetBase();
+    RETURN_IF_INVALID(base, v8::CheckedType<uintptr_t>());
+
+    CheckedType<int64_t> external = GetExternal();
+    RETURN_IF_INVALID(external, v8::CheckedType<uintptr_t>());
+
+    data = v8::CheckedType<uintptr_t>(*base + *external);
+  }
+  return data;
+}
+
+
 inline ScopeInfo::PositionInfo ScopeInfo::MaybePositionInfo(Error& err) {
   ScopeInfo::PositionInfo position_info = {
       .start_position = 0, .end_position = 0, .is_valid = false};
@@ -715,12 +778,12 @@ ACCESSOR(ThinString, Actual, thin_string()->kActualOffset, String);
 
 ACCESSOR(FixedArrayBase, Length, fixed_array_base()->kLengthOffset, Smi);
 
-inline int64_t FixedTypedArrayBase::GetBase(Error& err) {
-  return LoadField(v8()->fixed_typed_array_base()->kBasePointerOffset, err);
+inline CheckedType<int64_t> FixedTypedArrayBase::GetBase() {
+  return LoadCheckedField<int64_t>(v8()->fixed_typed_array_base()->kBasePointerOffset);
 }
 
-inline int64_t FixedTypedArrayBase::GetExternal(Error& err) {
-  return LoadField(*v8()->fixed_typed_array_base()->kExternalPointerOffset, err);
+inline CheckedType<int64_t> FixedTypedArrayBase::GetExternal() {
+  return LoadCheckedField<int64_t>(v8()->fixed_typed_array_base()->kExternalPointerOffset);
 }
 
 inline std::string OneByteString::ToString(Error& err) {

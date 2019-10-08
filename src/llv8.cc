@@ -53,6 +53,7 @@ void LLV8::Load(SBTarget target) {
   fixed_array_base.Assign(target, &common);
   fixed_array.Assign(target, &common);
   fixed_typed_array_base.Assign(target, &common);
+  js_typed_array.Assign(target, &common);
   oddball.Assign(target, &common);
   js_array_buffer.Assign(target, &common);
   js_array_buffer_view.Assign(target, &common);
