@@ -296,8 +296,8 @@ class ConsString : public Module {
  public:
   CONSTANTS_DEFAULT_METHODS(ConsString);
 
-  int64_t kFirstOffset;
-  int64_t kSecondOffset;
+  Constant<int64_t> kFirstOffset;
+  Constant<int64_t> kSecondOffset;
 
  protected:
   void Load();
@@ -308,7 +308,7 @@ class SlicedString : public Module {
   CONSTANTS_DEFAULT_METHODS(SlicedString);
 
   int64_t kParentOffset;
-  int64_t kOffsetOffset;
+  Constant<int64_t> kOffsetOffset;
 
  protected:
   void Load();
@@ -318,7 +318,7 @@ class ThinString : public Module {
  public:
   CONSTANTS_DEFAULT_METHODS(ThinString);
 
-  int64_t kActualOffset;
+  Constant<int64_t> kActualOffset;
 
  protected:
   void Load();

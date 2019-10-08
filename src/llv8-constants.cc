@@ -322,18 +322,18 @@ void TwoByteString::Load() {
 
 
 void ConsString::Load() {
-  kFirstOffset = LoadConstant("class_ConsString__first__String");
-  kSecondOffset = LoadConstant("class_ConsString__second__String");
+  kFirstOffset = LoadConstant({"class_ConsString__first__String", "class_ConsString__first_offset__int"});
+  kSecondOffset = LoadConstant({"class_ConsString__second__String", "class_ConsString__second_offset__int"});
 }
 
 
 void SlicedString::Load() {
   kParentOffset = LoadConstant("class_SlicedString__parent__String");
-  kOffsetOffset = LoadConstant("class_SlicedString__offset__SMI");
+  kOffsetOffset = LoadConstant({"class_SlicedString__offset__SMI", "class_SlicedString__offset_offset__int"});
 }
 
 void ThinString::Load() {
-  kActualOffset = LoadConstant("class_ThinString__actual__String");
+  kActualOffset = LoadConstant({"class_ThinString__actual__String", "class_ThinString__actual_offset__int"});
 }
 
 void FixedArrayBase::Load() {
