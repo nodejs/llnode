@@ -729,6 +729,7 @@ std::string Symbol::ToString(Error& err) {
     return "Symbol()";
   }
   HeapObject name = Name(err);
+  RETURN_IF_INVALID(name, "Symbol(???)");
   return "Symbol('" + String(name).ToString(err) + "')";
 }
 
