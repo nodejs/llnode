@@ -281,7 +281,7 @@ ACCESSOR(Map, MaybeConstructor, map()->kMaybeConstructorOffset, HeapObject)
 SAFE_ACCESSOR(Map, InstanceDescriptors, map()->kInstanceDescriptorsOffset,
               HeapObject)
 
-ACCESSOR(Symbol, Name, symbol()->kNameOffset, HeapObject)
+SAFE_ACCESSOR(Symbol, Name, symbol()->kNameOffset, HeapObject)
 
 inline int64_t Map::BitField3(Error& err) {
   return v8()->LoadUnsigned(LeaField(v8()->map()->kBitField3Offset), 4, err);
