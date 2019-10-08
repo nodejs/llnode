@@ -1005,7 +1005,7 @@ std::string Printer::StringifyDescriptors(v8::JSObject js_object, v8::Map map,
   for (int64_t i = 0; i < own_descriptors_count; i++) {
     if (!res.empty()) res += ",\n";
 
-    v8::Value key = descriptors.GetKey(i, err);
+    v8::Value key = descriptors.GetKey(i);
 
     ss.str("");
     ss.clear();
@@ -1032,7 +1032,8 @@ std::string Printer::StringifyDescriptors(v8::JSObject js_object, v8::Map map,
         descriptors.IsDescriptorDetails(details)) {
       v8::Value value;
 
-      value = descriptors.GetValue(i, err);
+      value = descriptors.GetValue(i);
+      RETURN_IF_INVALID(value, std::string());
       if (err.Fail()) return std::string();
 
       res += printer.Stringify(value, err);

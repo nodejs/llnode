@@ -412,8 +412,8 @@ class DescriptorArray : public Module {
   CONSTANTS_DEFAULT_METHODS(DescriptorArray);
 
   Constant<int64_t> kDetailsOffset;
-  int64_t kKeyOffset;
-  int64_t kValueOffset;
+  Constant<int64_t> kKeyOffset;
+  Constant<int64_t> kValueOffset;
 
   int64_t kPropertyIndexMask;
   int64_t kPropertyIndexShift;

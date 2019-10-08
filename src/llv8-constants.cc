@@ -426,8 +426,8 @@ bool JSArrayBufferView::IsByteOffsetScalar() {
 
 void DescriptorArray::Load() {
   kDetailsOffset = LoadConstant({"prop_desc_details"});
-  kKeyOffset = LoadConstant("prop_desc_key");
-  kValueOffset = LoadConstant("prop_desc_value");
+  kKeyOffset = LoadConstant({"prop_desc_key"});
+  kValueOffset = LoadConstant({"prop_desc_value"});
 
   kPropertyIndexMask = LoadConstant("prop_index_mask");
   kPropertyIndexShift = LoadConstant("prop_index_shift");

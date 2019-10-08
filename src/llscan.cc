@@ -1579,8 +1579,8 @@ bool FindJSObjectsVisitor::MapCacheEntry::Load(v8::Map map,
   }
 
   for (uint64_t i = 0; i < own_descriptors_count_; i++) {
-    v8::Value key = descriptors.GetKey(i, err);
-    if (err.Fail()) continue;
+    v8::Value key = descriptors.GetKey(i);
+    if (!key.Check()) continue;
     properties_.emplace_back(key.ToString(err));
   }
 

@@ -808,71 +808,41 @@ inline T FixedArray::Get(int index, Error& err) {
   return LoadFieldValue<T>(off, err);
 }
 
-inline Smi DescriptorArray::GetDetails(int index) {
+template <class T>
+inline T DescriptorArray::Get(int index, int64_t offset) {
   // TODO(mmarchini): shouldn't need Error here.
   Error err;
-  RETURN_IF_INVALID(v8()->descriptor_array()->kFirstIndex, Smi());
-  RETURN_IF_INVALID(v8()->descriptor_array()->kSize, Smi());
-  RETURN_IF_INVALID(v8()->descriptor_array()->kDetailsOffset, Smi());
+  RETURN_IF_INVALID(v8()->descriptor_array()->kSize, T());
 
   index = index * *(v8()->descriptor_array()->kSize);
   if (v8()->descriptor_array()->kFirstIndex.Loaded()) {
-    return Get<Smi>(*(v8()->descriptor_array()->kFirstIndex) +
-                        index +
-                        *(v8()->descriptor_array()->kDetailsOffset),
+    return FixedArray::Get<T>(*(v8()->descriptor_array()->kFirstIndex) +
+                        index + offset,
                     err);
   } else if (v8()->descriptor_array()->kHeaderSize.Loaded()) {
     index *= v8()->common()->kPointerSize;
     index += *(v8()->descriptor_array()->kHeaderSize);
-    index += (v8()->common()->kPointerSize * *(v8()->descriptor_array()->kDetailsOffset));
-    return LoadFieldValue<Smi>(index, err);
+    index += (v8()->common()->kPointerSize * offset);
+    return LoadFieldValue<T>(index, err);
   } else {
     PRINT_DEBUG("Missing FirstIndex and HeaderSize constants, can't get key from DescriptorArray");
-    return Smi();
+    return T();
   }
 }
 
-inline Value DescriptorArray::GetKey(int index, Error& err) {
-  RETURN_IF_INVALID(v8()->descriptor_array()->kFirstIndex, Smi());
-  RETURN_IF_INVALID(v8()->descriptor_array()->kSize, Smi());
-
-  index = index * *(v8()->descriptor_array()->kSize);
-  if (v8()->descriptor_array()->kFirstIndex.Loaded()) {
-    // TODO(mmarchini): check on `Get`
-    return Get<Value>(*(v8()->descriptor_array()->kFirstIndex) +
-                          index +
-                          v8()->descriptor_array()->kKeyOffset,
-                      err);
-  } else if (v8()->descriptor_array()->kHeaderSize.Loaded()) {
-    index *= v8()->common()->kPointerSize;
-    index += *(v8()->descriptor_array()->kHeaderSize);
-    index += v8()->descriptor_array()->kKeyOffset;
-    return LoadFieldValue<Value>(index, err);
-  } else {
-    PRINT_DEBUG("Missing FirstIndex and HeaderSize constants, can't get key from DescriptorArray");
-    return Value();
-  }
+inline Smi DescriptorArray::GetDetails(int index) {
+  RETURN_IF_INVALID(v8()->descriptor_array()->kDetailsOffset, Smi());
+  return Get<Smi>(index, *v8()->descriptor_array()->kDetailsOffset);
 }
 
-inline Value DescriptorArray::GetValue(int index, Error& err) {
-  RETURN_IF_INVALID(v8()->descriptor_array()->kFirstIndex, Smi());
-  RETURN_IF_INVALID(v8()->descriptor_array()->kSize, Smi());
+inline Value DescriptorArray::GetKey(int index) {
+  RETURN_IF_INVALID(v8()->descriptor_array()->kKeyOffset, Value());
+  return Get<Value>(index, *v8()->descriptor_array()->kKeyOffset);
+}
 
-  index = index * *(v8()->descriptor_array()->kSize);
-  if (v8()->descriptor_array()->kFirstIndex.Loaded()) {
-    return Get<Value>(*(v8()->descriptor_array()->kFirstIndex) +
-                          index +
-                          v8()->descriptor_array()->kValueOffset,
-                      err);
-  } else if (v8()->descriptor_array()->kHeaderSize.Loaded()) {
-    index *= v8()->common()->kPointerSize;
-    index += *(v8()->descriptor_array()->kHeaderSize);
-    index += (v8()->common()->kPointerSize * v8()->descriptor_array()->kValueOffset);
-    return LoadFieldValue<Value>(index, err);
-  } else {
-    PRINT_DEBUG("Missing FirstIndex and HeaderSize constants, can't get key from DescriptorArray");
-    return Value();
-  }
+inline Value DescriptorArray::GetValue(int index) {
+  RETURN_IF_INVALID(v8()->descriptor_array()->kValueOffset, Value());
+  return Get<Value>(index, *v8()->descriptor_array()->kValueOffset);
 }
 
 inline bool DescriptorArray::IsDescriptorDetails(Smi details) {

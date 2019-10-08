@@ -936,15 +936,15 @@ std::vector<std::pair<Value, Value>> JSObject::DescriptorEntries(Map map,
       continue;
     }
 
-    Value key = descriptors.GetKey(i, err);
-    if (err.Fail()) continue;
+    Value key = descriptors.GetKey(i);
+    if (!key.Check()) continue;
 
     if (descriptors.IsConstFieldDetails(details) ||
         descriptors.IsDescriptorDetails(details)) {
       Value value;
 
-      value = descriptors.GetValue(i, err);
-      if (err.Fail()) continue;
+      value = descriptors.GetValue(i);
+      if (!value.Check()) continue;
 
       entries.push_back(std::pair<Value, Value>(key, value));
       continue;
@@ -1042,8 +1042,8 @@ void JSObject::DescriptorKeys(std::vector<std::string>& keys, Map map,
       continue;
     }
 
-    Value key = descriptors.GetKey(i, err);
-    if (err.Fail()) return;
+    Value key = descriptors.GetKey(i);
+    RETURN_IF_INVALID(key, );
 
     // Skip non-fields for now, Object.keys(obj) does
     // not seem to return these (for example the "length"
@@ -1143,8 +1143,8 @@ Value JSObject::GetDescriptorProperty(std::string key_name, Map map,
       continue;
     }
 
-    Value key = descriptors.GetKey(i, err);
-    if (err.Fail()) return Value();
+    Value key = descriptors.GetKey(i);
+    RETURN_IF_INVALID(key, Value());
 
     if (key.ToString(err) != key_name) {
       continue;
@@ -1157,8 +1157,8 @@ Value JSObject::GetDescriptorProperty(std::string key_name, Map map,
         descriptors.IsDescriptorDetails(details)) {
       Value value;
 
-      value = descriptors.GetValue(i, err);
-      if (err.Fail()) return Value();
+      value = descriptors.GetValue(i);
+      RETURN_IF_INVALID(value, Value());
 
       continue;
     }
