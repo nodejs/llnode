@@ -543,7 +543,7 @@ void Frame::Load() {
 
 
 void Symbol::Load() {
-  kNameOffset = LoadConstant("class_Symbol__name__Object");
+  kNameOffset = LoadConstant({"class_Symbol__name__Object"});
 }
 
 

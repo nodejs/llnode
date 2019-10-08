@@ -509,7 +509,7 @@ class Symbol : public Module {
  public:
   CONSTANTS_DEFAULT_METHODS(Symbol);
 
-  int64_t kNameOffset;
+  Constant<int64_t> kNameOffset;
 
  protected:
   void Load();
