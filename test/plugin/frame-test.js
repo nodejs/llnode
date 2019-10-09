@@ -5,6 +5,7 @@ const { promisify } = require('util');
 const tape = require('tape');
 
 const common = require('../common');
+const { nodejsVersion } = common;
 
 const sourceCodes = {
   "fnFunctionName": [
@@ -86,7 +87,7 @@ tape('v8 stack', async (t) => {
     t.ok(/<exit>/.test(exit), 'exit frame');
     t.ok(/crasher/.test(crasher), 'crasher frame');
     t.ok(/<adaptor>/.test(adapter), 'arguments adapter frame');
-    if (!process.version.startsWith("v12"))
+    if (nodejsVersion()[0] < 12)
       t.ok(/\sfnInferredName\(/.test(fnInferredName), 'fnInferredName frame');
     t.ok(/\sModule.fnInferredNamePrototype\(/.test(fnInferredNamePrototype),
          'fnInferredNamePrototype frame');
@@ -112,7 +113,7 @@ tape('v8 stack', async (t) => {
       fatalError(t, sess, "Couldn't determine fnFunctionName's frame number");
     }
 
-    if (!process.version.startsWith("v12")) {
+    if (nodejsVersion()[0] < 12) {
       const fnInferredNamePrototypeFrame =
         fnInferredNamePrototype.match(/frame #([0-9]+)/)[1];
       if (fnInferredNamePrototypeFrame) {

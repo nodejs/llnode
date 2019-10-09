@@ -330,3 +330,10 @@ Session.prototype.hasSymbol = function hasSymbol(symbol, callback) {
     }
   });
 };
+
+function nodejsVersion() {
+  const version = process.version.substring(1, process.version.indexOf('-'));
+  const versionArray = version.split('.').map(s => Number(s));
+  return versionArray;
+}
+exports.nodejsVersion = nodejsVersion;
