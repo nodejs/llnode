@@ -26,7 +26,8 @@
     "codecov-upload-js": "codecov --disable=gcov --file=coverage-js.lcov",
     "codecov-upload": "npm run codecov-upload-cc && npm run codecov-upload-js",
     "linter": "node scripts/linter.js",
-    "format": "npx clang-format -i src/*"
+    "format": "npx clang-format -i src/*",
+    "lint-test": "(npx eslint test{,/**}/*.js && echo 'No problems found') || echo 'Lint failed for some files'"
   },
   "repository": {
     "type": "git",
@@ -54,9 +55,10 @@
   },
   "homepage": "https://github.com/nodejs/llnode#readme",
   "devDependencies": {
-    "codecov": "^3.1.0",
-    "nyc": "^13.1.0",
     "clang-format": "1.2.4",
+    "codecov": "^3.1.0",
+    "eslint": "^6.5.1",
+    "nyc": "^13.1.0",
     "tape": "^4.4.0"
   },
   "nyc": {
