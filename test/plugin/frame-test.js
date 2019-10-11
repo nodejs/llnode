@@ -5,10 +5,10 @@ const tape = require('tape');
 const common = require('../common');
 
 const sourceCode = [
-"10 function eyecatcher() {",
-"11   crasher();    // # args < # formal parameters inserts an adaptor frame.",
-"12   return this;  // Force definition of |this|.",
-"13 }",
+  "10 function eyecatcher() {",
+  "11   crasher();    // # args < # formal parameters inserts an adaptor frame.",
+  "12   return this;  // Force definition of |this|.",
+  "13 }",
 ];
 const lastLine = new RegExp(sourceCode[sourceCode.length - 1]);
 
@@ -20,35 +20,35 @@ function fatalError(t, sess, err) {
 
 function testFrameList(t, sess, frameNumber) {
   sess.send(`frame select ${frameNumber}`);
-  sess.linesUntil(/frame/, (err, lines) => {
+  sess.linesUntil(/frame/, (err) => {
     if (err) {
       return fatalError(t, sess, err);
     }
     sess.send('v8 source list');
 
-    sess.linesUntil(/v8 source list/, (err, lines) => {
+    sess.linesUntil(/v8 source list/, () => {
       sess.linesUntil(lastLine, (err, lines) => {
         if (err) {
           return fatalError(t, sess, err);
         }
         t.equal(lines.length, sourceCode.length,
-                `v8 source list correct size`);
+          `v8 source list correct size`);
         for (let i = 0; i < lines.length; i++) {
           t.equal(lines[i].trim(), sourceCode[i], `v8 source list #${i}`);
         }
 
         sess.send('v8 source list -l 2');
 
-        sess.linesUntil(/v8 source list/, (err, lines) => {
+        sess.linesUntil(/v8 source list/, () => {
           sess.linesUntil(lastLine, (err, lines) => {
             if (err) {
               return fatalError(t, sess, err);
             }
             t.equal(lines.length, sourceCode.length - 1,
-                    `v8 source list -l 2 correct size`);
+              `v8 source list -l 2 correct size`);
             for (let i = 0; i < lines.length; i++) {
               t.equal(lines[i].trim(), sourceCode[i + 1],
-                      `v8 source list -l 2 #${i}`);
+                `v8 source list -l 2 #${i}`);
             }
 
             sess.quit();

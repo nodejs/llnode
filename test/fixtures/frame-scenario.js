@@ -1,7 +1,5 @@
 // Note: top-level 'use strict' intentionally omitted.
-const common = require('../common');
-
-function crasher(unused) {
+function crasher() {
   'use strict';
   process.abort();  // Creates an exit frame.
   return this;      // Force definition of |this|.
