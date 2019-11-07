@@ -20,11 +20,8 @@
     "nyc-test-all": "nyc npm run test-all",
     "nyc-test": "nyc npm run test",
     "coverage-cc": "make coverage",
-    "coverage-js": "nyc report --reporter=text-lcov > coverage-js.lcov",
+    "coverage-js": "nyc report --reporter=text-lcov > coverage-js.info",
     "coverage": "npm run coverage-cc && npm run coverage-js",
-    "codecov-upload-cc": "codecov --disable=gcov --file=coverage-cc.info",
-    "codecov-upload-js": "codecov --disable=gcov --file=coverage-js.lcov",
-    "codecov-upload": "npm run codecov-upload-cc && npm run codecov-upload-js",
     "linter": "node scripts/linter.js",
     "format": "npx clang-format -i src/*"
   },

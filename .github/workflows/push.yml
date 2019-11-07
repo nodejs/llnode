@@ -1,0 +1,74 @@
+name: on push or pull_request
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+  schedule:
+    - cron:  '0 0 * * *'
+
+jobs:
+  tests:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node:
+          - version: 8.x
+          - version: 10.x
+          - version: 11.x
+          - version: 14.x
+            mirror: https://nodejs.org/download/nightly
+          - version: 14.x
+            mirror: https://nodejs.org/download/v8-canary
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v1
+      - name: Use Node.js ${{ matrix.node.version }} ${{ matrix.node.mirror }}
+        uses: mmarchini/setup-node@mirror
+        with:
+          node-version: ${{ matrix.node.version }}
+          node-mirror: ${{ matrix.node.mirror }}
+      - name: install dependencies Linux
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get -qq update
+          sudo apt-get install lldb-3.9 liblldb-3.9-dev lcov gdb -y
+      - name: npm install
+        run: |
+          npm install --llnode_build_addon=true --llnode_coverage=true
+      - name: run tests
+        run: TEST_LLDB_BINARY=`which lldb-3.9` npm run nyc-test-all
+        if: matrix.node.version != '14.x'
+      - name: run tests (nightly)
+        run: TEST_LLDB_BINARY=`which lldb-3.9` npm run nyc-test-all
+        if: matrix.node.version == '14.x'
+        continue-on-error: true
+      - name: prepare coverage
+        if: matrix.os == 'ubuntu-latest' && matrix.node.version != '14.x'
+        run: |
+          npm run coverage
+          cat ./coverage-js.info > ./coverage.info
+          cat ./coverage-cc.info >> ./coverage.info
+      - name: coveralls
+        if: matrix.os == 'ubuntu-latest' && matrix.node.version != '14.x'
+        uses: coverallsapp/github-action@master
+        with:
+          path-to-lcov: ./coverage.info
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+  linter:
+    runs-on: [ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v1
+      - name: Use Node.js LTS
+        uses: actions/setup-node@v1
+        with:
+          node-version: 12.x
+      - name: npm install, build, and test
+        run: |
+          sudo apt-get -qq update
+          sudo apt-get install lldb-3.9 liblldb-3.9-dev lcov -y
+          npm install
+          npm run linter
