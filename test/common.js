@@ -247,12 +247,14 @@ function spawnWithTimeout(cmd, cb) {
 }
 
 function saveCoreLinux(executable, scenario, core, cb) {
-  const cmd = `ulimit -c unlimited && ${executable} ` +
-              `--abort_on_uncaught_exception --expose_externalize_string ` +
-              `${path.join(exports.fixturesDir, scenario)}; `;
+  // TODO(mmarchini): Let users choose if they want system generated core dumps
+  // or gdb generated core dumps.
+  const cmd = `gdb ${executable} --batch -ex 'run ` +
+    `--abort-on-uncaught-exception --expose-externalize-string ` +
+    `${path.join(exports.fixturesDir, scenario)}' -ex 'generate-core-file ` +
+    `${core}'`;
   spawnWithTimeout(cmd, () => {
-    // FIXME (mmarchini): Should also handle different core system settings.
-    spawnWithTimeout(`mv ./core ${core}`, cb);
+    cb()
   });
 }
 
