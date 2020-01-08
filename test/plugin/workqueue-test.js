@@ -37,7 +37,7 @@ tape('v8 workqueue commands', (t) => {
   });
 
   // Check if current node version support these commands.
-  sess.waitError(/error: Couldn't get node's Environment/, (err, line) => {
+  sess.waitError(/error: Couldn't get node's Environment/, (err) => {
     if (err) {
       testWorkqueueCommands(t, sess);
     } else {

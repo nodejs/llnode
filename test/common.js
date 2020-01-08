@@ -1,6 +1,5 @@
 'use strict';
 
-const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const util = require('util');
@@ -48,7 +47,7 @@ function SessionOutput(session, stream, timeout) {
   stream.on('data', (data) => {
     buf += data;
 
-    for (;;) {
+    for (; ;) {
       let index = buf.indexOf('\n');
 
       if (index === -1)
@@ -114,7 +113,7 @@ SessionOutput.prototype.wait = function wait(regexp, callback, allLines) {
   }
 
   let done = false;
-  const check = setTimeout(() => {
+  setTimeout(() => {
     if (done)
       return;
 
@@ -229,7 +228,8 @@ function saveCoreLLDB(scenario, core, cb) {
 function spawnWithTimeout(cmd, cb) {
   const proc = spawn(cmd, {
     shell: true,
-    stdio: ['pipe', 'pipe', 'pipe'] });
+    stdio: ['pipe', 'pipe', 'pipe']
+  });
   const stdout = new SessionOutput(null, proc.stdout, exports.saveCoreTimeout);
   const stderr = new SessionOutput(null, proc.stderr, exports.saveCoreTimeout);
   stdout.on('line', (line) => { debug('[stdout]', line); });
@@ -240,7 +240,7 @@ function spawnWithTimeout(cmd, cb) {
     proc.kill();
   }, exports.saveCoreTimeout);
 
-  proc.on('exit', (status) => {
+  proc.on('exit', () => {
     clearTimeout(timeout);
     cb(null);
   });
@@ -248,8 +248,8 @@ function spawnWithTimeout(cmd, cb) {
 
 function saveCoreLinux(executable, scenario, core, cb) {
   const cmd = `ulimit -c unlimited && ${executable} ` +
-              `--abort_on_uncaught_exception --expose_externalize_string ` +
-              `${path.join(exports.fixturesDir, scenario)}; `;
+    `--abort_on_uncaught_exception --expose_externalize_string ` +
+    `${path.join(exports.fixturesDir, scenario)}; `;
   spawnWithTimeout(cmd, () => {
     // FIXME (mmarchini): Should also handle different core system settings.
     spawnWithTimeout(`mv ./core ${core}`, cb);
@@ -314,7 +314,7 @@ Session.prototype.hasSymbol = function hasSymbol(symbol, callback) {
 
   let pattern = new RegExp(symbol);
   this.linesUntil(versionMark, (err, lines) => {
-    if(pattern.test(lines.join('\n'))) {
+    if (pattern.test(lines.join('\n'))) {
       callback(err, true);
     } else {
       return callback(err, false);

@@ -1,16 +1,14 @@
 'use strict';
 
-const common = require('../common');
-
 function first() {
   second('second args', 1);
 }
 
-function second(arg1, arg2) {
+function second() {
   third('third args', 1, { a: 1 });
 }
 
-function third(arg1, arg2, arg3) {
+function third() {
   const c = new Class();
 
   c.method('method args', 1.23, null);
@@ -19,7 +17,7 @@ function third(arg1, arg2, arg3) {
 function Class() {
 }
 
-Class.prototype.method = function method(arg1, arg2, arg3) {
+Class.prototype.method = function method() {
   throw new Error('Uncaught');
 };
 

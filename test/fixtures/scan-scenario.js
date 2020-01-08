@@ -1,19 +1,10 @@
 'use strict';
 
-const common = require('../common');
-
 const zlib = require('zlib');
 
 let outerVar = 'outer variable';
 
 exports.holder = {};
-
-function makeThin(a, b) {
-  var str = a + b;
-  var obj = {};
-  obj[str];  // Turn the cons string into a thin string.
-  return str;
-}
 
 function closure() {
 
@@ -34,7 +25,7 @@ function closure() {
 
   let scopedVar = 'scoped value';
   let scopedAPI = zlib.createDeflate()._handle;
-  let scopedArray = [ 0, scopedAPI ];
+  let scopedArray = [0, scopedAPI];
 
   exports.holder = scopedAPI;
 
@@ -46,15 +37,8 @@ function closure() {
     this.my_class_b = "Class B";
   }
 
-  function Class_C(class_b_array) {
-    this.arr = class_b_array;
-    this.my_class_c = "My Class C";
-  }
-
   const arr = new Array();
-  for(let i=0; i < 10; i++) arr.push(new Class_B());
-
-  let classC = new Class_C(arr);
+  for (let i = 0; i < 10; i++) arr.push(new Class_B());
 
   c.method();
 }

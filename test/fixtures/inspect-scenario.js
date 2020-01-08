@@ -1,7 +1,5 @@
 'use strict';
 
-const common = require('../common');
-
 const zlib = require('zlib');
 
 let outerVar = 'outer variable';
@@ -36,19 +34,18 @@ function closure() {
   c.hashmap['some-key'] = 42;
   c.hashmap['other-key'] = 'ohai';
   c.hashmap['cons-string'] =
-      'this could be a bit smaller, but v8 wants big str.';
+    'this could be a bit smaller, but v8 wants big str.';
   c.hashmap['cons-string'] += c.hashmap['cons-string'];
   c.hashmap['internalized-string'] = 'foobar';
   // This thin string points to the previous 'foobar'.
   c.hashmap['thin-string'] = makeThin('foo', 'bar');
   // Create an externalized string and slice it.
   c.hashmap['externalized-string'] =
-      'string that will be externalized and sliced';
-  externalizeString(c.hashmap['externalized-string']);
+    'string that will be externalized and sliced';
   // Sliced strings need to be longer that SlicedString::kMinLength
   // which seems to be 13 so our string is 26.
   c.hashmap['sliced-externalized-string'] =
-      c.hashmap['externalized-string'].substring(10,36);
+    c.hashmap['externalized-string'].substring(10, 36);
 
   c.hashmap['array'] = [true, 1, undefined, null, 'test', Class];
   c.hashmap['long-array'] = new Array(20).fill(5);
@@ -70,12 +67,12 @@ function closure() {
   c.hashmap[0] = null;
   c.hashmap[4] = undefined;
   c.hashmap[23] = /regexp/;
-  c.hashmap[25] = (a,b)=>{a+b};
+  c.hashmap[25] = (a, b) => { a + b };
   c.hashmap[oneSymbol] = 42;
 
   let scopedVar = 'scoped value';
   let scopedAPI = zlib.createDeflate()._handle;
-  let scopedArray = [ 0, scopedAPI ];
+  let scopedArray = [0, scopedAPI];
 
   c.hashmap['date_1'] = new Date('2000-01-01');
   c.hashmap['date_2'] = new Date(1);
@@ -90,15 +87,8 @@ function closure() {
     this.name = "Class B";
   }
 
-  function Class_C(class_b_array) {
-    this.arr = class_b_array;
-    this.my_class_c = "My Class C";
-  }
-
   const arr = new Array();
-  for(let i=0; i < 10; i++) arr.push(new Class_B());
-
-  let classC = new Class_C(arr);
+  for (let i = 0; i < 10; i++) arr.push(new Class_B());
 
   c.method();
 }
