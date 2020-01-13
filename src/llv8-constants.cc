@@ -501,7 +501,7 @@ void DescriptorArray::Load() {
   kFirstIndex = LoadOptionalConstant({"prop_idx_first"}, 0);
   kSize = LoadConstant({"prop_desc_size"});
   kHeaderSize = LoadOptionalConstant(
-      {"class_DescriptorArray__header_size__uintptr_t"}, 0);
+      {"class_DescriptorArray__header_size__uintptr_t"}, 24);
 }
 
 
