@@ -889,7 +889,7 @@ inline T DescriptorArray::Get(int index, int64_t offset) {
   if (v8()->descriptor_array()->kFirstIndex.Loaded()) {
     return FixedArray::Get<T>(
         *(v8()->descriptor_array()->kFirstIndex) + index + offset, err);
-  } else if (v8()->descriptor_array()->kHeaderSize.Loaded()) {
+  } else if (v8()->descriptor_array()->kHeaderSize.Check()) {
     index *= v8()->common()->kPointerSize;
     index += *(v8()->descriptor_array()->kHeaderSize);
     index += (v8()->common()->kPointerSize * offset);
