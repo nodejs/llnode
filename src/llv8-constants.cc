@@ -550,7 +550,24 @@ void Frame::Load() {
 
 
 void Symbol::Load() {
-  kNameOffset = LoadConstant({"class_Symbol__name__Object"});
+  // map is the last field of HeapObject
+  Constant<int64_t> maybe_name_offset =
+      LoadConstant({"class_HeapObject__map__Map"});
+  common_->Load();
+  if (maybe_name_offset.Check()) {
+    int name_offset = *maybe_name_offset;
+
+    name_offset += common_->kPointerSize;
+    // class Name extends HeapObject and has only one uint32 field
+    name_offset += sizeof(uint32_t);
+    // class Symbol extends Name and has one int32 field before name
+    name_offset += sizeof(int32_t);
+
+    kNameOffset =
+        LoadOptionalConstant({"class_Symbol__name__Object"}, name_offset);
+  } else {
+    kNameOffset = LoadConstant({"class_Symbol__name__Object"});
+  }
 }
 
 
