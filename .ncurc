@@ -1,0 +1,6 @@
+{
+  "ciType": "github-check",
+  "repo": "llnode",
+  "waitTimeSingleApproval": 0,
+  "waitTimeMultiApproval": 0
+}
