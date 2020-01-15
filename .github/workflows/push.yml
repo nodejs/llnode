@@ -16,9 +16,8 @@ jobs:
       fail-fast: false
       matrix:
         node:
-          - version: 8.x
           - version: 10.x
-          - version: 11.x
+          - version: 12.x
           - version: 14.x
             mirror: https://nodejs.org/download/nightly
           - version: 14.x
