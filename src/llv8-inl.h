@@ -671,6 +671,7 @@ inline std::string ConsString::ToString(Error& err) {
 inline std::string SlicedString::ToString(Error& err) {
   String parent = Parent(err);
   if (err.Fail()) return std::string();
+  RETURN_IF_INVALID(parent, std::string());
 
   // TODO - Remove when we add support for external strings
   // We can't use the offset and length safely if we get "(external)"
@@ -683,6 +684,7 @@ inline std::string SlicedString::ToString(Error& err) {
 
   Smi offset = Offset(err);
   if (err.Fail()) return std::string();
+  RETURN_IF_INVALID(offset, std::string());
 
   CheckedType<int32_t> length = Length(err);
   RETURN_IF_INVALID(length, std::string());
@@ -692,7 +694,7 @@ inline std::string SlicedString::ToString(Error& err) {
 
   int64_t off = offset.GetValue();
   int64_t tmp_size = tmp.size();
-  if (off > tmp_size || *length > tmp_size) {
+  if (off > tmp_size || *length > tmp_size || *length < 0 || off < 0) {
     err = Error::Failure("Failed to display sliced string 0x%016" PRIx64
                          " (offset = 0x%016" PRIx64
                          ", length = %d) from parent string 0x%016" PRIx64
