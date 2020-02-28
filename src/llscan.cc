@@ -446,7 +446,7 @@ bool NodeInfoCmd::DoExecute(SBDebugger d, char** cmd,
         // attached a property.
         v8::JSArray execArgv_arr(execArgv_val);
         result.Printf(
-            "Node.js Comamnd line arguments (process.execArgv=0x%" PRIx64
+            "Node.js Command line arguments (process.execArgv=0x%" PRIx64
             "):\n",
             execArgv_val.raw());
         // execArgv is an array, which we can treat as a subtype of object.
