@@ -9,7 +9,8 @@
 </p>
 
 [![npm](https://img.shields.io/npm/v/llnode.svg?style=flat-square)](https://npmjs.org/package/llnode)
-![on push or pull_request](https://github.com/nodejs/llnode/workflows/on%20push%20or%20pull_request/badge.svg)[![coverage](https://img.shields.io/coveralls/github/nodejs/llnode/master?style=flat-square)](https://coveralls.io/github/nodejs/llnode)
+![on push or pull_request](https://github.com/nodejs/llnode/workflows/on%20push%20or%20pull_request/badge.svg)
+[![coverage](https://img.shields.io/coveralls/github/nodejs/llnode/master?style=flat-square)](https://coveralls.io/github/nodejs/llnode)
 
 
 Node.js v4.x+ C++ plugin for the [LLDB](http://lldb.llvm.org) debugger.
