@@ -208,7 +208,7 @@ const hashMapTests = {
     desc: '.long-array JSArray property',
     validator(t, sess, addresses, name, cb) {
       const address = addresses[name];
-      sess.send(`v8 inspect --array-length 10 ${address}`);
+      sess.send(`v8 inspect -l 10 ${address}`);
 
       sess.linesUntil(/}>/, (err, lines) => {
         if (err) return cb(err);

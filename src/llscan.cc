@@ -62,7 +62,7 @@ char** ParsePrinterOptions(char** cmd, Printer::PrinterOptions* options) {
   optind = 0;
   opterr = 1;
   do {
-    int arg = getopt_long(argc, args, "Fmsdvln:", opts, nullptr);
+    int arg = getopt_long(argc, args, "Fmsdvl:n:", opts, nullptr);
     if (arg == -1) break;
 
     switch (arg) {
