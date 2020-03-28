@@ -85,7 +85,7 @@ int64_t Constants::LoadConstant(const char* name, int64_t def) {
   auto constant =
       Constants::LookupConstant(target_, (constant_prefix() + name).c_str());
   if (!constant.Check()) {
-    PRINT_DEBUG("Failed to load constant %s, default to %" PRId64, name);
+    PRINT_DEBUG("Failed to load constant %s, default to %" PRId64, name, def);
     return def;
   }
 

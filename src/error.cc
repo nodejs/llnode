@@ -22,7 +22,7 @@ void Error::PrintInDebugMode(const char* file, int line, const char* funcname,
     return;
   }
   char fmt[kMaxMessageLength];
-  snprintf(fmt, sizeof(fmt), "[llnode][%s %s:%lld] %s\n", funcname, file, line,
+  snprintf(fmt, sizeof(fmt), "[llnode][%s %s:%d] %s\n", funcname, file, line,
            format);
   va_list arglist;
   va_start(arglist, format);
