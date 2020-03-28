@@ -60,7 +60,13 @@ inline T LLV8::LoadValue(int64_t addr, Error& err) {
   if (!res.Check()) {
     // TODO(joyeecheung): use Error::Failure() to report information when
     // there is less noise from here.
-    err = Error(true, "Invalid value");
+#if DEBUG
+#define _s typeid(T).name()
+#else
+#define _s "value"
+#endif
+    err = Error(true, "The value %lx is not a valid %s", addr, _s);
+#undef _s
     return T();
   }
 

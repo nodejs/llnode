@@ -26,6 +26,9 @@
       "Debug": {
         "defines": [ "DEBUG", "_DEBUG" ],
         "cflags": [ "-g", "-O0", "-fwrapv" ],
+        "cflags_cc!": [
+          "-fno-rtti"
+        ],
         "xcode_settings": {
           "GCC_OPTIMIZATION_LEVEL": "0"
         },
