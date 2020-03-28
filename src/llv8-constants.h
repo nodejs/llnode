@@ -157,7 +157,7 @@ class SharedInfo : public Module {
   int64_t kNameOffset;
   int64_t kInferredNameOffset;
   int64_t kScriptOffset;
-  int64_t kScriptOrDebugInfoOffset;
+  Constant<int64_t> kScriptOrDebugInfoOffset;
   int64_t kStartPositionOffset;
   int64_t kEndPositionOffset;
   int64_t kParameterCountOffset;

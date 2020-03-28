@@ -197,8 +197,9 @@ void SharedInfo::Load() {
       LoadConstant("class_SharedFunctionInfo__inferred_name__String",
                    "class_SharedFunctionInfo__function_identifier__Object");
   kScriptOffset = LoadConstant("class_SharedFunctionInfo__script__Object");
-  kScriptOrDebugInfoOffset =
-      LoadConstant("class_SharedFunctionInfo__script_or_debug_info__Object");
+  kScriptOrDebugInfoOffset = LoadConstant(
+      {"class_SharedFunctionInfo__script_or_debug_info__Object",
+       "class_SharedFunctionInfo__script_or_debug_info__HeapObject"});
   kStartPositionOffset =
       LoadConstant("class_SharedFunctionInfo__start_position_and_type__int",
                    "class_SharedFunctionInfo__start_position_and_type__SMI");
