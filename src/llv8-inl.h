@@ -450,8 +450,8 @@ ACCESSOR(SharedFunctionInfo, name, shared_info()->kNameOffset, String)
 ACCESSOR(SharedFunctionInfo, inferred_name, shared_info()->kInferredNameOffset,
          Value)
 ACCESSOR(SharedFunctionInfo, script, shared_info()->kScriptOffset, Script)
-ACCESSOR(SharedFunctionInfo, script_or_debug_info,
-         shared_info()->kScriptOrDebugInfoOffset, HeapObject)
+SAFE_ACCESSOR(SharedFunctionInfo, script_or_debug_info,
+              shared_info()->kScriptOrDebugInfoOffset, HeapObject)
 ACCESSOR(SharedFunctionInfo, scope_info, shared_info()->kScopeInfoOffset,
          HeapObject)
 ACCESSOR(SharedFunctionInfo, name_or_scope_info,
@@ -499,7 +499,9 @@ HeapObject SharedFunctionInfo::GetScopeInfo(Error& err) {
 }
 
 Script SharedFunctionInfo::GetScript(Error& err) {
-  if (v8()->shared_info()->kScriptOrDebugInfoOffset == -1) return script(err);
+  if (!v8()->shared_info()->kScriptOrDebugInfoOffset.Loaded()) {
+    return script(err);
+  }
 
   HeapObject maybe_script = script_or_debug_info(err);
   if (maybe_script.IsScript(err)) return maybe_script;
