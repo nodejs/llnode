@@ -13,7 +13,7 @@
 [![coverage](https://img.shields.io/coveralls/github/nodejs/llnode/master?style=flat-square)](https://coveralls.io/github/nodejs/llnode)
 
 
-Node.js v4.x+ C++ plugin for the [LLDB](http://lldb.llvm.org) debugger.
+Node.js v10.x+ C++ plugin for the [LLDB](http://lldb.llvm.org) debugger.
 
 The llnode plugin adds the ability to inspect JavaScript stack frames, objects,
 source code and more to the standard C/C++ debugging facilities when working
