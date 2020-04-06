@@ -693,8 +693,12 @@ std::string HeapObject::GetTypeName(Error& err) {
 std::string HeapNumber::ToString(bool whole, Error& err) {
   char buf[128];
   const char* fmt = whole ? "%f" : "%.2f";
-  snprintf(buf, sizeof(buf), fmt, GetValue(err));
-  err = Error::Ok();
+  auto val = GetValue(err);
+  if (err.Fail() || !val.Check()) {
+    err = Error::Ok();
+    return "???";
+  }
+  snprintf(buf, sizeof(buf), fmt, val);
   return buf;
 }
 
@@ -1176,15 +1180,7 @@ Value JSObject::GetDescriptorProperty(std::string key_name, Map map,
     int64_t index = descriptors.FieldIndex(details) - in_object_count;
 
     if (descriptors.IsDoubleField(details)) {
-      double value;
-      if (index < 0) {
-        value = GetInObjectValue<double>(instance_size, index, err);
-      } else {
-        value = extra_properties.Get<double>(index, err);
-      }
-
-      if (err.Fail()) return Value();
-
+      return GetDoubleField(index, err);
     } else {
       Value value;
       if (index < 0) {

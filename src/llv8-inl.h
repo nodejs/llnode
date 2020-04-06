@@ -89,6 +89,10 @@ inline bool HeapObject::Check() const {
          (raw() & v8()->heap_obj()->kTagMask) == v8()->heap_obj()->kTag;
 }
 
+inline bool HeapNumber::Check() const {
+  if (unboxed_double_) return Value::Check();
+  return HeapObject::Check();
+}
 
 int64_t HeapObject::LeaField(int64_t off) const {
   return raw() - v8()->heap_obj()->kTag + off;
@@ -388,8 +392,38 @@ inline T JSObject::GetInObjectValue(int64_t size, int index, Error& err) {
   return LoadFieldValue<T>(size + index * v8()->common()->kPointerSize, err);
 }
 
+inline HeapNumber JSObject::GetDoubleField(int64_t index, Error err) {
+  HeapObject map_obj = GetMap(err);
+  if (err.Fail()) HeapNumber();
 
-ACCESSOR(HeapNumber, GetValue, heap_number()->kValueOffset, double)
+  Map map(map_obj);
+  int64_t instance_size = map.InstanceSize(err);
+  if (err.Fail()) return HeapNumber();
+
+  // TODO(mmarchini): Explain why index might be lower than zero.
+  if (index < 0) {
+    // When unboxed doubles are not allowed, all double fields are stored as
+    // HeapNumber objects.
+    if (v8()->map()->HasUnboxedDoubleFields()) {
+      return HeapNumber(v8(),
+                        GetInObjectValue<double>(instance_size, index, err));
+    }
+    return GetInObjectValue<HeapNumber>(instance_size, index, err);
+  }
+  HeapObject extra_properties_obj = Properties(err);
+  if (err.Fail()) return HeapNumber();
+
+  FixedArray extra_properties(extra_properties_obj);
+
+  return HeapNumber(v8(), extra_properties.Get<double>(index, err));
+}
+
+inline const CheckedType<double> HeapNumber::GetValue(Error& err) {
+  if (unboxed_double_) return unboxed_value_;
+  return GetHeapNumberValue(err);
+};
+
+ACCESSOR(HeapNumber, GetHeapNumberValue, heap_number()->kValueOffset, double)
 
 ACCESSOR(JSArray, Length, js_array()->kLengthOffset, Smi)
 
