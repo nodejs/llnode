@@ -1,11 +1,17 @@
 #ifndef SRC_ERROR_H_
 #define SRC_ERROR_H_
 
+#include <iostream>
 #include <string>
 #include <typeinfo>
 
 #define PRINT_DEBUG(format, ...) \
   Error::PrintInDebugMode(__FILE__, __LINE__, __func__, format, ##__VA_ARGS__)
+
+[[noreturn]] inline void unreachable() {
+  std::cerr << "unreachable" << std::endl;
+  std::abort();
+}
 
 namespace llnode {
 

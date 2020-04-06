@@ -277,13 +277,35 @@ class ThinString : public String {
   inline std::string ToString(Error& err);
 };
 
+// Numbers on the heap can be a boxed HeapNumber or a unboxed double.
 class HeapNumber : public HeapObject {
  public:
   V8_VALUE_DEFAULT_METHODS(HeapNumber, HeapObject)
 
-  inline double GetValue(Error& err);
+  HeapNumber(LLV8* v8, CheckedType<double> value)
+      : HeapObject(v8, 0), unboxed_value_(value), unboxed_double_(true) {}
+
+  inline bool Check() const;
+
+  inline int64_t raw() const {
+    if (unboxed_double_) {
+      PRINT_DEBUG("Shouldn't try to access raw() of unboxed double");
+#if DEBUG
+      unreachable();
+#endif
+    }
+    return HeapObject::raw();
+  }
+
+  inline const CheckedType<double> GetValue(Error& err);
 
   std::string ToString(bool whole, Error& err);
+
+ private:
+  inline double GetHeapNumberValue(Error& err);
+
+  const CheckedType<double> unboxed_value_;
+  const bool unboxed_double_ = false;
 };
 
 class JSObject : public HeapObject {
@@ -308,6 +330,8 @@ class JSObject : public HeapObject {
   Value GetArrayElement(int64_t pos, Error& err);
 
   static inline bool IsObjectType(LLV8* v8, int64_t type);
+
+  inline HeapNumber GetDoubleField(int64_t index, Error err);
 
  protected:
   friend class llnode::Printer;
