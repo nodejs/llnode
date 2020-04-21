@@ -405,8 +405,16 @@ inline HeapNumber JSObject::GetDoubleField(int64_t index, Error err) {
     // When unboxed doubles are not allowed, all double fields are stored as
     // HeapNumber objects.
     if (v8()->map()->HasUnboxedDoubleFields()) {
-      return HeapNumber(v8(),
-                        GetInObjectValue<double>(instance_size, index, err));
+      // TODO(mmarchini): GetInObjectValue call chain should be
+      // CheckedType-aware instead of relying on Error.
+      Error get_in_object_value_err;
+      double result = GetInObjectValue<double>(instance_size, index,
+                                               get_in_object_value_err);
+      if (get_in_object_value_err.Fail()) {
+        return HeapNumber(v8(), CheckedType<double>());
+      } else {
+        return HeapNumber(v8(), CheckedType<double>(result));
+      }
     }
     return GetInObjectValue<HeapNumber>(instance_size, index, err);
   }

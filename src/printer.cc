@@ -1031,7 +1031,6 @@ std::string Printer::StringifyDescriptors(v8::JSObject js_object, v8::Map map,
 
     if (descriptors.IsDoubleField(details)) {
       v8::HeapNumber value = js_object.GetDoubleField(index, err);
-      RETURN_IF_INVALID(value, std::string());
 
       Error value_err;
       res += value.ToString(true, value_err);

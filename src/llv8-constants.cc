@@ -143,8 +143,7 @@ bool Map::HasUnboxedDoubleFields() {
   // Until then, we use the presence of this field as version (if the field is
   // present, it's safe to assume we're on V8 8.1+, at least on supported
   // release lines).
-  return kLayoutDescriptor.name() !=
-         "v8dbg_class_Map__layout_descriptor__LayoutDescriptor";
+  return !kLayoutDescriptor.Loaded();
 }
 
 void JSObject::Load() {
