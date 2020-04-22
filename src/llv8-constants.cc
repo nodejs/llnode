@@ -619,7 +619,8 @@ void Types::Load() {
   kFixedArrayType = LoadConstant("type_FixedArray__FIXED_ARRAY_TYPE");
   kJSArrayBufferType = LoadConstant("type_JSArrayBuffer__JS_ARRAY_BUFFER_TYPE");
   kJSTypedArrayType = LoadConstant("type_JSTypedArray__JS_TYPED_ARRAY_TYPE");
-  kJSRegExpType = LoadConstant("type_JSRegExp__JS_REGEXP_TYPE");
+  kJSRegExpType = LoadConstant(
+      {"type_JSRegExp__JS_REG_EXP_TYPE", "type_JSRegExp__JS_REGEXP_TYPE"});
   kJSDateType = LoadConstant("type_JSDate__JS_DATE_TYPE");
   kSharedFunctionInfoType =
       LoadConstant("type_SharedFunctionInfo__SHARED_FUNCTION_INFO_TYPE");

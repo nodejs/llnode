@@ -726,7 +726,7 @@ std::string Printer::Stringify(v8::HeapObject heap_object, Error& err) {
     return pre + Stringify(fn, err);
   }
 
-  if (type == llv8_->types()->kJSRegExpType) {
+  if (type == *llv8_->types()->kJSRegExpType) {
     v8::JSRegExp re(heap_object);
     return pre + Stringify(re, err);
   }

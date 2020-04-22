@@ -660,7 +660,7 @@ std::string HeapObject::GetTypeName(Error& err) {
     return "(Function)";
   }
 
-  if (type == v8()->types()->kJSRegExpType) {
+  if (type == *v8()->types()->kJSRegExpType) {
     return "(RegExp)";
   }
 
