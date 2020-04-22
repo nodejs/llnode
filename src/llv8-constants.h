@@ -545,7 +545,7 @@ class Types : public Module {
   int64_t kFixedArrayType;
   int64_t kJSArrayBufferType;
   int64_t kJSTypedArrayType;
-  int64_t kJSRegExpType;
+  Constant<int64_t> kJSRegExpType;
   int64_t kJSDateType;
   int64_t kSharedFunctionInfoType;
   Constant<int64_t> kUncompiledDataWithoutPreParsedScopeType;
