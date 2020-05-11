@@ -522,6 +522,10 @@ bool PluginInitialize(SBDebugger d) {
       "Print all pending requests in the queue. Equivalent to "
       "running process._getActiveRequests() on the living process.\n");
 
+
+  v8.AddCommand(
+      "snapshotdata", new llnode::SnapshotDataCmd(), "Finds data for generating heap snapshot.\n");
+
   // Set initial value for color support
   llnode::Settings* settings = llnode::Settings::GetSettings();
   settings->SetColor("auto");

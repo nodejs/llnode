@@ -335,6 +335,63 @@ class FindJSObjectsVisitor : MemoryVisitor {
   std::map<int64_t, MapCacheEntry> map_cache_;
 };
 
+class SnapshotDataCmd : public CommandBase {
+  public:
+    struct Node{
+      enum Type { /** node type (see HeapGraphNode::Type). in v8-profiler.h in v8 source */
+        kHidden = 0,  
+        kArray = 1,  
+        kString = 2, 
+        kObject = 3,  
+        kCode = 4,  
+        kClosure = 5,  
+        kRegExp = 6,  
+        kHeapNumber = 7,  
+        kNative = 8,  
+        kSynthetic = 9,  
+        kConsString = 10,  
+        kSlicedString = 11,  
+        kSymbol = 12,  
+        kSimdValue = 13,  
+        kInvalid = -1
+      };
+
+      Type type;
+      uint64_t addr;
+      uint64_t name_id;
+      uint64_t node_id;
+      uint64_t self_size;
+      uint64_t children;
+      uint64_t trace_node_id;
+    };
+
+    struct Edge {
+      enum Type {
+        kContextVariable = 0, 
+        kElement = 1, 
+        kProperty = 2, 
+        kInternal = 3, 
+        kHidden = 4, 
+        kShortcut = 5, 
+        kWeak = 6 
+      };
+
+      Type type;
+      uint64_t index_or_property;
+      uint64_t to_id;
+      uint64_t to_addr;
+    };
+   
+    ~SnapshotDataCmd() override {}
+
+    bool DoExecute(lldb::SBDebugger d, char** cmd, lldb::SBCommandReturnObject& result) override;
+
+    Node::Type GetInstanceType(Error& err, uint64_t word);
+    
+  private:
+    LLScan* llscan_;
+    std::vector<Node> nodes_
+};
 
 class LLScan {
  public:

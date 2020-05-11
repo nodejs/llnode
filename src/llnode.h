@@ -100,7 +100,6 @@ class GetActiveRequestsCmd : public WorkqueueCmd {
   std::string GetResultMessage(node::Environment* env, Error& err) override;
 };
 
-
 }  // namespace llnode
 
 #endif  // SRC_LLNODE_H_

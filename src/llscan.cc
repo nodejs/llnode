@@ -33,7 +33,6 @@ using lldb::SBStream;
 using lldb::SBTarget;
 using lldb::SBValue;
 
-
 char** ParsePrinterOptions(char** cmd, Printer::PrinterOptions* options) {
   static struct option opts[] = {
       {"full-string", no_argument, nullptr, 'F'},
@@ -605,7 +604,7 @@ void FindReferencesCmd::ScanForReferences(ObjectScanner* scanner) {
       v8::HeapObject heap_object(obj_value);
       int64_t type = heap_object.GetType(err);
       v8::LLV8* v8 = heap_object.v8();
-
+      
       // We only need to handle the types that are in
       // FindJSObjectsVisitor::IsAHistogramType
       // as those are the only objects that end up in GetMapsToInstances
@@ -1390,7 +1389,6 @@ FindJSObjectsVisitor::FindJSObjectsVisitor(SBTarget& target, LLScan* llscan)
 /* Visit every address, a bit brute force but it works. */
 uint64_t FindJSObjectsVisitor::Visit(uint64_t location, uint64_t word) {
   v8::Value v8_value(llscan_->v8(), word);
-
   Error err;
   // Test if this is SMI
   // Skip inspecting things that look like Smi's, they aren't objects.
@@ -1665,6 +1663,56 @@ void LLScan::ScanMemoryRegions(FindJSObjectsVisitor& v) {
   }
 
   delete[] block;
+}
+
+bool SnapshotDataCmd::DoExecute(SBDebugger d, char** cmd, SBCommandReturnObject& result){
+
+  SBTarget target = d.GetSelectedTarget();
+  if (!target.IsValid()) {
+    result.SetError("No valid process, please start something\n");
+    return false;
+  }
+
+  // Load V8 constants from postmortem data
+  llscan_->v8()->Load(target);
+
+  /* Ensure we have a map of objects. */
+  if (!llscan_->ScanHeapForObjects(target, result)) {
+    result.SetStatus(eReturnStatusFailed);
+    return false;
+  }
+  return true;
+}
+
+SnapshotDataCmd::Node::Type SnapshotDataCmd::GetInstanceType(
+    Error &err, uint64_t word) {
+  
+  v8::Value v8_value(llscan_->v8(), word);
+  v8::HeapObject heap_object(v8_value);
+  int64_t type = heap_object.GetType(err);
+  v8::LLV8* v8 = heap_object.v8();
+  
+  if(type == v8->types()->kJSObjectType){
+    return Node::Type::kObject;
+  }
+
+  if(type < v8->types()->kFirstNonstringType){
+    v8::String str(heap_object);
+
+    // Concatenated and sliced strings refer to other strings
+    v8::CheckedType<int64_t> str_repr = str.Representation(err);
+
+    if(*str_repr == v8->string()->kConsStringTag){
+      return Node::Type::kConsString;
+    }else if(*str_repr == v8->string()->kSlicedStringTag){
+      return Node::Type::kSlicedString;
+    }else{
+      return Node::Type::kString;
+    }
+
+  
+      
+  return Node::Type::kInvalid;
 }
 
 void LLScan::ClearMapsToInstances() {
