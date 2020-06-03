@@ -21,6 +21,7 @@ using Napi::String;
 using Napi::Symbol;
 using Napi::TypeError;
 using Napi::Value;
+using Napi::ArrayBuffer;
 
 FunctionReference LLNode::constructor;
 
@@ -39,6 +40,7 @@ Object LLNode::Init(Napi::Env env, Object exports) {
           InstanceMethod("getProcessObject", &LLNode::GetProcessObject),
           InstanceMethod("getHeapTypes", &LLNode::GetHeapTypes),
           InstanceMethod("getObjectAtAddress", &LLNode::GetObjectAtAddress),
+          InstanceMethod("snapshotSerializeData", &LLNode::SnapshotSerializeData)
       });
 
   constructor = Persistent(func);
@@ -189,6 +191,17 @@ Value LLNode::GetObjectAtAddress(const CallbackInfo& args) {
 
   uint64_t addr = std::strtoull(address_str.c_str(), nullptr, 16);
   Object result = this->GetObjectAtAddress(args.Env(), addr);
+  return result;
+}
+
+Value LLNode::SnapshotSerializeData(const CallbackInfo& args){
+  Napi::Env env = args.Env();
+  CHECK_INITIALIZED(this->api_, env)
+  
+  Array arr = Array::New(env);
+  Object result = Object::New(env);
+  this->api_->SnapshotSerialize();
+  result.Set("hello","world");
   return result;
 }
 

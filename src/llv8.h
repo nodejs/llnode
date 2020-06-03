@@ -21,7 +21,7 @@ class Printer;
 class FindJSObjectsVisitor;
 class FindReferencesCmd;
 class FindObjectsCmd;
-class SnapshotDataCmd;
+class HeapSnapshotJSONSerializer;
 
 namespace v8 {
 
@@ -753,7 +753,7 @@ class LLV8 {
   friend class llnode::FindObjectsCmd;
   friend class llnode::FindReferencesCmd;
   friend class llnode::node::constants::Environment;
-  friend class llnode::SnapshotDataCmd;
+  friend class llnode::HeapSnapshotJSONSerializer;
 };
 
 #undef V8_VALUE_DEFAULT_METHODS

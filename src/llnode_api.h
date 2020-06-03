@@ -7,6 +7,7 @@
 #include <string>
 #include <unordered_set>
 #include <vector>
+// #include "src/llscan.h"
 
 namespace lldb {
 class SBDebugger;
@@ -19,6 +20,7 @@ namespace llnode {
 
 class LLScan;
 class TypeRecord;
+class SnapshotDataCmd;
 
 namespace v8 {
 class LLV8;
@@ -55,7 +57,8 @@ class LLNodeApi {
   // TODO(joyeecheung): templatize all the `Inspect` in llv8.h to
   // return structured data
   std::string GetObject(uint64_t address);
-
+  // std::vector<SnapshotDataCmd::Node> GetNodeData();
+  void SnapshotSerialize();
  private:
   bool initialized_;
   static bool debugger_initialized_;
@@ -65,6 +68,7 @@ class LLNodeApi {
   std::unique_ptr<v8::LLV8> llv8;
   std::unique_ptr<LLScan> llscan;
   std::vector<TypeRecord*> object_types;
+  // std::unique_ptr<HeapSnapshotJSONSerializer> snapshot_data;
 };
 
 }  // namespace llnode

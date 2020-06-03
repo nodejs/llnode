@@ -524,7 +524,7 @@ bool PluginInitialize(SBDebugger d) {
 
 
   v8.AddCommand(
-      "snapshotdata", new llnode::SnapshotDataCmd(), "Finds data for generating heap snapshot.\n");
+      "snapshotdata", new llnode::HeapSnapshotJSONSerializer(&llscan), "Finds data for generating heap snapshot.\n");
 
   // Set initial value for color support
   llnode::Settings* settings = llnode::Settings::GetSettings();

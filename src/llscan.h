@@ -5,6 +5,7 @@
 #include <map>
 #include <set>
 #include <unordered_set>
+#include <fstream>
 
 #include "src/error.h"
 #include "src/llnode.h"
@@ -335,7 +336,7 @@ class FindJSObjectsVisitor : MemoryVisitor {
   std::map<int64_t, MapCacheEntry> map_cache_;
 };
 
-class SnapshotDataCmd : public CommandBase {
+class HeapSnapshotJSONSerializer : public CommandBase {
   public:
     struct Node{
       enum Type { /** node type (see HeapGraphNode::Type). in v8-profiler.h in v8 source */
@@ -357,10 +358,10 @@ class SnapshotDataCmd : public CommandBase {
       };
 
       Type type;
-      uint64_t addr;
-      uint64_t name_id;
-      uint64_t node_id;
-      uint64_t self_size;
+      uint64_t address;
+      uint64_t name;
+      uint64_t id;
+      uint64_t size;
       uint64_t children;
       uint64_t trace_node_id;
     };
@@ -381,16 +382,29 @@ class SnapshotDataCmd : public CommandBase {
       uint64_t to_id;
       uint64_t to_addr;
     };
-   
-    ~SnapshotDataCmd() override {}
+    HeapSnapshotJSONSerializer(LLScan* llscan) : llscan_(llscan) {}
+    ~HeapSnapshotJSONSerializer() override {}
 
     bool DoExecute(lldb::SBDebugger d, char** cmd, lldb::SBCommandReturnObject& result) override;
+    void HeapEntry(Error &err);
+    void AddRootEntry(Error &err);
+    void AddGCRootsEntry(Error &err);
+    Node::Type GetInstanceType(Error& err, uint64_t address);
+    uint64_t GetStringId(Error &err, std::string name);
+    bool ImplementSnapshot(Error &err);
+    void SerializationFormat(Error &err);
+    void SerializeNodes(Error &err);
+    void SetNode(Error& err, Node* node);
+    uint64_t GetNodeSelfSize(Error& err, uint64_t address);
+    // std::vector<HeapSnapshotJSONSerializer::Node> GetNode();
 
-    Node::Type GetInstanceType(Error& err, uint64_t word);
-    
+  uint64_t next_id = 1;
+  std::map<uint64_t, Node> visited;
   private:
     LLScan* llscan_;
-    std::vector<Node> nodes_
+    std::vector<Node> nodes_;
+    std::vector<std::string> strings_;
+    std::ofstream file;
 };
 
 class LLScan {

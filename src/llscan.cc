@@ -11,7 +11,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-
 #include <lldb/API/SBExpressionOptions.h>
 
 #include "deps/rang/include/rang.hpp"
@@ -1665,14 +1664,15 @@ void LLScan::ScanMemoryRegions(FindJSObjectsVisitor& v) {
   delete[] block;
 }
 
-bool SnapshotDataCmd::DoExecute(SBDebugger d, char** cmd, SBCommandReturnObject& result){
+bool HeapSnapshotJSONSerializer::DoExecute(SBDebugger d, char** cmd, SBCommandReturnObject& result){
+  Error err;
+  file.open("core-file.heapsnapshot");
 
   SBTarget target = d.GetSelectedTarget();
   if (!target.IsValid()) {
     result.SetError("No valid process, please start something\n");
     return false;
   }
-
   // Load V8 constants from postmortem data
   llscan_->v8()->Load(target);
 
@@ -1681,21 +1681,89 @@ bool SnapshotDataCmd::DoExecute(SBDebugger d, char** cmd, SBCommandReturnObject&
     result.SetStatus(eReturnStatusFailed);
     return false;
   }
+  HeapEntry(err);
+
+  ImplementSnapshot(err);
+
+  result.Printf("Snapshot generated at ./core.heapsnapshot\n");
+  file.close();
   return true;
 }
 
-SnapshotDataCmd::Node::Type SnapshotDataCmd::GetInstanceType(
-    Error &err, uint64_t word) {
+void HeapSnapshotJSONSerializer::HeapEntry(Error &err){
   
-  v8::Value v8_value(llscan_->v8(), word);
+  AddRootEntry(err); //Add root entry
+  
+  AddGCRootsEntry(err); // AddGCRootsEntry
+  
+  
+  // Node entries
+  for(auto type_record : llscan_->GetMapsToInstances()){
+    for(auto record : type_record.second->GetInstances()){// Accessing value of type_record map, first=>key, second=>value...
+      if (visited.count(record) != 0) { //Avoid processing a node more than once...
+        return;
+      }
+
+      Node node;  
+      node.address = record;
+      node.type = GetInstanceType(err, record); //Enum type from struct Node..
+      if(node.type == Node::Type::kInvalid){
+        continue;
+      }
+      node.name = GetStringId(err, type_record.second->GetTypeName()); //Index to the string representing the name of this node
+      node.id = next_id;
+      next_id += 2;
+      node.size = GetNodeSelfSize(err, record);
+      nodes_.push_back(node);
+      visited.insert(std::pair<uint64_t, Node>(record, nodes_.back()));
+    }
+  }
+  
+};
+void HeapSnapshotJSONSerializer::AddRootEntry(Error &err){
+    Node node;
+    node.address = 0;
+    node.type = Node::Type::kSynthetic;
+    node.name = GetStringId(err, "");
+    node.id = next_id;
+    node.size = 0;
+    node.children = 0;
+}
+
+void HeapSnapshotJSONSerializer::AddGCRootsEntry(Error &err){
+    Node node;
+    node.address = 0;
+    node.type = Node::Type::kSynthetic;
+    node.name = GetStringId(err, "(GC roots)");
+    node.id = next_id;
+    // next_id += 2;
+    node.size = 0;
+    node.children = 0;
+}
+
+HeapSnapshotJSONSerializer::Node::Type HeapSnapshotJSONSerializer::GetInstanceType(
+    Error &err, uint64_t address) {
+  
+  v8::Value v8_value(llscan_->v8(), address); //Accessing v8() from LLScan..
   v8::HeapObject heap_object(v8_value);
   int64_t type = heap_object.GetType(err);
   v8::LLV8* v8 = heap_object.v8();
   
+  if(type == v8->types()->kCodeType){ //Accessing types() from llv8.h Type types..
+    return Node::Type::kCode;
+  }
+  if(type == v8->types()->kJSFunctionType){
+    return Node::Type::kClosure;
+  }
+  if(type == *v8->types()->kJSRegExpType){
+    return Node::Type::kRegExp;
+  }
   if(type == v8->types()->kJSObjectType){
     return Node::Type::kObject;
   }
-
+  if(type == v8->types()->kHeapNumberType){
+    return Node::Type::kHeapNumber;
+  }
   if(type < v8->types()->kFirstNonstringType){
     v8::String str(heap_object);
 
@@ -1709,11 +1777,181 @@ SnapshotDataCmd::Node::Type SnapshotDataCmd::GetInstanceType(
     }else{
       return Node::Type::kString;
     }
-
-  
+  }
+  if(type == v8->types()->kJSArrayBufferType || 
+     type == v8->types()->kJSTypedArrayType  ||
+     type == v8->types()->kFixedArrayType    ||
+     type == v8->types()->kJSArrayType){
+    return Node::Type::kArray;
+  }
       
   return Node::Type::kInvalid;
+};
+
+uint64_t HeapSnapshotJSONSerializer::GetStringId(
+    Error &err, std::string name) {
+  auto pos = std::distance(
+      strings_.begin(), find(strings_.begin(), strings_.end(), name));
+  uint64_t index;
+  
+  if(pos >= strings_.size()) {
+    index = strings_.size();
+    strings_.push_back(name);
+  } else {
+    index = pos;
+  }
+  return index + 1;  // +1 because of the dummy string
 }
+
+bool HeapSnapshotJSONSerializer::ImplementSnapshot(Error &err) {
+//
+  file << "{";
+  file << "\"snapshot\":{";
+  // GetSnapshot(err);  // TODO incomplete
+  if (err.Fail()) return false;
+  file << "}," << std::endl;
+  file << "\"nodes\":[";
+  SerializeNodes(err);  // TODO incomplete
+  if (err.Fail()) return false;
+  file << "]," << std::endl;
+  // std::cout << "\"edges\":[";
+  // SerializeEdges(err);  // TODO incomplete
+  // if (err.Fail()) return false;
+  // std::cout << "]," << std::endl;
+
+  // std::cout << "\"trace_function_infos\":[";
+  // SerializeTraceNodeInfos(err);  // TODO incomplete
+  // if (err.Fail()) return false;
+  // std::cout << "]," << std::endl;
+  // std::cout << "\"trace_tree\":[";
+  // SerializeTraceTree(err);  // TODO incomplete
+  // if (err.Fail()) return false;
+  // std::cout << "]," << std::endl;
+
+  // std::cout << "\"samples\":[";
+  // SerializeSamples(err);  // TODO incomplete
+  // if (err.Fail()) return false;
+  // std::cout << "]," << std::endl;
+
+  // std::cout << "\"strings\":[";
+  // SerializeStrings(err);  // TODO incomplete
+  // if (err.Fail()) return false;
+  // std::cout << "]";
+  // std::cout << "}";
+
+  return true;
+}
+
+void HeapSnapshotJSONSerializer::SerializationFormat(Error &err) {
+  file << "\"meta\":";
+  #define JSON_A(s) "[" s "]"
+  #define JSON_O(s) "{" s "}"
+  #define JSON_S(s) "\"" s "\""
+    std::cout << JSON_O(
+      JSON_S("node_fields") ":" JSON_A(
+          JSON_S("type") ","
+          JSON_S("name") ","
+          JSON_S("id") ","
+          JSON_S("self_size") ","
+          JSON_S("edge_count") ","
+          JSON_S("trace_node_id")) ","
+      JSON_S("node_types") ":" JSON_A(
+          JSON_A(
+              JSON_S("hidden") ","
+              JSON_S("array") ","
+              JSON_S("string") ","
+              JSON_S("object") ","
+              JSON_S("code") ","
+              JSON_S("closure") ","
+              JSON_S("regexp") ","
+              JSON_S("number") ","
+              JSON_S("native") ","
+              JSON_S("synthetic") ","
+              JSON_S("concatenated string") ","
+              JSON_S("sliced string")) ","
+          JSON_S("string") ","
+          JSON_S("number") ","
+          JSON_S("number") ","
+          JSON_S("number") ","
+          JSON_S("number") ","
+          JSON_S("number")) ","
+      JSON_S("edge_fields") ":" JSON_A(
+          JSON_S("type") ","
+          JSON_S("name_or_index") ","
+          JSON_S("to_node")) ","
+      JSON_S("edge_types") ":" JSON_A(
+          JSON_A(
+              JSON_S("context") ","
+              JSON_S("element") ","
+              JSON_S("property") ","
+              JSON_S("internal") ","
+              JSON_S("hidden") ","
+              JSON_S("shortcut") ","
+              JSON_S("weak")) ","
+          JSON_S("string_or_number") ","
+          JSON_S("node")) ","
+      JSON_S("trace_function_info_fields") ":" JSON_A(
+          JSON_S("function_id") ","
+          JSON_S("name") ","
+          JSON_S("script_name") ","
+          JSON_S("script_id") ","
+          JSON_S("line") ","
+          JSON_S("column")) ","
+      JSON_S("trace_node_fields") ":" JSON_A(
+          JSON_S("id") ","
+          JSON_S("function_info_index") ","
+          JSON_S("count") ","
+          JSON_S("size") ","
+          JSON_S("children")) ","
+      JSON_S("sample_fields") ":" JSON_A(
+          JSON_S("timestamp_us") ","
+          JSON_S("last_assigned_id")));
+  #undef JSON_S
+  #undef JSON_O
+  #undef JSON_A
+  std::cout << ",\"node_count\":";
+  std::cout << nodes_.size();
+
+  std::cout << ",\"edge_count\":";
+  std::cout << ",\"trace_function_count\":";
+  uint32_t count = 0;
+  std::cout << count;
+}
+
+void HeapSnapshotJSONSerializer::SerializeNodes(Error &err) {
+  bool initial_node = true;
+  std::cout << nodes_.size() << std::endl;
+  for(auto node : nodes_) {
+    SetNode(err, &node);
+    if (err.Fail()) return;
+  }
+  // this->nodes_ = nodes_;
+};
+
+void HeapSnapshotJSONSerializer::SetNode(Error& err, Node* node){
+  file << node->type << "," << node->name << "," << node->id << "," << node->size << "," << node->children << "," << node->trace_node_id << std::endl;
+}
+
+uint64_t HeapSnapshotJSONSerializer::GetNodeSelfSize(
+    Error &err, uint64_t address) {
+  v8::Value v8_value(llscan_->v8(), address); //Looks in llv8.h
+
+  v8::Smi smi(v8_value);  //Check for SMI..
+  if (smi.Check()) return 4;
+
+  v8::HeapObject heap_object(v8_value); //Takes Value as default argument
+  if (!heap_object.Check()) return -1;
+
+  v8::HeapObject map_object = heap_object.GetMap(err);
+  if (err.Fail() || !map_object.Check()) return -1;
+
+  v8::Map map(map_object); //Takes Heap object as default argument V8_VALUE_DEFAULT_METHODS in llv8.h
+  return map.InstanceSize(err);
+}
+// std::vector<SnapshotDataCmd::Node> SnapshotDataCmd::GetNode(){
+//   return nodes_;
+// }
+
 
 void LLScan::ClearMapsToInstances() {
   TypeRecord* t;

@@ -19,14 +19,14 @@
 #include "src/printer.h"
 
 namespace llnode {
-
 LLNodeApi::LLNodeApi()
     : initialized_(false),
       debugger(new lldb::SBDebugger()),
       target(new lldb::SBTarget()),
       process(new lldb::SBProcess()),
       llv8(new v8::LLV8()),
-      llscan(new LLScan(llv8.get())) {}
+      llscan(new LLScan(llv8.get())){}
+      // snapshot_data(new HeapSnapshotJSONSerializer(llscan.get())) {}
 LLNodeApi::~LLNodeApi() = default;
 LLNodeApi::LLNodeApi(LLNodeApi&&) = default;
 LLNodeApi& LLNodeApi::operator=(LLNodeApi&&) = default;
@@ -138,6 +138,7 @@ void LLNodeApi::ScanHeap() {
   // Initial scan to create the JavaScript object map
   // TODO: make it possible to create multiple instances
   // of llscan and llnode
+  
   if (!llscan->ScanHeapForObjects(*target, result)) {
     return;
   }
@@ -182,6 +183,13 @@ std::unordered_set<uint64_t>* LLNodeApi::GetTypeInstances(size_t type_index) {
   }
   return &(object_types[type_index]->GetInstances());
 }
+
+
+
+// void LLNodeApi::SnapshotSerialize(){
+//   Error err;
+//   snapshot_data->GetNodeSelfSize(err, u_int64_t address);
+// }
 
 std::string LLNodeApi::GetObject(uint64_t address) {
   v8::Value v8_value(llscan->v8(), address);

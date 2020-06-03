@@ -27,7 +27,7 @@ class LLNode : public Napi::ObjectWrap<LLNode> {
   Napi::Value GetProcessObject(const Napi::CallbackInfo& args);
   Napi::Value GetHeapTypes(const Napi::CallbackInfo& args);
   Napi::Value GetObjectAtAddress(const Napi::CallbackInfo& args);
-
+  Napi::Value SnapshotSerializeData(const Napi::CallbackInfo& args);
   bool heap_initialized_;
 
  protected:
