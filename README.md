@@ -32,10 +32,25 @@ npm install -g llnode
 llnode `which node` -c /path/to/core/dump
 ```
 
+- Never install llnode with `sudo` as it can easily lead to errors during 
+  installation and execution.
 - For more details on starting llnode see the [Usage](#usage) section.
 - To get started with the llnode commands see the [Commands](#commands) section.
 
 ## Install Instructions
+
+### Prerequisites: Official, active Node.js version
+
+`llnode` only supports currently active Node.js versions installed via official
+channels. We recommend installing Node.js with [nvm](https://github.com/nvm-sh/nvm)
+as it allows users to install global packages without `sudo` by default, and
+it always installs the official executables from https://nodejs.org.
+
+**Do not install Node.js from the default Ubuntu/Debian apt repositories (or from 
+the default repositories of other Linux distributions), llnode is not compatible 
+with Node.js installed that way**. If you still want to install Node.js via 
+`apt-get`, take a look at
+[nodesource/distributions](https://github.com/nodesource/distributions).
 
 ### Prerequisites: Install LLDB and its Library
 
