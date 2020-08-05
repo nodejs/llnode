@@ -23,7 +23,7 @@ jobs:
             mirror: https://nodejs.org/download/nightly
           - version: 15.x
             mirror: https://nodejs.org/download/v8-canary
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest]
     steps:
       - uses: actions/checkout@v1
       - name: Use Node.js ${{ matrix.node.version }} ${{ matrix.node.mirror }}
