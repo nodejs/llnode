@@ -52,12 +52,10 @@ jobs:
           npm run coverage
           cat ./coverage-js.info > ./coverage.info
           cat ./coverage-cc.info >> ./coverage.info
-      - name: coveralls
-        if: matrix.os == 'ubuntu-latest' && matrix.node.version != '15.x'
-        uses: coverallsapp/github-action@master
+      - name: Upload coverage report to Codecov
+        uses: codecov/codecov-action@v1
         with:
-          path-to-lcov: ./coverage.info
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          file: ./coverage.info
   linter:
     runs-on: [ubuntu-latest]
     steps:
