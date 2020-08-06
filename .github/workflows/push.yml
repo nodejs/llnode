@@ -23,6 +23,9 @@ jobs:
             mirror: https://nodejs.org/download/nightly
           - version: 15.x
             mirror: https://nodejs.org/download/v8-canary
+        # os: [ubuntu-latest, macos-latest]
+        # Temporarily disable MacOS until
+        # https://github.com/nodejs/node/issues/32981 is fixed
         os: [ubuntu-latest]
     steps:
       - uses: actions/checkout@v1
