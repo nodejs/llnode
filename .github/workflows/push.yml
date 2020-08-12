@@ -19,10 +19,14 @@ jobs:
           - version: 10.x
           - version: 12.x
           - version: 14.x
+          - version: 15.x
             mirror: https://nodejs.org/download/nightly
-          - version: 14.x
+          - version: 15.x
             mirror: https://nodejs.org/download/v8-canary
-        os: [ubuntu-latest, macos-latest]
+        # os: [ubuntu-latest, macos-latest]
+        # Temporarily disable MacOS until
+        # https://github.com/nodejs/node/issues/32981 is fixed
+        os: [ubuntu-latest]
     steps:
       - uses: actions/checkout@v1
       - name: Use Node.js ${{ matrix.node.version }} ${{ matrix.node.mirror }}
@@ -40,23 +44,21 @@ jobs:
           npm install --llnode_build_addon=true --llnode_coverage=true
       - name: run tests
         run: TEST_LLDB_BINARY=`which lldb-3.9` npm run nyc-test-all
-        if: matrix.node.version != '14.x'
+        if: matrix.node.version != '15.x'
       - name: run tests (nightly)
         run: TEST_LLDB_BINARY=`which lldb-3.9` npm run nyc-test-all
-        if: matrix.node.version == '14.x'
+        if: matrix.node.version == '15.x'
         continue-on-error: true
       - name: prepare coverage
-        if: matrix.os == 'ubuntu-latest' && matrix.node.version != '14.x'
+        if: matrix.os == 'ubuntu-latest' && matrix.node.version != '15.x'
         run: |
           npm run coverage
           cat ./coverage-js.info > ./coverage.info
           cat ./coverage-cc.info >> ./coverage.info
-      - name: coveralls
-        if: matrix.os == 'ubuntu-latest' && matrix.node.version != '14.x'
-        uses: coverallsapp/github-action@master
+      - name: Upload coverage report to Codecov
+        uses: codecov/codecov-action@v1
         with:
-          path-to-lcov: ./coverage.info
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          file: ./coverage.info
   linter:
     runs-on: [ubuntu-latest]
     steps:

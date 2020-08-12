@@ -128,8 +128,23 @@ void Map::Load() {
     kNumberOfOwnDescriptorsMask = (1 << kDescriptorIndexBitCount) - 1;
     kNumberOfOwnDescriptorsMask <<= kNumberOfOwnDescriptorsShift;
   }
+  kLayoutDescriptor =
+      LoadConstant({"class_Map__layout_descriptor__LayoutDescriptor"});
 }
 
+
+bool Map::HasUnboxedDoubleFields() {
+  // LayoutDescriptor is used by V8 to define which fields are not tagged
+  // (unboxed). In preparation for pointer compressions, V8 disabled unboxed
+  // doubles everywhere, which means Map doesn't have a layout_descriptor
+  // field, but because of how gen-postmortem-metadata works and how Torque
+  // generates the offsets file, we get a constant for it anyway. In the future
+  // unboxing will be enabled again, in which case this field will be used.
+  // Until then, we use the presence of this field as version (if the field is
+  // present, it's safe to assume we're on V8 8.1+, at least on supported
+  // release lines).
+  return !kLayoutDescriptor.Loaded();
+}
 
 void JSObject::Load() {
   kPropertiesOffset =
@@ -604,7 +619,8 @@ void Types::Load() {
   kFixedArrayType = LoadConstant("type_FixedArray__FIXED_ARRAY_TYPE");
   kJSArrayBufferType = LoadConstant("type_JSArrayBuffer__JS_ARRAY_BUFFER_TYPE");
   kJSTypedArrayType = LoadConstant("type_JSTypedArray__JS_TYPED_ARRAY_TYPE");
-  kJSRegExpType = LoadConstant("type_JSRegExp__JS_REGEXP_TYPE");
+  kJSRegExpType = LoadConstant(
+      {"type_JSRegExp__JS_REG_EXP_TYPE", "type_JSRegExp__JS_REGEXP_TYPE"});
   kJSDateType = LoadConstant("type_JSDate__JS_DATE_TYPE");
   kSharedFunctionInfoType =
       LoadConstant("type_SharedFunctionInfo__SHARED_FUNCTION_INFO_TYPE");

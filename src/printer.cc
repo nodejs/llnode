@@ -726,7 +726,7 @@ std::string Printer::Stringify(v8::HeapObject heap_object, Error& err) {
     return pre + Stringify(fn, err);
   }
 
-  if (type == llv8_->types()->kJSRegExpType) {
+  if (type == *llv8_->types()->kJSRegExpType) {
     v8::JSRegExp re(heap_object);
     return pre + Stringify(re, err);
   }
@@ -1030,17 +1030,10 @@ std::string Printer::StringifyDescriptors(v8::JSObject js_object, v8::Map map,
     int64_t index = descriptors.FieldIndex(details) - in_object_count;
 
     if (descriptors.IsDoubleField(details)) {
-      double value;
-      if (index < 0)
-        value = js_object.GetInObjectValue<double>(instance_size, index, err);
-      else
-        value = extra_properties.Get<double>(index, err);
+      v8::HeapNumber value = js_object.GetDoubleField(index, err);
 
-      if (err.Fail()) return std::string();
-
-      char tmp[100];
-      snprintf(tmp, sizeof(tmp), "%f", value);
-      res += tmp;
+      Error value_err;
+      res += value.ToString(true, value_err);
     } else {
       v8::Value value;
       if (index < 0)

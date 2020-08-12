@@ -77,10 +77,13 @@ class Map : public Module {
   int64_t kInObjectPropertiesStartOffset;
   int64_t kInstanceSizeOffset;
   int64_t kInstanceTypeOffset;
+  Constant<int64_t> kLayoutDescriptor;
 
   int64_t kNumberOfOwnDescriptorsMask;
   int64_t kNumberOfOwnDescriptorsShift;
   int64_t kDictionaryMapShift;
+
+  bool HasUnboxedDoubleFields();
 
  protected:
   void Load();
@@ -542,7 +545,7 @@ class Types : public Module {
   int64_t kFixedArrayType;
   int64_t kJSArrayBufferType;
   int64_t kJSTypedArrayType;
-  int64_t kJSRegExpType;
+  Constant<int64_t> kJSRegExpType;
   int64_t kJSDateType;
   int64_t kSharedFunctionInfoType;
   Constant<int64_t> kUncompiledDataWithoutPreParsedScopeType;
