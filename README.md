@@ -63,7 +63,7 @@ version is LLDB 3.9 and above.
   - Optionally, you can install newer versions of lldb using Homebrew with
 
     ```bash
-    brew update && brew install --with-lldb --with-toolchain llvm
+    brew update && brew install llvm
     ```
 
     and make sure `/usr/local/opt/llvm/bin` gets searched before `/usr/bin/`
