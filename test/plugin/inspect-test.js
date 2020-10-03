@@ -648,8 +648,9 @@ function verifyInvalidExpr(t, sess) {
     if (err) {
       return teardown(t, sess, err);
     }
-    t.ok(
-      /error: error: use of undeclared identifier 'invalid_expr'/.test(line),
+
+    t.ok(/^error: error: /.test(line)
+        && / use of undeclared identifier 'invalid_expr'$/.test(line),
       'invalid expression should return an error'
     );
     teardown(t, sess);

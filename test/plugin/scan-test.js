@@ -26,8 +26,8 @@ function testFindrefsForInvalidExpr(t, sess, next) {
   sess.send('v8 findrefs invalid_expr');
   sess.waitError(/error:/, (err, line) => {
     t.error(err);
-    t.ok(
-      /error: error: use of undeclared identifier 'invalid_expr'/.test(line),
+    t.ok(/^error: error: /.test(line)
+        && / use of undeclared identifier 'invalid_expr'$/.test(line),
       'invalid expression should return an error'
     );
     next();
