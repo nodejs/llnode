@@ -511,7 +511,7 @@ std::string Printer::Stringify(v8::Map map, Error& err) {
     return std::string(tmp) + ":" +
            Stringify<v8::FixedArray>(descriptors, err) + ">";
   } else {
-    std::string(tmp) + ">";
+    return std::string(tmp) + ">";
   }
 }
 
