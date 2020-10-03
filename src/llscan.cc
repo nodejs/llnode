@@ -547,7 +547,8 @@ bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
      * - Objects that refer to a particular string literal.
      *   (lldb) findreferences -s "Hello World!"
      */
-    case ScanOptions::ScanType::kBadOption: {
+    case ScanOptions::ScanType::kBadOption:
+    default: {
       result.SetError("Invalid search type");
       result.SetStatus(eReturnStatusFailed);
       return false;
@@ -596,7 +597,7 @@ bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
 void FindReferencesCmd::ScanForReferences(ObjectScanner* scanner) {
   // Walk all the object instances and handle them according to their type.
   TypeRecordMap mapstoinstances = llscan_->GetMapsToInstances();
-  for (auto const entry : mapstoinstances) {
+  for (auto const& entry : mapstoinstances) {
     TypeRecord* typerecord = entry.second;
 
     for (uint64_t addr : typerecord->GetInstances()) {
