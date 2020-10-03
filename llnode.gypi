@@ -48,7 +48,6 @@
       "-Wendif-labels",
       "-W",
       "-Wno-unused-parameter",
-      "-Wundeclared-selector",
     ],
     "xcode_settings": {
       "GCC_VERSION": "com.apple.compilers.llvm.clang.1_0",
