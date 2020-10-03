@@ -547,7 +547,8 @@ bool FindReferencesCmd::DoExecute(SBDebugger d, char** cmd,
      * - Objects that refer to a particular string literal.
      *   (lldb) findreferences -s "Hello World!"
      */
-    case ScanOptions::ScanType::kBadOption: {
+    case ScanOptions::ScanType::kBadOption:
+    default: {
       result.SetError("Invalid search type");
       result.SetStatus(eReturnStatusFailed);
       return false;
