@@ -999,7 +999,7 @@ std::string Printer::StringifyDescriptors(v8::JSObject js_object, v8::Map map,
     if (key.Check()) {
       ss << key.ToString(err);
     } else {
-      PRINT_DEBUG("Failed to get key for index %ld", i);
+      PRINT_DEBUG("Failed to get key for index %" PRId64, i);
       ss << "???";
     }
     ss << rang::fg::reset << rang::style::reset;
@@ -1009,7 +1009,7 @@ std::string Printer::StringifyDescriptors(v8::JSObject js_object, v8::Map map,
 
     v8::Smi details = descriptors.GetDetails(i);
     if (!details.Check()) {
-      PRINT_DEBUG("Failed to get details for index %ld", i);
+      PRINT_DEBUG("Failed to get details for index %" PRId64, i);
       res += "???";
       continue;
     }
