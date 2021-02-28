@@ -30,7 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - name: Use Node.js ${{ matrix.node.version }} ${{ matrix.node.mirror }}
-        uses: mmarchini/setup-node@mirror
+        uses: oyyd/setup-node@mirror
         with:
           node-version: ${{ matrix.node.version }}
           node-mirror: ${{ matrix.node.mirror }}
