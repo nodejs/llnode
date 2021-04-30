@@ -21,10 +21,15 @@ function getLldbExecutable() {
     return process.env.npm_config_lldb_exe;
   }
 
-  const lldbExeNames = [
-    'lldb', 'lldb-5.0', 'lldb-4.0',
-    'lldb-3.9', 'lldb-3.8', 'lldb-3.7', 'lldb-3.6'
-  ];
+  // Use `Array.prototype.concat.apply` to support
+  // runtimes without `Array.prototype.flatMap`.
+  // Look for LLDB up to version 20.
+  const versions = Array.prototype.concat.apply([],
+    Array.from({length: 20}, (_, i) => i + 1).map((major) =>
+      Array.from({ length: major < 4 ? 10 : 1 }, (_, minor) => major + '.' + minor)
+    ));
+
+  const lldbExeNames = ['lldb'].concat(versions.reverse().map((v) => 'lldb-' + v));
 
   return lldb.tryExecutables(lldbExeNames);
 }
