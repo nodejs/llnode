@@ -10,7 +10,23 @@ const fs = require('fs');
  * @returns {string} Branch of the corresponding lldb release
  */
 function versionToBranch(version) {
-  return 'release_' + version.replace('.', '');
+  // `llvm-project` v1-3 branches are in the form `release/major.minor.x`:
+  //   release/1.0.x ... release/3.9.x
+  // `llvm-project` v4-latest branches are in the form `release/major.x`:
+  //   release/4.x ... release/12.x
+
+  // split into array of semver components
+  var chars = (version.indexOf('.') === -1
+    ? version.split('')                         // split `39` into ['3', '9']
+    : version.split('.').filter(x => x !== '.') // split `3.9` into ['3', '9']
+  );
+
+  // if version < 4, keep `major.minor` components
+  // if version >= 4, only keep `major` component
+  chars = chars.slice(0, (+chars[0] >= 4) ? 1 : 2);
+
+  // join components into the form `release/3.9.x`
+  return 'release/' + chars.concat('x').join('.');
 }
 
 /**
@@ -44,18 +60,30 @@ function cloneHeaders(lldbVersion, buildDir) {
 
   if (!fs.existsSync(lldbInstallDir)) {
     console.log(`\nCloning lldb ${lldbHeadersBranch} into ${lldbInstallDir}`);
+    // use `git clone --filter` in git v2.19 to only download `lldb` dir of `llvm-project` monorepo
+    // see: https://stackoverflow.com/a/52269934/3117331
+    // see: https://github.blog/2020-01-17-bring-your-monorepo-down-to-size-with-sparse-checkout/
     child_process.execFileSync(
         'git', ['clone',
           '--depth', '1',
+          '--filter=blob:none',
+          '--sparse',
           '--branch', lldbHeadersBranch,
-          'https://github.com/llvm-mirror/lldb.git',
+          'https://github.com/llvm/llvm-project.git',
           lldbInstallDir
+        ],
+        { stdio: 'inherit' });  // show progress
+    child_process.execFileSync(
+        'git', [
+          '-C', lldbInstallDir,
+          'sparse-checkout',
+          'set', 'lldb'
         ],
         { stdio: 'inherit' });  // show progress
   } else {
     console.log(`\nSkip cloning lldb headers because ${lldbInstallDir} exists`);
   }
-  return path.join(lldbInstallDir, 'include');
+  return path.join(lldbInstallDir, 'lldb', 'include');
 }
 
 /**
