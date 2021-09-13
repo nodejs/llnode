@@ -1,7 +1,7 @@
 # llnode Collaborator Guide
 
 llnode follows the
-[Node.js Collaborator Guide](https://github.com/nodejs/node/blob/master/COLLABORATOR_GUIDE.md),
+[Node.js Collaborator Guide](https://github.com/nodejs/node/blob/main/COLLABORATOR_GUIDE.md),
 with the following differences:
 
   - At least one Collaborator must approve a pull request before the pull
