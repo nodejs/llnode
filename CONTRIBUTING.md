@@ -15,7 +15,7 @@ $ git remote add upstream git://github.com/indutny/llnode.git
 
 #### Which branch?
 
-For developing new features and bug fixes, the `master` branch should be pulled
+For developing new features and bug fixes, the `main` branch should be pulled
 and built upon.
 
 ### Step 2: Branch
@@ -23,7 +23,7 @@ and built upon.
 Create a feature branch and start hacking:
 
 ```text
-$ git checkout -b my-feature-branch -t origin/master
+$ git checkout -b my-feature-branch -t origin/main
 ```
 
 ### Step 3: Commit
