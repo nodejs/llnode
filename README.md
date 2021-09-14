@@ -73,10 +73,10 @@ version is LLDB 3.9 and above.
   - You can install the lldb package using the package manager of your
     distribution. You may need to install additional packages for `liblldb`
     as well.
-  - For example, on Ubuntu 16.04 you can install the prerequisites with
+  - For example, on Ubuntu 20.04 you can install the prerequisites with
 
     ```bash
-    apt-get install lldb-4.0 liblldb-4.0-dev
+    apt-get install lldb liblldb-dev
     ```
 - FreeBSD
 
