@@ -32,7 +32,7 @@ npm install -g llnode
 llnode `which node` -c /path/to/core/dump
 ```
 
-- Never install llnode with `sudo` as it can easily lead to errors during 
+- Never install llnode with `sudo` as it can easily lead to errors during
   installation and execution.
 - For more details on starting llnode see the [Usage](#usage) section.
 - To get started with the llnode commands see the [Commands](#commands) section.
@@ -46,9 +46,9 @@ channels. We recommend installing Node.js with [nvm](https://github.com/nvm-sh/n
 as it allows users to install global packages without `sudo` by default, and
 it always installs the official executables from https://nodejs.org.
 
-**Do not install Node.js from the default Ubuntu/Debian apt repositories (or from 
-the default repositories of other Linux distributions), llnode is not compatible 
-with Node.js installed that way**. If you still want to install Node.js via 
+**Do not install Node.js from the default Ubuntu/Debian apt repositories (or from
+the default repositories of other Linux distributions), llnode is not compatible
+with Node.js installed that way**. If you still want to install Node.js via
 `apt-get`, take a look at
 [nodesource/distributions](https://github.com/nodesource/distributions).
 
@@ -73,10 +73,10 @@ version is LLDB 3.9 and above.
   - You can install the lldb package using the package manager of your
     distribution. You may need to install additional packages for `liblldb`
     as well.
-  - For example, on Ubuntu 16.04 you can install the prerequisites with
+  - For example, on Ubuntu 18.04 you can install the prerequisites with
 
     ```bash
-    apt-get install lldb-4.0 liblldb-4.0-dev
+    apt-get install lldb-8 liblldb-8-dev
     ```
 - FreeBSD
 

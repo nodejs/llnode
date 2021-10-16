@@ -18,39 +18,44 @@ jobs:
         node:
           - version: 10.x
           - version: 12.x
-          - version: 14.x
-          - version: 15.x
-            mirror: https://nodejs.org/download/nightly
-          - version: 15.x
-            mirror: https://nodejs.org/download/v8-canary
+          # - version: 14.x
+          # TODO(mmarchini): re-enable once mirror is supported on setup-node
+          # - version: 15.x
+          #   mirror: https://nodejs.org/download/nightly
+          # - version: 15.x
+          #   mirror: https://nodejs.org/download/v8-canary
         # os: [ubuntu-latest, macos-latest]
         # Temporarily disable MacOS until
         # https://github.com/nodejs/node/issues/32981 is fixed
-        os: [ubuntu-latest]
+        # TODO(mmarchini): test on 20.04 (need different lldb version)
+        os: [ubuntu-18.04, ubuntu-20.04]
+        llvm: [ 8, 9 ]
     steps:
       - uses: actions/checkout@v1
       - name: Use Node.js ${{ matrix.node.version }} ${{ matrix.node.mirror }}
-        uses: mmarchini/setup-node@mirror
+        uses: actions/setup-node@v2
         with:
           node-version: ${{ matrix.node.version }}
-          node-mirror: ${{ matrix.node.mirror }}
+          # TODO(mmarchini): re-enable once mirror is supported on setup-node
+          # node-mirror: ${{ matrix.node.mirror }}
       - name: install dependencies Linux
-        if: matrix.os == 'ubuntu-latest'
+        if: startsWith(matrix.os, 'ubuntu-')
         run: |
           sudo apt-get -qq update
-          sudo apt-get install lldb-3.9 liblldb-3.9-dev lcov gdb -y
+          sudo apt-get install lldb-${{ matrix.llvm }} liblldb-${{ matrix.llvm }}-dev lcov gdb -y
+          sudo ln -s $(which lldb-${{ matrix.llvm }}) /usr/bin/lldb
       - name: npm install
         run: |
           npm install --llnode_build_addon=true --llnode_coverage=true
       - name: run tests
-        run: TEST_LLDB_BINARY=`which lldb-3.9` npm run nyc-test-all
+        run: TEST_LLDB_BINARY=`which lldb-${{ matrix.llvm }}` npm run nyc-test-all
         if: matrix.node.version != '15.x'
       - name: run tests (nightly)
-        run: TEST_LLDB_BINARY=`which lldb-3.9` npm run nyc-test-all
+        run: TEST_LLDB_BINARY=`which lldb-${{ matrix.llvm }}` npm run nyc-test-all
         if: matrix.node.version == '15.x'
         continue-on-error: true
       - name: prepare coverage
-        if: matrix.os == 'ubuntu-latest' && matrix.node.version != '15.x'
+        if: startsWith(matrix.os, 'ubuntu-') && matrix.node.version != '15.x'
         run: |
           npm run coverage
           cat ./coverage-js.info > ./coverage.info
@@ -70,6 +75,7 @@ jobs:
       - name: npm install, build, and test
         run: |
           sudo apt-get -qq update
-          sudo apt-get install lldb-3.9 liblldb-3.9-dev lcov -y
+          sudo apt-get install lldb-6.0 liblldb-6.0-dev lcov -y
+          sudo ln -s $(which lldb-6.0) /usr/bin/lldb
           npm install
           npm run linter
