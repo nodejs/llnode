@@ -18,12 +18,11 @@ jobs:
         node:
           - version: 10.x
           - version: 12.x
-          # - version: 14.x
-          # TODO(mmarchini): re-enable once mirror is supported on setup-node
-          # - version: 15.x
-          #   mirror: https://nodejs.org/download/nightly
-          # - version: 15.x
-          #   mirror: https://nodejs.org/download/v8-canary
+          - version: 14.x
+          - version: 15.x
+            mirror: https://nodejs.org/download/nightly
+          - version: 15.x
+            mirror: https://nodejs.org/download/v8-canary
         # os: [ubuntu-latest, macos-latest]
         # Temporarily disable MacOS until
         # https://github.com/nodejs/node/issues/32981 is fixed
@@ -33,11 +32,11 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - name: Use Node.js ${{ matrix.node.version }} ${{ matrix.node.mirror }}
-        uses: actions/setup-node@v2
+        uses:  No9/setup-node@mirror
         with:
           node-version: ${{ matrix.node.version }}
           # TODO(mmarchini): re-enable once mirror is supported on setup-node
-          # node-mirror: ${{ matrix.node.mirror }}
+          node-mirror: ${{ matrix.node.mirror }}
       - name: install dependencies Linux
         if: startsWith(matrix.os, 'ubuntu-')
         run: |
