@@ -28,7 +28,7 @@ jobs:
         # https://github.com/nodejs/node/issues/32981 is fixed
         # TODO(mmarchini): test on 20.04 (need different lldb version)
         os: [ubuntu-18.04, ubuntu-20.04]
-        llvm: [ 8, 9 ]
+        llvm: [ 8, 9, 10, 11, 12, 13 ]
     steps:
       - uses: actions/checkout@v1
       - name: Use Node.js ${{ matrix.node.version }} ${{ matrix.node.mirror }}
