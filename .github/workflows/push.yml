@@ -70,7 +70,13 @@ jobs:
             lldb-${{ matrix.llvm }} \
             liblldb-${{ matrix.llvm }}-dev
 
-          sudo ln -s "$(which lldb-${{ matrix.llvm }})" /usr/bin/lldb
+          if [[ -n "$(which lldb-${{ matrix.llvm }})" ]]; then
+            sudo ln -s "$(which lldb-${{ matrix.llvm }})" /usr/bin/lldb
+          fi
+
+          if [[ -n "$(which llvm-config-${{ matrix.llvm }})" ]]; then
+            sudo ln -s "$(which llvm-config-${{ matrix.llvm }})" /usr/bin/llvm-config
+          fi
       - name: npm install
         run: |
           npm install --llnode_build_addon=true --llnode_coverage=true
