@@ -19,16 +19,18 @@ jobs:
           - version: 10.x
           - version: 12.x
           - version: 14.x
-          - version: 15.x
+          - version: 16.x
+          - version: 18.x
+          - version: 19.x
             mirror: https://nodejs.org/download/nightly
-          - version: 15.x
+          - version: 19.x
             mirror: https://nodejs.org/download/v8-canary
         # os: [ubuntu-latest, macos-latest]
         # Temporarily disable MacOS until
         # https://github.com/nodejs/node/issues/32981 is fixed
         # TODO(mmarchini): test on 20.04 (need different lldb version)
         os: [ubuntu-18.04, ubuntu-20.04]
-        llvm: [ 8, 9, 10, 11, 12, 13 ]
+        llvm: [8, 9, 10, 11, 12, 13, 14]
     steps:
       - uses: actions/checkout@v1
       - name: Use Node.js ${{ matrix.node.version }} ${{ matrix.node.mirror }}
@@ -40,6 +42,28 @@ jobs:
       - name: install dependencies Linux
         if: startsWith(matrix.os, 'ubuntu-')
         run: |
+          use_llvm_repos=0
+
+          case "${{ matrix.os }}-${{ matrix.llvm }}" in
+            ubuntu18.04-10) use_llvm_repos=1;;
+            ubuntu18.04-11) use_llvm_repos=1;;
+            ubuntu18.04-12) use_llvm_repos=1;;
+            ubuntu18.04-13) use_llvm_repos=1;;
+            ubuntu18.04-14) use_llvm_repos=1;;
+            ubuntu20.04-13) use_llvm_repos=1;;
+            ubuntu20.04-14) use_llvm_repos=1;;
+            *) use_llvm_repos=0;;
+          esac
+
+          if [[ ${use_llvm_repos} == 1 ]]; then
+            wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -;
+            release="$(lsb_release -cs)"
+            cat << EOF | sudo tee /etc/apt/sources.list.d/llvm-${{ matrix.llvm }}.list
+            deb http://apt.llvm.org/${release}/ llvm-toolchain-${release}-${{ matrix.llvm }} main
+            deb-src http://apt.llvm.org/${release}/ llvm-toolchain-${release}-${{ matrix.llvm }} main
+            EOF
+          fi
+
           sudo apt-get -qq update
           sudo apt-get install lldb-${{ matrix.llvm }} liblldb-${{ matrix.llvm }}-dev lcov gdb -y
           sudo ln -s $(which lldb-${{ matrix.llvm }}) /usr/bin/lldb
@@ -48,13 +72,13 @@ jobs:
           npm install --llnode_build_addon=true --llnode_coverage=true
       - name: run tests
         run: TEST_LLDB_BINARY=`which lldb-${{ matrix.llvm }}` npm run nyc-test-all
-        if: matrix.node.version != '15.x'
+        if: matrix.node.version != '19.x'
       - name: run tests (nightly)
         run: TEST_LLDB_BINARY=`which lldb-${{ matrix.llvm }}` npm run nyc-test-all
-        if: matrix.node.version == '15.x'
+        if: matrix.node.version == '19.x'
         continue-on-error: true
       - name: prepare coverage
-        if: startsWith(matrix.os, 'ubuntu-') && matrix.node.version != '15.x'
+        if: startsWith(matrix.os, 'ubuntu-') && matrix.node.version != '19.x'
         run: |
           npm run coverage
           cat ./coverage-js.info > ./coverage.info
@@ -70,7 +94,7 @@ jobs:
       - name: Use Node.js LTS
         uses: actions/setup-node@v1
         with:
-          node-version: 12.x
+          node-version: 18.x
       - name: npm install, build, and test
         run: |
           sudo apt-get -qq update
