@@ -59,9 +59,9 @@ jobs:
             wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -;
             release="$(lsb_release -cs)"
             cat << EOF | sudo tee /etc/apt/sources.list.d/llvm-${{ matrix.llvm }}.list
-            deb http://apt.llvm.org/${release}/ llvm-toolchain-${release}-${{ matrix.llvm }} main
-            deb-src http://apt.llvm.org/${release}/ llvm-toolchain-${release}-${{ matrix.llvm }} main
-            EOF
+          deb http://apt.llvm.org/${release}/ llvm-toolchain-${release}-${{ matrix.llvm }} main
+          deb-src http://apt.llvm.org/${release}/ llvm-toolchain-${release}-${{ matrix.llvm }} main
+          EOF
           fi
 
           sudo apt-get -qq update
