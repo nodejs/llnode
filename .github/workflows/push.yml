@@ -43,6 +43,7 @@ jobs:
         if: startsWith(matrix.os, 'ubuntu-')
         run: |
           use_llvm_repos=0
+          lldb_pkg="lldb-${{ matrix.llvm }}"
 
           case "${{ matrix.os }}-${{ matrix.llvm }}" in
             ubuntu18.04-10) use_llvm_repos=1;;
@@ -56,6 +57,7 @@ jobs:
           esac
 
           if [[ ${use_llvm_repos} == 1 ]]; then
+            lldb_pkg="lldb";
             wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -;
             release="$(lsb_release -cs)"
             cat << EOF | sudo tee /etc/apt/sources.list.d/llvm-${{ matrix.llvm }}.list
@@ -65,8 +67,10 @@ jobs:
           fi
 
           sudo apt-get -qq update
-          sudo apt-get install lldb-${{ matrix.llvm }} liblldb-${{ matrix.llvm }}-dev lcov gdb -y
-          sudo ln -s $(which lldb-${{ matrix.llvm }}) /usr/bin/lldb
+          sudo apt-get install ${lldb_pkg} lib${lldb_pkg}-dev lcov gdb -y
+          if [[ -z "$(which lldb-${{ matrix.llvm }})" ]]; then
+            sudo ln -s "$(which lldb-${{ matrix.llvm }})" /usr/bin/lldb
+          fi
       - name: npm install
         run: |
           npm install --llnode_build_addon=true --llnode_coverage=true
