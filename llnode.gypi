@@ -41,6 +41,14 @@
     "cflags": [
       "-std=c++11", "-fPIC",
     ],
+    "cflags_cc": [
+      "-Werror",
+      "-Wall",
+      "-Wextra",
+      "-Wendif-labels",
+      "-W",
+      "-Wno-unused-parameter",
+    ],
     "xcode_settings": {
       "GCC_VERSION": "com.apple.compilers.llvm.clang.1_0",
       "GCC_WARN_ABOUT_MISSING_NEWLINE": "YES",  # -Wnewline-eof
@@ -51,7 +59,9 @@
         "-g",
       ],
       "WARNING_CFLAGS": [
+        "-Werror",
         "-Wall",
+        "-Wextra",
         "-Wendif-labels",
         "-W",
         "-Wno-unused-parameter",

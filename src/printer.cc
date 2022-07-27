@@ -365,7 +365,7 @@ std::string Printer::Stringify(v8::JSArrayBuffer js_array_buffer, Error& err) {
     } else {
       res += " [\n  ";
 
-      int display_length = std::min<int>(*byte_length, options_.length);
+      size_t display_length = std::min<size_t>(*byte_length, options_.length);
       res += llv8_->LoadBytes(*data, display_length, err);
 
       if (display_length < *byte_length) {
@@ -430,7 +430,7 @@ std::string Printer::Stringify(v8::JSTypedArray js_typed_array, Error& err) {
 
     res += " [\n  ";
 
-    int display_length = std::min<int>(*byte_length, options_.length);
+    size_t display_length = std::min<size_t>(*byte_length, options_.length);
     res += llv8_->LoadBytes(*data + *byte_offset, display_length, err);
 
     if (display_length < *byte_length) {
@@ -511,7 +511,7 @@ std::string Printer::Stringify(v8::Map map, Error& err) {
     return std::string(tmp) + ":" +
            Stringify<v8::FixedArray>(descriptors, err) + ">";
   } else {
-    std::string(tmp) + ">";
+    return std::string(tmp) + ">";
   }
 }
 
