@@ -32,7 +32,7 @@ jobs:
         os: [ubuntu-18.04, ubuntu-20.04]
         llvm: [8, 9, 10, 11, 12, 13, 14]
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v3
       - name: Use Node.js ${{ matrix.node.version }} ${{ matrix.node.mirror }}
         uses:  No9/setup-node@mirror
         with:
@@ -96,17 +96,17 @@ jobs:
           cat ./coverage-js.info > ./coverage.info
           cat ./coverage-cc.info >> ./coverage.info
       - name: Upload coverage report to Codecov
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v3
         with:
           file: ./coverage.info
   linter:
     runs-on: [ubuntu-latest]
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v3
       - name: Use Node.js LTS
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
-          node-version: 18.x
+          node-version: 12.x
       - name: npm install, build, and test
         run: |
           sudo apt-get -qq update
