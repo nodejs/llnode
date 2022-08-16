@@ -228,8 +228,12 @@ inline JSFunction JSFrame::GetFunction(Error& err) {
 
 
 inline int64_t JSFrame::LeaParamSlot(int slot, int count) const {
+  // On older versions of V8 with argument adaptor frames (particularly for
+  // Node.js v14), parameters are pushed onto the stack in the "reverse" order.
+  int64_t offset =
+      v8()->frame()->kAdaptorFrame == -1 ? slot + 1 : count - slot - 1;
   return raw() + v8()->frame()->kArgsOffset +
-         (count - slot - 1) * v8()->common()->kPointerSize;
+         offset * v8()->common()->kPointerSize;
 }
 
 

@@ -62,7 +62,7 @@ async function testFrameList(t, sess, frameNumber, sourceCode, cb) {
 }
 
 tape('v8 stack', async (t) => {
-  t.timeoutAfter(15000);
+  t.timeoutAfter(30000);
 
   const sess = common.Session.create('frame-scenario.js');
   sess.waitBreak = promisify(sess.waitBreak);
@@ -78,15 +78,19 @@ tape('v8 stack', async (t) => {
     t.ok(lines.length > 4, 'frame count');
 
     lines = lines.filter((s) => !/<builtin>|<stub>/.test(s));
-    const exit = lines[5];
-    const crasher = lines[4];
-    const adapter = lines[3];
+    const hasArgumentAdaptorFrame = nodejsVersion()[0] < 16;
+    const argumentAdaptorOffset = hasArgumentAdaptorFrame ? 1 : 0;
+    const exit = lines[4 + argumentAdaptorOffset];
+    const crasher = lines[3 + argumentAdaptorOffset];
+    if (hasArgumentAdaptorFrame) {
+      const adaptor = lines[3];
+      t.ok(/<adaptor>/.test(adaptor), 'arguments adapter frame');
+    }
     const fnInferredName = lines[2];
     const fnInferredNamePrototype = lines[1];
     const fnFunctionName = lines[0];
     t.ok(/<exit>/.test(exit), 'exit frame');
     t.ok(/crasher/.test(crasher), 'crasher frame');
-    t.ok(/<adaptor>/.test(adapter), 'arguments adapter frame');
     if (nodejsVersion()[0] < 12)
       t.ok(/\sfnInferredName\(/.test(fnInferredName), 'fnInferredName frame');
     t.ok(/\sModule.fnInferredNamePrototype\(/.test(fnInferredNamePrototype),
