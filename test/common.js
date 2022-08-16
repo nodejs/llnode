@@ -342,7 +342,9 @@ Session.prototype.hasSymbol = function hasSymbol(symbol, callback) {
 };
 
 function nodejsVersion() {
-  const version = process.version.substring(1, process.version.indexOf('-'));
+  const candidateIndex = process.version.indexOf('-');
+  const endIndex = candidateIndex != -1 ? candidateIndex : process.version.length;
+  const version = process.version.substring(1, endIndex);
   const versionArray = version.split('.').map(s => Number(s));
   return versionArray;
 }
