@@ -207,6 +207,7 @@ class ScopeInfo : public Module {
   int64_t kContextLocalCountOffset;
   bool kEmbeddedParamAndStackLocals;
   int64_t kVariablePartIndex;
+  bool kIsFixedArray;
 
  protected:
   void Load();
