@@ -722,21 +722,28 @@ inline CheckedType<uintptr_t> JSTypedArray::GetData() {
 inline ScopeInfo::PositionInfo ScopeInfo::MaybePositionInfo(Error& err) {
   ScopeInfo::PositionInfo position_info = {
       .start_position = 0, .end_position = 0, .is_valid = false};
-  int proper_index = ContextLocalIndex(err);
+  auto kPointerSize = v8()->common()->kPointerSize;
+  int bytes_offset = kPointerSize * ContextLocalIndex(err);
   if (err.Fail()) return position_info;
 
   Smi context_local_count = ContextLocalCount(err);
   if (err.Fail()) return position_info;
-  proper_index += context_local_count.GetValue() * 2;
+  bytes_offset += 2 * kPointerSize * context_local_count.GetValue();
+
+  int64_t data_offset =
+      v8()->scope_info()->kIsFixedArray ? v8()->fixed_array()->kDataOffset : 0;
+  bytes_offset += data_offset;
 
   int tries = 5;
-  while (tries > 0 && proper_index < (Length(err).GetValue() - 1)) {
+  while (tries > 0) {
     err = Error();
 
-    Smi maybe_start_position = Get<Smi>(proper_index, err);
+    Smi maybe_start_position =
+        HeapObject::LoadFieldValue<Smi>(bytes_offset, err);
     if (err.Success() && maybe_start_position.IsSmi(err)) {
-      proper_index++;
-      Smi maybe_end_position = Get<Smi>(proper_index, err);
+      bytes_offset += kPointerSize;
+      Smi maybe_end_position =
+          HeapObject::LoadFieldValue<Smi>(bytes_offset, err);
       if (err.Success() && maybe_end_position.IsSmi(err)) {
         position_info.start_position = maybe_start_position.GetValue();
         position_info.end_position = maybe_end_position.GetValue();
@@ -746,7 +753,7 @@ inline ScopeInfo::PositionInfo ScopeInfo::MaybePositionInfo(Error& err) {
     }
 
     tries--;
-    proper_index++;
+    bytes_offset += kPointerSize;
   }
   return position_info;
 }
@@ -1091,19 +1098,34 @@ inline Value Context::ContextSlot(int index, Error& err) {
 }
 
 inline Smi ScopeInfo::ParameterCount(Error& err) {
-  return FixedArray::Get<Smi>(v8()->scope_info()->kParameterCountOffset, err);
+  int64_t data_offset =
+      v8()->scope_info()->kIsFixedArray ? v8()->fixed_array()->kDataOffset : 0;
+  return HeapObject::LoadFieldValue<Smi>(
+      data_offset + v8()->scope_info()->kParameterCountOffset *
+                        v8()->common()->kPointerSize,
+      err);
 }
 
 inline Smi ScopeInfo::StackLocalCount(Error& err) {
   if (v8()->scope_info()->kStackLocalCountOffset == -1) {
     return Smi(v8(), 0);
   }
-  return FixedArray::Get<Smi>(v8()->scope_info()->kStackLocalCountOffset, err);
+  int64_t data_offset =
+      v8()->scope_info()->kIsFixedArray ? v8()->fixed_array()->kDataOffset : 0;
+  return HeapObject::LoadFieldValue<Smi>(
+      data_offset + v8()->scope_info()->kStackLocalCountOffset *
+                        v8()->common()->kPointerSize,
+      err);
 }
 
 inline Smi ScopeInfo::ContextLocalCount(Error& err) {
-  return FixedArray::Get<Smi>(v8()->scope_info()->kContextLocalCountOffset,
-                              err);
+  int64_t data_offset = v8()->scope_info()->kIsFixedArray
+                            ? v8()->fixed_array()->kDataOffset
+                            : v8()->common()->kPointerSize;
+  return HeapObject::LoadFieldValue<Smi>(
+      data_offset + v8()->scope_info()->kContextLocalCountOffset *
+                        v8()->common()->kPointerSize,
+      err);
 }
 
 inline int ScopeInfo::ContextLocalIndex(Error& err) {
@@ -1122,30 +1144,39 @@ inline int ScopeInfo::ContextLocalIndex(Error& err) {
 }
 
 inline String ScopeInfo::ContextLocalName(int index, Error& err) {
-  int proper_index = ContextLocalIndex(err) + index;
+  int64_t data_offset = v8()->scope_info()->kIsFixedArray
+                            ? v8()->fixed_array()->kDataOffset
+                            : v8()->common()->kPointerSize;
+  int proper_index = data_offset + (ContextLocalIndex(err) + index) *
+                                       v8()->common()->kPointerSize;
   if (err.Fail()) return String();
-  return FixedArray::Get<String>(proper_index, err);
+  return HeapObject::LoadFieldValue<String>(proper_index, err);
 }
 
 inline HeapObject ScopeInfo::MaybeFunctionName(Error& err) {
-  int proper_index = ContextLocalIndex(err);
-  if (err.Fail()) return HeapObject();
-
-  Smi context_local_count = ContextLocalCount(err);
-  if (err.Fail()) return HeapObject();
-  proper_index += context_local_count.GetValue() * 2;
-
   // NOTE(mmarchini): FunctionName can be stored either in the first, second or
   // third slot after ContextLocalCount. Since there are missing postmortem
   // metadata to determine in which slot its being stored for the present
   // ScopeInfo, we try to find it heuristically.
-  int tries = 3;
+  auto kPointerSize = v8()->common()->kPointerSize;
   HeapObject likely_function_name;
-  while (tries > 0 && proper_index < Length(err).GetValue()) {
+  int bytes_offset = kPointerSize * ContextLocalIndex(err);
+  if (err.Fail()) return likely_function_name;
+
+  Smi context_local_count = ContextLocalCount(err);
+  if (err.Fail()) return likely_function_name;
+  bytes_offset += 2 * kPointerSize * context_local_count.GetValue();
+
+  int64_t data_offset =
+      v8()->scope_info()->kIsFixedArray ? v8()->fixed_array()->kDataOffset : 0;
+  bytes_offset += data_offset;
+
+  int tries = 5;
+  while (tries > 0) {
     err = Error();
 
     HeapObject maybe_function_name =
-        FixedArray::Get<HeapObject>(proper_index, err);
+        HeapObject::LoadFieldValue<HeapObject>(bytes_offset, err);
     if (err.Success() && String::IsString(v8(), maybe_function_name, err)) {
       likely_function_name = maybe_function_name;
       if (*String(likely_function_name).Length(err) > 0) {
@@ -1154,7 +1185,7 @@ inline HeapObject ScopeInfo::MaybeFunctionName(Error& err) {
     }
 
     tries--;
-    proper_index++;
+    bytes_offset += kPointerSize;
   }
 
   if (likely_function_name.Check()) {

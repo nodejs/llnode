@@ -509,9 +509,9 @@ class NameDictionary : public FixedArray {
   inline int64_t Length(Error& err);
 };
 
-class ScopeInfo : public FixedArray {
+class ScopeInfo : public HeapObject {
  public:
-  V8_VALUE_DEFAULT_METHODS(ScopeInfo, FixedArray)
+  V8_VALUE_DEFAULT_METHODS(ScopeInfo, HeapObject)
 
   struct PositionInfo {
     int64_t start_position;

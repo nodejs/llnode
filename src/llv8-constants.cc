@@ -279,6 +279,9 @@ void ScopeInfo::Load() {
   kEmbeddedParamAndStackLocals = kStackLocalCountOffset != -1;
   kContextLocalCountOffset = LoadConstant("scopeinfo_idx_ncontextlocals");
   kVariablePartIndex = LoadConstant("scopeinfo_idx_first_vars");
+  // Prior to Node.js v16, ScopeInfo inherited from FixedArray. In release
+  // lines after Node.js v16, it no longer does.
+  kIsFixedArray = LoadConstant("parent_ScopeInfo__FixedArray") != -1;
 }
 
 
