@@ -484,7 +484,7 @@ void Script::GetLineColumnFromPos(int64_t pos, int64_t& line, int64_t& column,
   line = 0;
   column = 0;
 
-  HeapObject source = Source(err);
+  String source = Source(err);
   if (err.Fail()) return;
 
   int64_t type = source.GetType(err);
@@ -496,8 +496,7 @@ void Script::GetLineColumnFromPos(int64_t pos, int64_t& line, int64_t& column,
     return;
   }
 
-  String str(source);
-  std::string source_str = str.ToString(err);
+  std::string source_str = source.ToString(err);
   int64_t limit = source_str.length();
   if (limit > pos) limit = pos;
 
