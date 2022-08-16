@@ -483,7 +483,7 @@ inline CheckedType<int32_t> String::Length(Error& err) {
 
 ACCESSOR(Script, Name, script()->kNameOffset, String)
 ACCESSOR(Script, LineOffset, script()->kLineOffsetOffset, Smi)
-ACCESSOR(Script, Source, script()->kSourceOffset, HeapObject)
+ACCESSOR(Script, Source, script()->kSourceOffset, String)
 ACCESSOR(Script, LineEnds, script()->kLineEndsOffset, HeapObject)
 
 ACCESSOR(SharedFunctionInfo, function_data, shared_info()->kFunctionDataOffset,

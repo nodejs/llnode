@@ -93,6 +93,11 @@ void Map::Load() {
   kMaybeConstructorOffset =
       LoadConstant("class_Map__constructor_or_backpointer__Object",
                    "class_Map__constructor__Object");
+  if (kMaybeConstructorOffset == -1) {
+    kMaybeConstructorOffset =
+        LoadConstant("class_Map__constructor_or_back_pointer__Object");
+  }
+
   kInstanceDescriptorsOffset = LoadConstant({
       "class_Map__instance_descriptors__DescriptorArray",
       "class_Map__instance_descriptors_offset",
@@ -300,7 +305,7 @@ void Context::Load() {
 void Script::Load() {
   kNameOffset = LoadConstant("class_Script__name__Object");
   kLineOffsetOffset = LoadConstant("class_Script__line_offset__SMI");
-  kSourceOffset = LoadConstant("class_Script__source__Object");
+  kSourceOffset = LoadConstant("class_Script__source__Object", 8);
   kLineEndsOffset = LoadConstant("class_Script__line_ends__Object");
 }
 

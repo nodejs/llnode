@@ -182,7 +182,7 @@ class Script : public HeapObject {
 
   inline String Name(Error& err);
   inline Smi LineOffset(Error& err);
-  inline HeapObject Source(Error& err);
+  inline String Source(Error& err);
   inline HeapObject LineEnds(Error& err);
 
   void GetLines(uint64_t start_line, std::string lines[], uint64_t line_limit,
