@@ -658,11 +658,11 @@ function verifyInvalidExpr(t, sess) {
       return teardown(t, sess, err);
     }
     t.ok(
-      /error: error: use of undeclared identifier 'invalid_expr'/.test(line),
+      /use of undeclared identifier 'invalid_expr'/.test(line),
       'invalid expression should return an error'
     );
     teardown(t, sess);
-  });
+  }, false);
 }
 
 tape('v8 inspect', (t) => {
