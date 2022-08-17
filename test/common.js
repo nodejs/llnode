@@ -118,7 +118,7 @@ SessionOutput.prototype.wait = function wait(regexp, callback, allLines) {
   const lines = [];
 
   function onLine(line) {
-    // console.log(line);
+
     lines.push(line);
     if (self.session)
       debug(`[LINE][${self.session.lldb.pid}]`, line);
@@ -207,15 +207,6 @@ function Session(options) {
   }
   this.stdout = new SessionOutput(this, this.lldb.stdout, timeout);
   this.stderr = new SessionOutput(this, this.lldb.stderr, timeout);
-
-  this.stderr.on('line', (line) => {
-    console.log("stderrorline:" + line);
-  });
-
-  this.stdout.on('line', (line) => {
-    
-  });
-
 
   // Map these methods to stdout for compatibility with legacy tests.
   this.wait = SessionOutput.prototype.wait.bind(this.stdout);
