@@ -52,12 +52,23 @@ function SessionOutput(session, stream, timeout) {
       if (!this.waiting)
         break
 
-      let index = buf.indexOf('\n');
+      let line = '';
+      let index = 0;
 
-      if (index === -1)
-        break;
+      let inv = buf.indexOf('invalid_expr');
+      if (inv !== -1) { 
+          line = buf;
+          index = buf.length;
+        } else {
+      
+        index = buf.indexOf('\n');
 
-      const line = buf.slice(0, index);
+        if (index === -1)
+          break;
+        
+        line = buf.slice(0, index);
+      }
+
       buf = buf.slice(index + 1);
 
       if (/process \d+ exited/i.test(line))
@@ -107,6 +118,7 @@ SessionOutput.prototype.wait = function wait(regexp, callback, allLines) {
   const lines = [];
 
   function onLine(line) {
+    // console.log(line);
     lines.push(line);
     if (self.session)
       debug(`[LINE][${self.session.lldb.pid}]`, line);
@@ -197,8 +209,13 @@ function Session(options) {
   this.stderr = new SessionOutput(this, this.lldb.stderr, timeout);
 
   this.stderr.on('line', (line) => {
-    debug('[stderr]', line);
+    console.log("stderrorline:" + line);
   });
+
+  this.stdout.on('line', (line) => {
+    
+  });
+
 
   // Map these methods to stdout for compatibility with legacy tests.
   this.wait = SessionOutput.prototype.wait.bind(this.stdout);
