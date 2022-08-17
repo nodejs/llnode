@@ -72,6 +72,8 @@ jobs:
 
           if [[ -n "$(which lldb-${{ matrix.llvm }})" ]]; then
             sudo ln -s "$(which lldb-${{ matrix.llvm }})" /usr/bin/lldb
+            sudo mkdir -p /usr/lib/lib/python3.8
+            sudo ln -s /usr/lib/llvm-${{ matrix.llvm }}/lib/python3.8/site-packages /usr/lib/lib/python3.8/site-packages
           fi
 
           if [[ -n "$(which llvm-config-${{ matrix.llvm }})" ]]; then
