@@ -21,10 +21,11 @@ jobs:
           - version: 14.x
           - version: 16.x
           - version: 18.x
-          - version: 19.x
-            mirror: https://nodejs.org/download/nightly
-          - version: 19.x
-            mirror: https://nodejs.org/download/v8-canary
+          # These error with "Unexpected input(s) 'node-mirror' ...":
+          # - version: 19.x
+          #   mirror: https://nodejs.org/download/nightly
+          # - version: 19.x
+          #   mirror: https://nodejs.org/download/v8-canary
         # os: [ubuntu-latest, macos-latest]
         # Temporarily disable MacOS until
         # https://github.com/nodejs/node/issues/32981 is fixed
@@ -32,8 +33,8 @@ jobs:
         os: [ubuntu-18.04, ubuntu-20.04]
         llvm: [8, 9, 10, 11, 12, 13, 14]
         exclude:
+          # This errors due to a glibc incompatibility.
           - {os: ubuntu-18.04, node: {version: 18.x}}
-          - {os: ubuntu-18.04, node: {version: 19.x}}
     steps:
       - uses: actions/checkout@v1
       - name: Use Node.js ${{ matrix.node.version }} ${{ matrix.node.mirror }}
