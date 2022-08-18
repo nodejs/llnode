@@ -100,13 +100,13 @@ jobs:
         with:
           file: ./coverage.info
   linter:
-    runs-on: [ubuntu-latest]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - name: Use Node.js LTS
         uses: actions/setup-node@v3
         with:
-          node-version: 12.x
+          node-version: 18.x
       - name: npm install, build, and test
         run: |
           sudo apt-get -qq update
