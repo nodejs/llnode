@@ -87,7 +87,7 @@ function verifyBasicTypes(llnode, t) {
     // basic JS types
     '(Array)', '(String)', 'Object', '(ArrayBufferView)',
     // Node types
-    'process', 'NativeModule'
+    'process',
   ].sort();
 
   const typeMap = new Map();

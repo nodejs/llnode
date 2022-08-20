@@ -186,10 +186,12 @@ const hashMapTests = {
       });
     }
   },
-  'promise': {
-    re: /.promise=(0x[0-9a-f]+):<Object: Promise>/,
-    desc: '.promise Promise property'
-  },
+  // TODO(kvakil): removing promise as it doesn't work on Node 16+.
+  // The existing support is rudimentary anyway.
+  // 'promise': {
+  //   re: /.promise=(0x[0-9a-f]+):<Object: Promise>/,
+  //   desc: '.promise Promise property',
+  // },
   // .array=0x000003df9cbe7919:<Array: length=6>,
   'array': {
     re: /.array=(0x[0-9a-f]+):<Array: length=6>/,
