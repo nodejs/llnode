@@ -16,8 +16,6 @@ jobs:
       fail-fast: false
       matrix:
         node:
-          - version: 10.x
-          - version: 12.x
           - version: 14.x
           - version: 16.x
           - version: 18.x
