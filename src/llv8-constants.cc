@@ -139,16 +139,10 @@ void Map::Load() {
 
 
 bool Map::HasUnboxedDoubleFields() {
-  // LayoutDescriptor is used by V8 to define which fields are not tagged
-  // (unboxed). In preparation for pointer compressions, V8 disabled unboxed
-  // doubles everywhere, which means Map doesn't have a layout_descriptor
-  // field, but because of how gen-postmortem-metadata works and how Torque
-  // generates the offsets file, we get a constant for it anyway. In the future
-  // unboxing will be enabled again, in which case this field will be used.
-  // Until then, we use the presence of this field as version (if the field is
-  // present, it's safe to assume we're on V8 8.1+, at least on supported
-  // release lines).
-  return !kLayoutDescriptor.Loaded();
+  // V8 has now disabled unboxed doubles in all supported Node.js branches. Per
+  // the V8 authors (v8/v8@42409a2e) it seems unlikely this support will ever
+  // return, so we could probably just remove it entirely.
+  return false;
 }
 
 void JSObject::Load() {
