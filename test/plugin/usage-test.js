@@ -7,7 +7,7 @@ function containsLine(lines, re) {
 }
 
 tape('usage messages', (t) => {
-  t.timeoutAfter(15000);
+  t.timeoutAfter(30000);
 
   const sess = common.Session.create('inspect-scenario.js');
 
