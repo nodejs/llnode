@@ -34,7 +34,7 @@ jobs:
           # This errors due to a glibc incompatibility.
           - {os: ubuntu-18.04, node: {version: 18.x}}
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v3
       - name: Use Node.js ${{ matrix.node.version }} ${{ matrix.node.mirror }}
         uses:  No9/setup-node@mirror
         with:
@@ -98,15 +98,15 @@ jobs:
           cat ./coverage-js.info > ./coverage.info
           cat ./coverage-cc.info >> ./coverage.info
       - name: Upload coverage report to Codecov
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v3
         with:
           file: ./coverage.info
   linter:
-    runs-on: [ubuntu-latest]
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v3
       - name: Use Node.js LTS
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
           node-version: 18.x
       - name: npm install, build, and test

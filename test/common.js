@@ -42,7 +42,7 @@ function SessionOutput(session, stream, timeout) {
   this.waiting = false;
   this.waitQueue = [];
   let buf = '';
-  this.timeout = timeout || 20000;
+  this.timeout = timeout || 40000;
   this.session = session;
 
   this.flush = function flush() {
@@ -170,7 +170,7 @@ SessionOutput.prototype.linesUntil = function linesUntil(regexp, callback) {
 
 function Session(options) {
   EventEmitter.call(this);
-  const timeout = parseInt(process.env.TEST_TIMEOUT) || 20000;
+  const timeout = parseInt(process.env.TEST_TIMEOUT) || 40000;
   const lldbBin = process.env.TEST_LLDB_BINARY || 'lldb';
   const env = Object.assign({}, process.env);
 

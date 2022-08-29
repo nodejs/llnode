@@ -26,7 +26,7 @@ function testWorkqueueCommands(t, sess) {
 }
 
 tape('v8 workqueue commands', (t) => {
-  t.timeoutAfter(30000);
+  t.timeoutAfter(60000);
 
   const sess = common.Session.create('workqueue-scenario.js');
   sess.timeoutAfter
