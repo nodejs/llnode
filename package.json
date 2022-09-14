@@ -1,6 +1,6 @@
 {
   "name": "llnode",
-  "version": "3.3.0",
+  "version": "4.0.0",
   "description": "An lldb plugin for Node.js and V8, which enables inspection of JavaScript states for insights into Node.js processes and their core dumps.",
   "main": "index.js",
   "directories": {
