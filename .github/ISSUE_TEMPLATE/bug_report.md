@@ -31,7 +31,7 @@ If applicable, add console output to help explain your problem.
    Obtained using `npm view llnode version`
  - OS Info: [e.g. Linux ub 5.15.0-46-generic #49~20.04.1-Ubuntu SMP Thu Aug 4 19:15:44 UTC 2022 x86_64 x86_64 x86_64 GNU/Linux] 
  
-   Obtained using `uname -a` or get the important information with `wmic os get OsArchitecture` and `wmic os get name` on Windows  
+   Obtained using `uname -a` or on Windows get the important information with `wmic os get OsArchitecture` and `wmic os get name`  
  - lldb Version [e.g. 14.0.6] 
    
    Obtained using `lldb --version`
@@ -42,7 +42,7 @@ If applicable, add console output to help explain your problem.
 **Server where the core was dumped (please complete the following information):**
  - OS Info: [e.g. Linux ub 5.15.0-46-generic #49~20.04.1-Ubuntu SMP Thu Aug 4 19:15:44 UTC 2022 x86_64 x86_64 x86_64 GNU/Linux] 
  
-   Obtained using `uname -a`
+   Obtained using `uname -a` or on Windows get the important information with `wmic os get OsArchitecture` and `wmic os get name`
  - lldb Version [e.g. 14.0.6] 
  
    Obtained using `lldb --version`
