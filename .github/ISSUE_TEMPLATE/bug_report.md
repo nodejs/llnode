@@ -19,18 +19,20 @@ Steps to reproduce the behavior:
 **Expected behavior**
 A clear and concise description of what you expected to happen.
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
+**console output**
+If applicable, add console output to help explain your problem.
 
-**Desktop (please complete the following information):**
+**Local Environment (please complete the following information):**
  - OS: [e.g. Ubuntu 18.04 LTS]
  - lldb Version [e.g. 14.0.6]
  - Version of node.js [e.g. 16.17.0]
+ - CPU Arch [e.g.  x86-64]
 
 **Server where the core was dumped (please complete the following information):**
  - OS: [e.g. Ubuntu 18.04 LTS]
  - lldb Version [e.g. 14.0.6]
  - Version of node.js [e.g. 16.17.0]
+ - CPU Arch [e.g.  x86-64]
 
 **Additional context**
 Add any other context about the problem here.
