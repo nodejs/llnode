@@ -10,30 +10,45 @@ assignees: ''
 **Describe the bug**
 A clear and concise description of what the bug is.
 
-**To Reproduce**
+**To reproduce**
 Steps to reproduce the behavior:
-1 Loaded core with llnode node/location -c core/location
-2. Ran command v8 '...'
-3. See error
+
+  1. Loaded core with llnode node/location -c core/location
+  
+  2. Ran command v8 '...'
+  
+  3. See error
 
 **Expected behavior**
 A clear and concise description of what you expected to happen.
 
-**console output**
+**Console output**
 If applicable, add console output to help explain your problem.
 
-**Local Environment (please complete the following information):**
- - Version of llnode [e.g. v4.0.0]
- - OS: [e.g. Ubuntu 18.04 LTS]
- - lldb Version [e.g. 14.0.6]
- - Version of node.js [e.g. 16.17.0]
- - CPU Arch [e.g.  x86-64]
+**Local environment (please complete the following information):**
+ - Version of llnode [e.g. 4.0.0]
+ 
+   Obtained using `npm view llnode version`
+ - OS Info: [e.g. Linux ub 5.15.0-46-generic #49~20.04.1-Ubuntu SMP Thu Aug 4 19:15:44 UTC 2022 x86_64 x86_64 x86_64 GNU/Linux] 
+ 
+   Obtained using `uname -a`
+ - lldb Version [e.g. 14.0.6] 
+   
+   Obtained using `lldb --version`
+ - Version of node.js [e.g. 16.17.0] 
+   
+   Obtained using `node -v`
 
 **Server where the core was dumped (please complete the following information):**
- - OS: [e.g. Ubuntu 18.04 LTS]
- - lldb Version [e.g. 14.0.6]
- - Version of node.js [e.g. 16.17.0]
- - CPU Arch [e.g.  x86-64]
+ - OS Info: [e.g. Linux ub 5.15.0-46-generic #49~20.04.1-Ubuntu SMP Thu Aug 4 19:15:44 UTC 2022 x86_64 x86_64 x86_64 GNU/Linux] 
+ 
+   Obtained using `uname -a`
+ - lldb Version [e.g. 14.0.6] 
+ 
+   Obtained using `lldb --version`
+ - Version of node.js [e.g. 16.17.0] 
+   
+   Obtained using `node -v`
 
 **Additional context**
 Add any other context about the problem here.
