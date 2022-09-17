@@ -23,6 +23,7 @@ A clear and concise description of what you expected to happen.
 If applicable, add console output to help explain your problem.
 
 **Local Environment (please complete the following information):**
+ - Version of llnode [e.g. v4.0.0]
  - OS: [e.g. Ubuntu 18.04 LTS]
  - lldb Version [e.g. 14.0.6]
  - Version of node.js [e.g. 16.17.0]
