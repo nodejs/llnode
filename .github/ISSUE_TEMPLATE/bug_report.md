@@ -31,24 +31,24 @@ If applicable, add console output to help explain your problem.
    Obtained using `npm view llnode version`
  - OS Info: [e.g. Linux ub 5.15.0-46-generic #49~20.04.1-Ubuntu SMP Thu Aug 4 19:15:44 UTC 2022 x86_64 x86_64 x86_64 GNU/Linux] 
  
-   Obtained using `uname -a` or on Windows get the important information with `wmic os get OsArchitecture && wmic os get name`  
+   Obtained using `uname -a` or on Windows `wmic os get OsArchitecture && wmic os get name`  
  - lldb Version [e.g. 14.0.6] 
    
    Obtained using `lldb --version`
  - Version of node.js [e.g. 16.17.0] 
    
-   Obtained using `node -v`
+   Obtained using `node --version`
 
 **Server where the core was dumped (please complete the following information):**
  - OS Info: [e.g. Linux ub 5.15.0-46-generic #49~20.04.1-Ubuntu SMP Thu Aug 4 19:15:44 UTC 2022 x86_64 x86_64 x86_64 GNU/Linux] 
  
-   Obtained using `uname -a` or on Windows get the important information with `wmic os get OsArchitecture && wmic os get name`
+   Obtained using `uname -a` or on Windows `wmic os get OsArchitecture && wmic os get name`
  - lldb Version [e.g. 14.0.6] 
  
    Obtained using `lldb --version`
  - Version of node.js [e.g. 16.17.0] 
    
-   Obtained using `node -v`
+   Obtained using `node --version`
 
 **Additional context**
 Add any other context about the problem here.
