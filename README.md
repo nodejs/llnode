@@ -9,7 +9,7 @@
 </p>
 
 [![npm](https://img.shields.io/npm/v/llnode.svg?style=flat-square)](https://npmjs.org/package/llnode)
-![ci](https://img.shields.io/github/workflow/status/nodejs/llnode/push/main?style=flat-square)
+![ci](https://img.shields.io/github/workflow/status/nodejs/llnode/on%20push%20or%20pull_request/main?style=flat-square)
 [![coverage](https://img.shields.io/coveralls/github/nodejs/llnode/mmain?style=flat-square)](https://coveralls.io/github/nodejs/llnode)
 
 
