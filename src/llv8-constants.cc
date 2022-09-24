@@ -379,17 +379,9 @@ void JSArrayBuffer::Load() {
       LoadConstant({"class_JSArrayBuffer__byte_length__Object",
                     "class_JSArrayBuffer__byte_length__size_t"});
 
-  if (kBackingStoreOffset.Check()) {
-  }
-
-  kWasNeuteredMask = LoadConstant("jsarray_buffer_was_neutered_mask");
-  kWasNeuteredShift = LoadConstant("jsarray_buffer_was_neutered_shift");
-
-  if (kWasNeuteredMask == -1) {
-    // TODO(indutny): check V8 version?
-    kWasNeuteredMask = 1 << 3;
-    kWasNeuteredShift = 3;
-  }
+  // TODO: This should use postmortem data.
+  kWasNeuteredMask = 1 << 3;
+  kWasNeuteredShift = 3;
 }
 
 
