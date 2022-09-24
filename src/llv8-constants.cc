@@ -259,9 +259,6 @@ void Context::Load() {
   // of constants or a fallback list).
   kNativeIndex =
       LoadConstant("class_Context__native_index__int", "context_idx_native");
-  if (kNativeIndex == -1) {
-    kNativeIndex = LoadConstant("class_Context__native_context_index__int");
-  }
   kEmbedderDataIndex = LoadConstant("context_idx_embedder_data", (int)5);
 
   kMinContextSlots = LoadConstant("class_Context__min_context_slots__int",
