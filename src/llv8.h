@@ -669,7 +669,7 @@ class LLV8 {
   inline CheckedType<T> LoadUnsigned(int64_t addr, uint32_t byte_size);
   int64_t LoadUnsigned(int64_t addr, uint32_t byte_size, Error& err);
   double LoadDouble(int64_t addr, Error& err);
-  std::string LoadBytes(int64_t addr, int64_t length, Error& err);
+  std::string LoadBytes(int64_t addr, size_t length, Error& err);
   std::string LoadString(int64_t addr, int64_t length, Error& err);
   std::string LoadTwoByteString(int64_t addr, int64_t length, Error& err);
   uint8_t* LoadChunk(int64_t addr, int64_t length, Error& err);
