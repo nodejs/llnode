@@ -49,8 +49,7 @@ std::string Printer::Stringify(v8::JSFrame js_frame, Error& err) {
       return "<constructor>";
     } else if (value == llv8_->frame()->kStubFrame) {
       return "<stub>";
-    } else if (value != llv8_->frame()->kJSFrame &&
-               value != llv8_->frame()->kOptimizedFrame) {
+    } else if (value != llv8_->frame()->kOptimizedFrame) {
       err = Error::Failure("Unknown frame marker %" PRId64, value);
       return std::string();
     }
