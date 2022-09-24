@@ -203,11 +203,6 @@ std::string Printer::Stringify(v8::FixedArray fixed_array, Error& err) {
 
 template <>
 std::string Printer::Stringify(v8::Context ctx, Error& err) {
-  // Not enough postmortem information, return bare minimum
-  if (llv8_->shared_info()->kScopeInfoOffset == -1 &&
-      llv8_->shared_info()->kNameOrScopeInfoOffset == -1)
-    return std::string();
-
   std::string res = "<Context";
 
   if (!options_.detailed) {

@@ -217,11 +217,9 @@ class SharedFunctionInfo : public HeapObject {
 
  private:
   inline String name(Error& err);
-  inline Script script(Error& err);
   inline HeapObject script_or_debug_info(Error& err);
   inline Value inferred_name(Error& err);
   inline Value function_data(Error& err);
-  inline HeapObject scope_info(Error& err);
   inline HeapObject name_or_scope_info(Error& err);
 };
 
@@ -520,7 +518,6 @@ class ScopeInfo : public HeapObject {
   };
 
   inline Smi ParameterCount(Error& err);
-  inline Smi StackLocalCount(Error& err);
   inline Smi ContextLocalCount(Error& err);
   inline int ContextLocalIndex(Error& err);
   inline PositionInfo MaybePositionInfo(Error& err);
