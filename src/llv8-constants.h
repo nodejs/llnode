@@ -495,7 +495,6 @@ class Frame : public Module {
   int64_t kExitFrame;
   int64_t kInternalFrame;
   int64_t kConstructFrame;
-  int64_t kJSFrame;
   int64_t kOptimizedFrame;
   int64_t kStubFrame;
 
