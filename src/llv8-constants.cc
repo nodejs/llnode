@@ -135,9 +135,6 @@ void JSObject::Load() {
       LoadConstant("class_JSReceiver__raw_properties_or_hash__Object",
                    "class_JSReceiver__properties__FixedArray");
 
-  if (kPropertiesOffset == -1)
-    kPropertiesOffset = LoadConstant("class_JSObject__properties__FixedArray");
-
   kElementsOffset = LoadConstant("class_JSObject__elements__Object");
   kInternalFieldsOffset =
       LoadConstant("class_JSObject__internal_fields__uintptr_t");
