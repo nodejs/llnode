@@ -239,6 +239,10 @@ const hashMapTests = {
     re: new RegExp('.array-buffer=(0x[0-9a-f]+):' +
                     '<ArrayBuffer: backingStore=0x[0-9a-f]+, byteLength=5>'),
     desc: '.array-buffer JSArrayBuffer property',
+    optional: {
+      re: new RegExp(''),
+      reason: 'flakes occasionally on Node.js v18'
+    },
     validators: [(t, sess, addresses, name, cb) => {
       const address = addresses[name];
       sess.send(`v8 inspect ${address}`);
