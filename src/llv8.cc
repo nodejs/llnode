@@ -119,14 +119,14 @@ double LLV8::LoadDouble(int64_t addr, Error& err) {
 }
 
 
-std::string LLV8::LoadBytes(int64_t addr, int64_t length, Error& err) {
+std::string LLV8::LoadBytes(int64_t addr, size_t length, Error& err) {
   uint8_t* buf = new uint8_t[length + 1];
   SBError sberr;
-  process_.ReadMemory(addr, buf, static_cast<size_t>(length), sberr);
+  process_.ReadMemory(addr, buf, length, sberr);
   if (sberr.Fail()) {
     err = Error::Failure(
         "Failed to load v8 backing store memory, "
-        "addr=0x%016" PRIx64 ", length=%" PRId64,
+        "addr=0x%016" PRIx64 ", length=%zu",
         addr, length);
     delete[] buf;
     return std::string();
@@ -134,7 +134,7 @@ std::string LLV8::LoadBytes(int64_t addr, int64_t length, Error& err) {
 
   std::string res;
   char tmp[10];
-  for (int i = 0; i < length; ++i) {
+  for (size_t i = 0; i < length; ++i) {
     snprintf(tmp, sizeof(tmp), "%s%02x", (i == 0 ? "" : ", "), buf[i]);
     res += tmp;
   }
@@ -732,7 +732,8 @@ std::string Symbol::ToString(Error& err) {
     return "Symbol()";
   }
   HeapObject name = Name(err);
-  RETURN_IF_INVALID(name, "Symbol(???)");
+  // Use \? so we don't treat this as a trigraph.
+  RETURN_IF_INVALID(name, "Symbol(\?\?\?)");
   return "Symbol('" + String(name).ToString(err) + "')";
 }
 
