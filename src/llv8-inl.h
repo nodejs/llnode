@@ -495,11 +495,8 @@ ACCESSOR(SharedFunctionInfo, function_data, shared_info()->kFunctionDataOffset,
 ACCESSOR(SharedFunctionInfo, name, shared_info()->kNameOffset, String)
 ACCESSOR(SharedFunctionInfo, inferred_name, shared_info()->kInferredNameOffset,
          Value)
-ACCESSOR(SharedFunctionInfo, script, shared_info()->kScriptOffset, Script)
 SAFE_ACCESSOR(SharedFunctionInfo, script_or_debug_info,
               shared_info()->kScriptOrDebugInfoOffset, HeapObject)
-ACCESSOR(SharedFunctionInfo, scope_info, shared_info()->kScopeInfoOffset,
-         HeapObject)
 ACCESSOR(SharedFunctionInfo, name_or_scope_info,
          shared_info()->kNameOrScopeInfoOffset, HeapObject)
 
@@ -535,8 +532,6 @@ Value SharedFunctionInfo::GetInferredName(Error& err) {
 }
 
 HeapObject SharedFunctionInfo::GetScopeInfo(Error& err) {
-  if (v8()->shared_info()->kNameOrScopeInfoOffset == -1) return scope_info(err);
-
   HeapObject maybe_scope_info = name_or_scope_info(err);
   if (!String::IsString(v8(), maybe_scope_info, err)) return maybe_scope_info;
 
@@ -545,10 +540,6 @@ HeapObject SharedFunctionInfo::GetScopeInfo(Error& err) {
 }
 
 Script SharedFunctionInfo::GetScript(Error& err) {
-  if (!v8()->shared_info()->kScriptOrDebugInfoOffset.Loaded()) {
-    return script(err);
-  }
-
   HeapObject maybe_script = script_or_debug_info(err);
   if (maybe_script.IsScript(err)) return maybe_script;
 
@@ -1110,18 +1101,6 @@ inline Smi ScopeInfo::ParameterCount(Error& err) {
       err);
 }
 
-inline Smi ScopeInfo::StackLocalCount(Error& err) {
-  if (v8()->scope_info()->kStackLocalCountOffset == -1) {
-    return Smi(v8(), 0);
-  }
-  int64_t data_offset =
-      v8()->scope_info()->kIsFixedArray ? v8()->fixed_array()->kDataOffset : 0;
-  return HeapObject::LoadFieldValue<Smi>(
-      data_offset + v8()->scope_info()->kStackLocalCountOffset *
-                        v8()->common()->kPointerSize,
-      err);
-}
-
 inline Smi ScopeInfo::ContextLocalCount(Error& err) {
   int64_t data_offset = v8()->scope_info()->kIsFixedArray
                             ? v8()->fixed_array()->kDataOffset
@@ -1134,16 +1113,6 @@ inline Smi ScopeInfo::ContextLocalCount(Error& err) {
 
 inline int ScopeInfo::ContextLocalIndex(Error& err) {
   int context_local_index = v8()->scope_info()->kVariablePartIndex;
-
-  if (v8()->scope_info()->kEmbeddedParamAndStackLocals) {
-    Smi param_count = ParameterCount(err);
-    if (err.Fail()) return -1;
-    context_local_index += param_count.GetValue() + 1;
-
-    Smi stack_local = StackLocalCount(err);
-    if (err.Fail()) return -1;
-    context_local_index += stack_local.GetValue();
-  }
   return context_local_index;
 }
 

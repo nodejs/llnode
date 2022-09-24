@@ -159,12 +159,10 @@ class SharedInfo : public Module {
   int64_t kNameOrScopeInfoOffset;
   int64_t kNameOffset;
   int64_t kInferredNameOffset;
-  int64_t kScriptOffset;
   Constant<int64_t> kScriptOrDebugInfoOffset;
   int64_t kStartPositionOffset;
   int64_t kEndPositionOffset;
   int64_t kParameterCountOffset;
-  int64_t kScopeInfoOffset;
   int64_t kFunctionDataOffset;
 
   int64_t kStartPositionMask;
@@ -203,9 +201,7 @@ class ScopeInfo : public Module {
   CONSTANTS_DEFAULT_METHODS(ScopeInfo);
 
   int64_t kParameterCountOffset;
-  int64_t kStackLocalCountOffset;
   int64_t kContextLocalCountOffset;
-  bool kEmbeddedParamAndStackLocals;
   int64_t kVariablePartIndex;
   bool kIsFixedArray;
 

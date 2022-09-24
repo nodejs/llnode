@@ -201,7 +201,6 @@ void SharedInfo::Load() {
   kInferredNameOffset =
       LoadConstant("class_SharedFunctionInfo__inferred_name__String",
                    "class_SharedFunctionInfo__function_identifier__Object");
-  kScriptOffset = LoadConstant("class_SharedFunctionInfo__script__Object");
   kScriptOrDebugInfoOffset = LoadConstant(
       {"class_SharedFunctionInfo__script_or_debug_info__Object",
        "class_SharedFunctionInfo__script_or_debug_info__HeapObject"});
@@ -221,18 +220,9 @@ void SharedInfo::Load() {
         "class_SharedFunctionInfo__formal_parameter_count__SMI");
   }
 
-  // NOTE: Could potentially be -1 on v4 and v5 node, should check in llv8
-  kScopeInfoOffset =
-      LoadConstant("class_SharedFunctionInfo__scope_info__ScopeInfo");
-
-  kStartPositionMask = LoadConstant("sharedfunctioninfo_start_position_mask");
-  kStartPositionShift = LoadConstant("sharedfunctioninfo_start_position_shift");
-
-  if (kStartPositionShift == -1) {
-    // TODO(indutny): check version?
-    kStartPositionShift = 2;
-    kStartPositionMask = ~((1 << kStartPositionShift) - 1);
-  }
+  // TODO: this should use postmortem data.
+  kStartPositionShift = 2;
+  kStartPositionMask = ~((1 << kStartPositionShift) - 1);
 
   if (LoadConstant("class_SharedFunctionInfo__compiler_hints__int") == -1 &&
       kNameOrScopeInfoOffset == -1)
@@ -260,8 +250,6 @@ void Code::Load() {
 
 void ScopeInfo::Load() {
   kParameterCountOffset = LoadConstant("scopeinfo_idx_nparams");
-  kStackLocalCountOffset = LoadConstant("scopeinfo_idx_nstacklocals");
-  kEmbeddedParamAndStackLocals = kStackLocalCountOffset != -1;
   kContextLocalCountOffset = LoadConstant("scopeinfo_idx_ncontextlocals");
   kVariablePartIndex = LoadConstant("scopeinfo_idx_first_vars");
   // Prior to Node.js v16, ScopeInfo inherited from FixedArray. In release
