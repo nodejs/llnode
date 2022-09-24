@@ -81,14 +81,8 @@ void HeapObject::Load() {
 
 void Map::Load() {
   Error err;
-  kInstanceAttrsOffset = LoadConstant({"class_Map__instance_attributes__int",
-                                       "class_Map__instance_type__uint16_t"});
-  if (kInstanceAttrsOffset.name() ==
-      "v8dbg_class_Map__instance_type__uint16_t") {
-    kMapTypeMask = 0xffff;
-  } else {
-    kMapTypeMask = 0xff;
-  }
+  kInstanceAttrsOffset = LoadConstant({"class_Map__instance_type__uint16_t"});
+  kMapTypeMask = 0xffff;
 
   kMaybeConstructorOffset =
       LoadConstant("class_Map__constructor_or_backpointer__Object",
