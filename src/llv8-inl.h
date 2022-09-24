@@ -470,13 +470,6 @@ inline int64_t String::Encoding(Error& err) {
 inline CheckedType<int32_t> String::Length(Error& err) {
   RETURN_IF_INVALID((*this), CheckedType<int32_t>());
 
-  if (v8()->string()->kLengthIsSmi) {
-    Smi len = LoadFieldValue<Smi>(v8()->string()->kLengthOffset, err);
-    RETURN_IF_INVALID(len, CheckedType<int32_t>());
-
-    return CheckedType<int32_t>(len.GetValue());
-  }
-
   CheckedType<int32_t> len = v8()->LoadValue<CheckedType<int32_t>>(
       LeaField(v8()->string()->kLengthOffset));
   RETURN_IF_INVALID(len, CheckedType<int32_t>());

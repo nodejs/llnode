@@ -295,12 +295,7 @@ void String::Load() {
   kExternalStringTag = LoadConstant("ExternalStringTag");
   kThinStringTag = LoadConstant("ThinStringTag");
 
-  kLengthIsSmi = true;
-  kLengthOffset = LoadConstant("class_String__length__SMI");
-  if (kLengthOffset == -1) {
-    kLengthIsSmi = false;
-    kLengthOffset = LoadConstant("class_String__length__int32_t");
-  }
+  kLengthOffset = LoadConstant("class_String__length__int32_t");
 }
 
 
