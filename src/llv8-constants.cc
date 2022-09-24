@@ -133,17 +133,8 @@ void Map::Load() {
     kNumberOfOwnDescriptorsMask = (1 << kDescriptorIndexBitCount) - 1;
     kNumberOfOwnDescriptorsMask <<= kNumberOfOwnDescriptorsShift;
   }
-  kLayoutDescriptor =
-      LoadConstant({"class_Map__layout_descriptor__LayoutDescriptor"});
 }
 
-
-bool Map::HasUnboxedDoubleFields() {
-  // V8 has now disabled unboxed doubles in all supported Node.js branches. Per
-  // the V8 authors (v8/v8@42409a2e) it seems unlikely this support will ever
-  // return, so we could probably just remove it entirely.
-  return false;
-}
 
 void JSObject::Load() {
   kPropertiesOffset =
