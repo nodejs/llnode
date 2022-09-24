@@ -265,7 +265,6 @@ class String : public Module {
   int64_t kThinStringTag;
 
   int64_t kLengthOffset;
-  bool kLengthIsSmi;
 
  protected:
   void Load();
