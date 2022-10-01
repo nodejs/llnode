@@ -47,9 +47,17 @@ function getLibPath(libDir) {
 }
 
 /**
+ * Check if the installed version of git supports sparse checkout. Notably,
+ * Ubuntu 18.04 (which is not EOL at time of writing) has git 2.17, which does
+ * not support sparse-checkout.
+ */
+function doesGitSupportSparseCheckout() {
+  const returnCode = child_process.spawnSync('git', ['sparse-checkout', '--help']).status;
+  return returnCode === 0;
+}
+
+/**
  * Check out source code of the lldb for headers
- * TODO: The llvm project is probably moving to github soon at that point we
- * should stop using the mirror.
  * @param {string} lldbVersion Version of lldb, either like 3.9 or 39
  * @param {string} buildDir Path to the llnode module directory
  * @returns {string} The include directory in the downloaded lldb source code
@@ -60,26 +68,39 @@ function cloneHeaders(lldbVersion, buildDir) {
 
   if (!fs.existsSync(lldbInstallDir)) {
     console.log(`\nCloning lldb ${lldbHeadersBranch} into ${lldbInstallDir}`);
-    // use `git clone --filter` in git v2.19 to only download `lldb` dir of `llvm-project` monorepo
-    // see: https://stackoverflow.com/a/52269934/3117331
-    // see: https://github.blog/2020-01-17-bring-your-monorepo-down-to-size-with-sparse-checkout/
-    child_process.execFileSync(
-        'git', ['clone',
-          '--depth', '1',
-          '--filter=blob:none',
-          '--sparse',
-          '--branch', lldbHeadersBranch,
-          'https://github.com/llvm/llvm-project.git',
-          lldbInstallDir
-        ],
-        { stdio: 'inherit' });  // show progress
-    child_process.execFileSync(
-        'git', [
-          '-C', lldbInstallDir,
-          'sparse-checkout',
-          'set', 'lldb'
-        ],
-        { stdio: 'inherit' });  // show progress
+    if (doesGitSupportSparseCheckout()) {
+      // use `git clone --filter` in git v2.19 to only download `lldb` dir of `llvm-project` monorepo
+      // see: https://stackoverflow.com/a/52269934/3117331
+      // see: https://github.blog/2020-01-17-bring-your-monorepo-down-to-size-with-sparse-checkout/
+      child_process.execFileSync(
+          'git', ['clone',
+            '--depth', '1',
+            '--filter=blob:none',
+            '--sparse',
+            '--branch', lldbHeadersBranch,
+            'https://github.com/llvm/llvm-project.git',
+            lldbInstallDir
+          ],
+          { stdio: 'inherit' });  // show progress
+      child_process.execFileSync(
+          'git', [
+            '-C', lldbInstallDir,
+            'sparse-checkout',
+            'set', 'lldb'
+          ],
+          { stdio: 'inherit' });  // show progress
+    } else {
+      // There's no sparse checkout support, so we need to clone the entire
+      // repo.
+      child_process.execFileSync(
+          'git', ['clone',
+            '--depth', '1',
+            '--branch', lldbHeadersBranch,
+            'https://github.com/llvm/llvm-project.git',
+            lldbInstallDir
+          ],
+          { stdio: 'inherit' });  // show progress
+    }
   } else {
     console.log(`\nSkip cloning lldb headers because ${lldbInstallDir} exists`);
   }
