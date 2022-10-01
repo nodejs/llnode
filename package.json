@@ -51,9 +51,9 @@
   },
   "homepage": "https://github.com/nodejs/llnode#readme",
   "devDependencies": {
-    "codecov": "^3.1.0",
-    "nyc": "^13.1.0",
     "clang-format": "1.2.4",
+    "codecov": "^3.1.0",
+    "nyc": "^15.1.0",
     "tape": "^4.4.0"
   },
   "nyc": {
