@@ -362,8 +362,15 @@ std::string JSFunction::GetSource(Error& err) {
   }
   int64_t len = end_pos - start_pos;
 
-  std::string res = source_str.substr(start_pos, len);
+  // Make sure the substr isn't out of range
+  if (start_pos < 0 || len < 0 || start_pos + len > source_len) {
+    err = Error::Failure("Invalid source range, start_pos=%" PRId64
+                         ", len=%" PRId64 ", source_len=%" PRId64,
+                         start_pos, len, source_len);
+    return std::string();
+  }
 
+  std::string res = source_str.substr(start_pos, len);
   return res;
 }
 
