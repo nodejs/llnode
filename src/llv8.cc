@@ -944,7 +944,7 @@ std::vector<std::pair<Value, Value>> JSObject::DescriptorEntries(Map map,
   for (int64_t i = 0; i < own_descriptors_count; i++) {
     Smi details = descriptors.GetDetails(i);
     if (!details.Check()) {
-      PRINT_DEBUG("Failed to get details for index %ld", i);
+      PRINT_DEBUG("Failed to get details for index %" PRId64, i);
       entries.push_back(std::pair<Value, Value>(Value(), Value()));
       continue;
     }
@@ -1050,7 +1050,7 @@ void JSObject::DescriptorKeys(std::vector<std::string>& keys, Map map,
   for (int64_t i = 0; i < own_descriptors_count; i++) {
     Smi details = descriptors.GetDetails(i);
     if (!details.Check()) {
-      PRINT_DEBUG("Failed to get details for index %ld", i);
+      PRINT_DEBUG("Failed to get details for index %" PRId64, i);
       keys.push_back("???");
       continue;
     }
@@ -1152,7 +1152,7 @@ Value JSObject::GetDescriptorProperty(std::string key_name, Map map,
   for (int64_t i = 0; i < own_descriptors_count; i++) {
     Smi details = descriptors.GetDetails(i);
     if (!details.Check()) {
-      PRINT_DEBUG("Failed to get details for index %ld", i);
+      PRINT_DEBUG("Failed to get details for index %" PRId64, i);
       continue;
     }
 
@@ -1329,7 +1329,7 @@ StackTrace::StackTrace(JSArray frame_array, Error& err)
         ((frame_array_.GetArrayLength(err) - 1) % multiplier_ != 0)) {
       PRINT_DEBUG(
           "JSArray doesn't look like a Stack Frames array. stack_len: %d "
-          "array_len: %ld",
+          "array_len: %" PRId64,
           len_, frame_array_.GetArrayLength(err));
       len_ = -1;
       multiplier_ = -1;

@@ -65,7 +65,7 @@ inline T LLV8::LoadValue(int64_t addr, Error& err) {
 #else
 #define _s "value"
 #endif
-    err = Error(true, "The value %lx is not a valid %s", addr, _s);
+    err = Error(true, "The value %" PRId64 " is not a valid %s", addr, _s);
 #undef _s
     return T();
   }
