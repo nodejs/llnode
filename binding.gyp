@@ -62,6 +62,7 @@
       "src/node-constants.cc",
       "src/settings.cc",
     ],
+    "cflags": [ '-DLLNODE_VERSION=<!(grep -Po \'"version": \K(".*")\' <(module_root_dir)/package.json)' ],
     "conditions": [
       [ "OS == 'win'", {
         "sources": [
