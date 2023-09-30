@@ -100,6 +100,12 @@ class GetActiveRequestsCmd : public WorkqueueCmd {
   std::string GetResultMessage(node::Environment* env, Error& err) override;
 };
 
+class GetLLNodeVersionCmd : public CommandBase {
+ public:
+  bool DoExecute(lldb::SBDebugger d, char** cmd,
+                 lldb::SBCommandReturnObject& result) override;
+};
+
 
 }  // namespace llnode
 

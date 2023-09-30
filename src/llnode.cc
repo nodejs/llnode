@@ -394,6 +394,12 @@ std::string GetActiveRequestsCmd::GetResultMessage(node::Environment* env,
   return result_message.str();
 }
 
+bool GetLLNodeVersionCmd::DoExecute(SBDebugger d, char** cmd,
+				    SBCommandReturnObject& result) {
+  result.Printf("llnode version %s", LLNODE_VERSION);
+  return true;
+}
+
 
 void InitDebugMode() {
   bool is_debug_mode = false;
@@ -521,6 +527,10 @@ bool PluginInitialize(SBDebugger d) {
       "getactiverequests", new llnode::GetActiveRequestsCmd(&llv8, &node),
       "Print all pending requests in the queue. Equivalent to "
       "running process._getActiveRequests() on the living process.\n");
+
+  v8.AddCommand(
+      "version", new llnode::GetLLNodeVersionCmd(),
+      "print llnode version");
 
   // Set initial value for color support
   llnode::Settings* settings = llnode::Settings::GetSettings();
