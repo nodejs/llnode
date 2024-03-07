@@ -151,7 +151,7 @@ jobs:
       - name: npm install, build, and test
         run: |
           sudo apt-get -qq update
-          sudo apt-get install lldb-6.0 liblldb-6.0-dev lcov -y
-          sudo ln -s $(which lldb-6.0) /usr/bin/lldb
+          sudo apt-get install lldb-11 liblldb-11-dev lcov -y
+          sudo ln -s $(which lldb-11) /usr/bin/lldb
           npm install
           npm run linter
