@@ -121,6 +121,9 @@ jobs:
           if [[ -n "$(which llvm-config-${{ matrix.llvm }})" ]]; then
             sudo ln -s "$(which llvm-config-${{ matrix.llvm }})" /usr/bin/llvm-config
           fi
+
+          echo "/usr/lib/llvm-${{ matrix.llvm }}/lib" | sudo tee /etc/ld.so.conf.d/llvm.conf
+          sudo ldconfig
       - name: npm install
         run: |
           npm install --llnode_build_addon=true --llnode_coverage=true
