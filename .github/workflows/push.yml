@@ -28,11 +28,15 @@ jobs:
         # Temporarily disable MacOS until
         # https://github.com/nodejs/node/issues/32981 is fixed
         # TODO(mmarchini): test on 20.04 (need different lldb version)
-        os: [ubuntu-18.04, ubuntu-20.04]
-        llvm: [8, 9, 10, 11, 12, 13, 14]
+        os: [ubuntu-18.04, ubuntu-20.04, ubuntu-22.04]
+        llvm: [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
         exclude:
           # This errors due to a glibc incompatibility.
           - {os: ubuntu-18.04, node: {version: 18.x}}
+          # Neither LLVM nor Canonical package these versions for Jammy
+          - {os: ubuntu-22.04, llvm: 8}
+          - {os: ubuntu-22.04, llvm: 9}
+          - {os: ubuntu-22.04, llvm: 10}
     steps:
       - uses: actions/checkout@v3
       - name: Use Node.js ${{ matrix.node.version }} ${{ matrix.node.mirror }}
@@ -44,25 +48,59 @@ jobs:
       - name: install dependencies Linux
         if: startsWith(matrix.os, 'ubuntu-')
         run: |
-          use_llvm_repos=0
+          use_llvm_repos=1
 
-          case "${{ matrix.os }}-${{ matrix.llvm }}" in
-            ubuntu-18.04-10) use_llvm_repos=1;;
-            ubuntu-18.04-11) use_llvm_repos=1;;
-            ubuntu-18.04-12) use_llvm_repos=1;;
-            ubuntu-18.04-13) use_llvm_repos=1;;
-            ubuntu-18.04-14) use_llvm_repos=1;;
-            ubuntu-20.04-13) use_llvm_repos=1;;
-            ubuntu-20.04-14) use_llvm_repos=1;;
-            *) use_llvm_repos=0;;
+          case "${{ matrix.os }}" in
+            ubuntu-18.04)
+              case "${{ matrix.llvm }}" in
+                8) use_llvm_repos=0;;
+                9) use_llvm_repos=0;;
+                10) use_llvm_repos=0;;
+                *) use_llvm_repos=1;;
+              esac
+              ;;
+            ubuntu-20.04)
+              case "${{ matrix.llvm }}" in
+                8) use_llvm_repos=0;;
+                9) use_llvm_repos=0;;
+                10) use_llvm_repos=0;;
+                11) use_llvm_repos=0;;
+                12) use_llvm_repos=0;;
+                *) use_llvm_repos=1;;
+              esac
+              ;;
+            ubuntu-22.04)
+              case "${{ matrix.llvm }}" in
+                11) use_llvm_repos=0;;
+                12) use_llvm_repos=0;;
+                13) use_llvm_repos=0;;
+                14) use_llvm_repos=0;;
+                15) use_llvm_repos=0;;
+                *) use_llvm_repos=1;;
+              esac
+              ;;
+            *) use_llvm_repos=1;;
           esac
 
           if [[ ${use_llvm_repos} == 1 ]]; then
+            llvm_suffix="-${{ matrix.llvm }}";
+            # If there's no `release/XY.x` branch, check if this is current dev release
+            if ! git ls-remote --exit-code --heads \
+                 https://github.com/llvm/llvm-project.git \
+                 refs/heads/release/${{ matrix.llvm }}.x >/dev/null 2>&1; then
+              # If there's an `llvmorg-XY-init` tag, this is the current dev release
+              if git ls-remote --exit-code --tags \
+                 https://github.com/llvm/llvm-project.git \
+                 refs/tags/llvmorg-${{ matrix.llvm }}-init >/dev/null 2>&1; then
+                # The dev release doesn't use a version suffix
+                llvm_suffix="";
+              fi
+            fi
             wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -;
             release="$(lsb_release -cs)"
-            cat << EOF | sudo tee /etc/apt/sources.list.d/llvm-${{ matrix.llvm }}.list
-          deb http://apt.llvm.org/${release}/ llvm-toolchain-${release}-${{ matrix.llvm }} main
-          deb-src http://apt.llvm.org/${release}/ llvm-toolchain-${release}-${{ matrix.llvm }} main
+            cat << EOF | sudo tee /etc/apt/sources.list.d/llvm${llvm_suffix}.list
+          deb http://apt.llvm.org/${release}/ llvm-toolchain-${release}${llvm_suffix} main
+          deb-src http://apt.llvm.org/${release}/ llvm-toolchain-${release}${llvm_suffix} main
           EOF
           fi
 
@@ -74,6 +112,7 @@ jobs:
 
           if [[ -n "$(which lldb-${{ matrix.llvm }})" ]]; then
             sudo ln -s "$(which lldb-${{ matrix.llvm }})" /usr/bin/lldb
+            # Is `/usr/lib/lib` here correct?
             sudo mkdir -p /usr/lib/lib/python3.8
             sudo ln -s /usr/lib/llvm-${{ matrix.llvm }}/lib/python3.8/site-packages /usr/lib/lib/python3.8/site-packages
           fi
