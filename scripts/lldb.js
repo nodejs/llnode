@@ -26,7 +26,33 @@ function versionToBranch(version) {
   chars = chars.slice(0, (+chars[0] >= 4) ? 1 : 2);
 
   // join components into the form `release/3.9.x`
-  return 'release/' + chars.concat('x').join('.');
+  const releaseBranch = 'release/' + chars.concat('x').join('.');
+
+  // Use the release branch if it exists in the remote
+  if (0 === child_process.spawnSync('git', [
+      'ls-remote',
+      '--exit-code',
+      '--heads',
+      'https://github.com/llvm/llvm-project.git',
+      'refs/heads/' + releaseBranch
+    ]).status) {
+      return releaseBranch;
+  }
+
+  const devTag = 'llvmorg-' + chars.join('.') + '-init';
+
+  // Use the main branch if the LLVM version is the current "dev" release
+  if (0 === child_process.spawnSync('git', [
+      'ls-remote',
+      '--exit-code',
+      '--tags',
+      'https://github.com/llvm/llvm-project.git',
+      'refs/tags/' + devTag
+    ]).status) {
+      return 'main';
+  }
+
+  throw new Error('Unknown LLVM version: ' + version);
 }
 
 /**

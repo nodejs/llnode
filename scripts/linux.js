@@ -23,9 +23,9 @@ function getLldbExecutable() {
 
   // Use `Array.prototype.concat.apply` to support
   // runtimes without `Array.prototype.flatMap`.
-  // Look for LLDB up to version 20.
+  // Look for LLDB up to version 99.
   const versions = Array.prototype.concat.apply([],
-    Array.from({length: 20}, (_, i) => i + 1).map((major) =>
+    Array.from({length: 99}, (_, i) => i + 1).map((major) =>
       Array.from({ length: major < 4 ? 10 : 1 }, (_, minor) => major + '.' + minor)
     ));
 
