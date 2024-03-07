@@ -19,6 +19,7 @@ jobs:
           - version: 14.x
           - version: 16.x
           - version: 18.x
+          - version: 20.x
           # These error with "Unexpected input(s) 'node-mirror' ...":
           # - version: 19.x
           #   mirror: https://nodejs.org/download/nightly
@@ -28,11 +29,9 @@ jobs:
         # Temporarily disable MacOS until
         # https://github.com/nodejs/node/issues/32981 is fixed
         # TODO(mmarchini): test on 20.04 (need different lldb version)
-        os: [ubuntu-18.04, ubuntu-20.04, ubuntu-22.04]
+        os: [ubuntu-20.04, ubuntu-22.04]
         llvm: [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
         exclude:
-          # This errors due to a glibc incompatibility.
-          - {os: ubuntu-18.04, node: {version: 18.x}}
           # Neither LLVM nor Canonical package these versions for Jammy
           - {os: ubuntu-22.04, llvm: 8}
           - {os: ubuntu-22.04, llvm: 9}
@@ -51,14 +50,6 @@ jobs:
           use_llvm_repos=1
 
           case "${{ matrix.os }}" in
-            ubuntu-18.04)
-              case "${{ matrix.llvm }}" in
-                8) use_llvm_repos=0;;
-                9) use_llvm_repos=0;;
-                10) use_llvm_repos=0;;
-                *) use_llvm_repos=1;;
-              esac
-              ;;
             ubuntu-20.04)
               case "${{ matrix.llvm }}" in
                 8) use_llvm_repos=0;;
