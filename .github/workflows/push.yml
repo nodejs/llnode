@@ -1,5 +1,9 @@
 name: on push or pull_request
 
+concurrency:
+  group: push-on-${{ github.event_name }}-from-${{ github.ref_name }}
+  cancel-in-progress: true
+
 on:
   push:
     branches:
