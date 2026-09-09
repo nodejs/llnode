@@ -678,7 +678,7 @@ function verifyInvalidExpr(t, sess) {
 }
 
 tape('v8 inspect', (t) => {
-  t.timeoutAfter(30000);
+  t.timeoutAfter(common.testTimeout);
 
   const sess = common.Session.create('inspect-scenario.js');
 

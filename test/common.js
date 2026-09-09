@@ -12,6 +12,8 @@ exports.projectDir = path.join(__dirname, '..');
 
 exports.core = path.join(os.tmpdir(), 'core');
 exports.promptDelay = 200;
+exports.testTimeout = parseInt(process.env.TEST_TIMEOUT) || 40000;
+exports.testTimeoutLong = parseInt(process.env.TEST_TIMEOUT_LONG) || 60000;
 
 function llnodeDebug() {
   // Node v4.x does not support rest
@@ -170,7 +172,6 @@ SessionOutput.prototype.linesUntil = function linesUntil(regexp, callback) {
 
 function Session(options) {
   EventEmitter.call(this);
-  const timeout = parseInt(process.env.TEST_TIMEOUT) || 40000;
   const lldbBin = process.env.TEST_LLDB_BINARY || 'lldb';
   const env = Object.assign({}, process.env);
 
@@ -205,8 +206,8 @@ function Session(options) {
     this.lldb.stdin.write(`target create "${options.executable}"` +
       ` --core "${options.core}"\n`);
   }
-  this.stdout = new SessionOutput(this, this.lldb.stdout, timeout);
-  this.stderr = new SessionOutput(this, this.lldb.stderr, timeout);
+  this.stdout = new SessionOutput(this, this.lldb.stdout, exports.testTimeout);
+  this.stderr = new SessionOutput(this, this.lldb.stderr, exports.testTimeout);
 
   // Map these methods to stdout for compatibility with legacy tests.
   this.wait = SessionOutput.prototype.wait.bind(this.stdout);
